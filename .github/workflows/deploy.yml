@@ -28,12 +28,20 @@ jobs:
         with:
           node-version: "20"
 
-      # Демо ещё собирается: падение сборки не должно снимать домен с заглушки.
-      - name: Build demo apps
-        continue-on-error: true
+      # Кабинет живой, поэтому падение сборки — это провал деплоя, а не повод
+      # выложить заглушку: старое демо на домене хуже честной ошибки.
+      # VITE_* публичны: они и так уезжают в браузер вместе с бандлом.
+      - name: Build cabinets
         working-directory: portal/demo
+        env:
+          VITE_API_URL: https://pharma-edge.sinoptics.ru
+          VITE_AGENT_API: https://pharma-edge.sinoptics.ru
+          VITE_KEYCLOAK_URL: https://auth.sinoptics.ru
+          VITE_KEYCLOAK_REALM: pharma
+          VITE_KEYCLOAK_CLIENT_ID: medmost-spa
         run: |
           npm ci || npm install
+          npm run check:copy
           npm run build
 
       - name: Assemble static bundle

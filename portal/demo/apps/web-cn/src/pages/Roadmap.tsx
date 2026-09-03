@@ -1,58 +1,70 @@
+import { l10n } from '@demo/domain'
+import type { NodeMapItem } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { Card, Empty, Estimate, PageHeader, StatusBadge, Table } from '@demo/ui'
+import { Callout, Card, Empty, Estimate, PageHeader, StatusBadge, Table, ui } from '@demo/ui'
 import { useCaseId } from '../CaseLayout'
-import { useRoadmap } from '../queries'
+import { useCase } from '../queries'
+
+/**
+ * Карта M0–M12 из `node_map_items`. Статус кодируется подписью, а не цветом:
+ * янтарный остаётся за дедлайном и незакрытым запросом.
+ */
+function statusTone(node: NodeMapItem): 'accent' | 'warm' | 'quiet' | 'neutral' {
+  if (node.critical) return 'warm'
+  if (node.status === 'done') return 'accent'
+  if (node.status === 'later') return 'quiet'
+  return 'neutral'
+}
 
 export function RoadmapPage() {
   const caseId = useCaseId()
   const { t, text } = useI18n()
-  const roadmap = useRoadmap(caseId)
+  const caseQuery = useCase(caseId)
 
-  if (roadmap.isLoading) return <Empty>{t('common.loading')}</Empty>
+  if (caseQuery.isLoading) return <Empty>{t('common.loading')}</Empty>
 
-  const project = (roadmap.data ?? []).filter((item) => item.kind === 'project')
-  const normative = (roadmap.data ?? []).filter((item) => item.kind === 'normative')
+  const nodes = caseQuery.data?.nodeMap ?? []
+  const critical = caseQuery.data?.criticalNode ?? null
 
   return (
     <>
-      <PageHeader title={t('roadmap.title')} />
+      <PageHeader title={t('map.title')} lead={t('map.lead')} />
 
-      <Card title={t('roadmap.projectTitle')} meta={t('roadmap.projectHint')}>
-        <Table head={[t('roadmap.stage'), '', t('roadmap.owner'), t('common.months')]}>
-          {project.map((item) => (
-            <tr key={item.id}>
-              <td>
-                <StatusBadge tone="quiet">{t(`stage.${item.stage}`)}</StatusBadge>
-              </td>
-              <td>
-                {text(item.title).value}
-                {item.note ? <div>{text(item.note).value}</div> : null}
-              </td>
-              <td>{t(`actor.${item.owner}`)}</td>
-              <td>{item.months ? `${item.months[0]}–${item.months[1]}` : '—'}</td>
-            </tr>
-          ))}
-        </Table>
-      </Card>
+      {critical ? (
+        <Callout tone="deadline">
+          <strong>{t('map.critical')}:</strong> {critical.code} · {text(l10n(critical.title)).value} ·{' '}
+          {t(`nodeOwner.${critical.owner}`)}
+        </Callout>
+      ) : null}
 
-      <Card title={t('roadmap.normativeTitle')} meta={t('roadmap.normativeHint')}>
-        <Table head={[t('roadmap.stage'), '', t('roadmap.owner'), t('common.workingDays')]}>
-          {normative.map((item) => (
-            <tr key={item.id}>
-              <td>
-                <StatusBadge tone="quiet">{t(`stage.${item.stage}`)}</StatusBadge>
-              </td>
-              <td>
-                {text(item.title).value}
-                {item.note ? <div>{text(item.note).value}</div> : null}
-              </td>
-              <td>{t(`actor.${item.owner}`)}</td>
-              <td>
-                <StatusBadge tone="accent">{item.workingDays}</StatusBadge>
-              </td>
-            </tr>
-          ))}
-        </Table>
+      <Card>
+        {nodes.length === 0 ? (
+          <Empty>{t('map.empty')}</Empty>
+        ) : (
+          <Table head={[t('map.node'), '', t('map.owner'), t('map.due'), '']}>
+            {nodes.map((node) => (
+              <tr key={node.code}>
+                <td>
+                  <StatusBadge tone={node.critical ? 'warm' : 'quiet'}>{node.code}</StatusBadge>
+                </td>
+                <td>
+                  {text(l10n(node.title)).value}
+                  {node.note ? <div className={ui.muted}>{text(l10n(node.note)).value}</div> : null}
+                  {node.blockedBy.length > 0 ? (
+                    <div className={ui.muted}>
+                      {t('map.blocked')}: {node.blockedBy.join(', ')}
+                    </div>
+                  ) : null}
+                </td>
+                <td>{t(`nodeOwner.${node.owner}`)}</td>
+                <td>{node.dueHint ? text(l10n(node.dueHint)).value : '—'}</td>
+                <td>
+                  <StatusBadge tone={statusTone(node)}>{t(`nodeStatus.${node.status}`)}</StatusBadge>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        )}
       </Card>
 
       <Estimate>{t('common.estimate')}</Estimate>

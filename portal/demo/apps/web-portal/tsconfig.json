@@ -1,10 +1,13 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
+    "baseUrl": "../..",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["apps/web-portal/src/*"],
+      "@demo/api-client": ["packages/api-client/src/index.tsx"],
+      "@demo/auth": ["packages/auth/src/index.tsx"],
+      "@demo/domain": ["packages/domain/src/index.ts"]
     }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts", "../../packages/api-client", "../../packages/auth", "../../packages/domain"]
 }

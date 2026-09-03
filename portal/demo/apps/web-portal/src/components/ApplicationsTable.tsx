@@ -15,7 +15,7 @@ export function ApplicationsTable({
   initialQuery?: string
 }) {
   const navigate = useNavigate()
-  const { t, procedure, kindShort, product, form, work, dateTime } = useI18n()
+  const { t, procedure, kindShort, product, form, work, date } = useI18n()
   const [status, setStatus] = useState<'all' | AppStatus>('all')
   const [query, setQuery] = useState(initialQuery)
 
@@ -115,7 +115,7 @@ export function ApplicationsTable({
                       <StatusBadge status={itemStatus} />
                     </td>
                     <td>{nextStep}</td>
-                    <td>{dateTime(item.updatedAt)}</td>
+                    <td>{item.updatedAt ? date(item.updatedAt) : t('common.dash')}</td>
                   </tr>
                 ))}
               </tbody>

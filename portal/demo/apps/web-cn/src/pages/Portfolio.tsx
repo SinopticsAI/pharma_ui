@@ -1,21 +1,77 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { describeError } from '@demo/api-client'
+import type { Organization, OrganizationStatus, ProductStatus } from '@demo/domain'
+import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { Card, Empty, Estimate, KeyValue, PageHeader, StatusBadge, ui } from '@demo/ui'
-import { mockCompanies, mockProducts, progressPercent } from '@demo/mock'
+import { Callout, Card, Empty, Estimate, KeyValue, PageHeader, StatusBadge, ui } from '@demo/ui'
 import { Shell } from '../Shell'
-import { useCases } from '../queries'
+import {
+  useAllProducts,
+  useCases,
+  useCreateOrganization,
+  useCreateProduct,
+  useOpenIntakeSession,
+  useOrganizations,
+} from '../queries'
 import styles from './portfolio.module.css'
 
 /**
- * Главная отвечает на вопрос «что делать дальше» по каждому объекту, а не
- * показывает общий inbox. Отсюда два входа: компания и продукт — продукт
- * всегда принадлежит ровно одной компании.
+ * Главная отвечает на вопрос «что делать дальше» по каждому объекту. Отсюда два
+ * входа: компания и продукт — продукт всегда принадлежит ровно одной компании.
  */
+
+const ORG_STATUS_LABEL: Record<OrganizationStatus, string> = {
+  collecting: 'агент собирает документы',
+  draft: 'черновик профиля',
+  profile_approved: 'профиль одобрен',
+}
+
+const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
+  collecting: 'сбор данных',
+  draft: 'черновик карточки',
+  data_approved: 'карточка одобрена',
+  variants_pending: 'ждёт выбора варианта',
+  variant_selected: 'вариант выбран',
+  ru_confirmed: 'трек подтверждён',
+}
+
 export function PortfolioPage() {
   const { t, text } = useI18n()
+  const navigate = useNavigate()
+  const organizations = useOrganizations()
+  const companies = organizations.data ?? []
+  const products = useAllProducts(companies.map((item) => item.id))
   const cases = useCases()
-  const companies = mockCompanies()
-  const products = mockProducts()
+
+  const createOrganization = useCreateOrganization()
+  const createProduct = useCreateProduct()
+  const openSession = useOpenIntakeSession()
+
+  const busy = createOrganization.isPending || createProduct.isPending || openSession.isPending
+  const failure = createOrganization.error ?? createProduct.error ?? openSession.error
+
+  /** Компания и её диалог создаются вместе: анкету пользователь не заполняет. */
+  const startCompany = async () => {
+    const organization = await createOrganization.mutateAsync({})
+    const session = await openSession.mutateAsync({ scope: 'organization', organizationId: organization.id })
+    void navigate({
+      to: '/intake/company/$organizationId',
+      params: { organizationId: organization.id },
+      search: { session: session.id },
+    })
+  }
+
+  const startProduct = async (organization: Organization) => {
+    const product = await createProduct.mutateAsync({ organizationId: organization.id })
+    const session = await openSession.mutateAsync({ scope: 'product', productId: product.id })
+    void navigate({
+      to: '/intake/product/$productId',
+      params: { productId: product.id },
+      search: { session: session.id },
+    })
+  }
+
+  const readyCompany = companies.find((item) => item.status === 'profile_approved')
 
   const nav = (cases.data ?? []).map((item) => (
     <Link
@@ -25,71 +81,77 @@ export function PortfolioPage() {
       className={ui.navItem}
       activeProps={{ className: `${ui.navItem} ${ui.navItemActive}` }}
     >
-      {item.code} · {text(item.product).value}
+      {item.code} · {text(l10n(item.product)).value}
     </Link>
   ))
-
-  const firstCompany = companies[0]
 
   return (
     <Shell nav={nav}>
       <PageHeader title={t('portfolio.title')} lead={t('portfolio.lead')} />
 
+      {failure ? <Callout tone="deadline">{describeError(failure)}</Callout> : null}
+
       <div className={styles.cta}>
-        <Link to="/intake/company" className={styles.ctaCard}>
+        <button type="button" className={styles.ctaCard} onClick={() => void startCompany()} disabled={busy}>
           <strong>Зарегистрировать компанию</strong>
           <span>Диалог с агентом ≈ 15 минут — он заполнит профиль по вашим документам</span>
-        </Link>
-        <Link
-          to="/intake/product/$companyId"
-          params={{ companyId: firstCompany?.id ?? 'org-demo' }}
+        </button>
+        <button
+          type="button"
           className={styles.ctaCard}
-          // Продукт без компании завести нельзя: профиль должен быть одобрен.
-          aria-disabled={!firstCompany || firstCompany.status !== 'profile_approved'}
+          // Продукт без одобренного профиля ядро не создаёт: 409 profile_not_approved.
+          disabled={busy || !readyCompany}
+          onClick={() => readyCompany && void startProduct(readyCompany)}
         >
           <strong>Добавить продукт</strong>
-          <span>Агент соберёт данные, предложит классификацию и построит карту</span>
-        </Link>
+          <span>
+            {readyCompany
+              ? 'Агент соберёт данные, предложит классификацию и построит карту'
+              : 'Доступно после того, как профиль компании одобрен'}
+          </span>
+        </button>
       </div>
 
+      {organizations.isError ? <Callout tone="deadline">{describeError(organizations.error)}</Callout> : null}
+
       <h3 className={styles.sectionTitle}>Компании</h3>
+      {organizations.isLoading ? <Empty>{t('common.loading')}</Empty> : null}
+      {!organizations.isLoading && companies.length === 0 ? (
+        <Empty>Компаний пока нет. Начните с диалога — агент заполнит профиль.</Empty>
+      ) : null}
       <div className={ui.grid2}>
-        {companies.map((company) => {
-          const percent = progressPercent(company.sections)
-          const done = percent === 100
-          return (
-            <Card key={company.id} title={company.name} meta={company.registrationNumber}>
-              <div className={ui.row}>
-                <StatusBadge tone={company.riskLevel === 'low' ? 'accent' : 'warm'}>
-                  {company.riskLevel === 'low' ? 'риск низкий · берём в работу' : 'проверка рисков'}
-                </StatusBadge>
-                <StatusBadge tone="quiet">{company.productIds.length} продукт(а)</StatusBadge>
-              </div>
-              <KeyValue
-                items={[
-                  { key: 'Профиль', value: `${percent}%` },
-                  {
-                    key: 'Документы',
-                    value: done ? 'собраны' : 'агент продолжает собирать',
-                  },
-                ]}
-              />
-              {/* Незавершённая компания остаётся карточкой с кнопкой возврата в диалог. */}
-              {!done ? (
-                <Link to="/intake/company">Продолжить с агентом →</Link>
-              ) : null}
-            </Card>
-          )
-        })}
+        {companies.map((company) => (
+          <Card
+            key={company.id}
+            title={text(l10n(company.name, company.id)).value}
+            meta={company.completeness ? `${company.completeness.percent}%` : undefined}
+          >
+            <div className={ui.row}>
+              <StatusBadge tone={company.status === 'profile_approved' ? 'accent' : 'quiet'}>
+                {ORG_STATUS_LABEL[company.status]}
+              </StatusBadge>
+            </div>
+            {company.status !== 'profile_approved' ? (
+              <Link to="/intake/company/$organizationId" params={{ organizationId: company.id }} search={{}}>
+                Продолжить с агентом →
+              </Link>
+            ) : null}
+          </Card>
+        ))}
       </div>
 
       <h3 className={styles.sectionTitle}>Продукты</h3>
+      {products.isLoading ? <Empty>{t('common.loading')}</Empty> : null}
       <div className={ui.grid2}>
-        {products.map((product) => (
-          <Card key={product.id} title={product.name} meta={`Комплектность ${product.completeness}%`}>
+        {(products.data ?? []).map((product) => (
+          <Card
+            key={product.id}
+            title={text(l10n(product.name, product.id)).value}
+            meta={`Комплектность ${product.completeness}%`}
+          >
             <div className={ui.row}>
-              <StatusBadge tone={product.status === 'variant_selected' ? 'accent' : 'neutral'}>
-                {product.status === 'variant_selected' ? 'вариант выбран' : 'сбор данных'}
+              <StatusBadge tone={product.caseId ? 'accent' : 'quiet'}>
+                {PRODUCT_STATUS_LABEL[product.status]}
               </StatusBadge>
             </div>
             {product.caseId ? (
@@ -97,7 +159,7 @@ export function PortfolioPage() {
                 Открыть кейс →
               </Link>
             ) : (
-              <Link to="/intake/product/$companyId" params={{ companyId: product.companyId }}>
+              <Link to="/intake/product/$productId" params={{ productId: product.id }} search={{}}>
                 Продолжить с агентом →
               </Link>
             )}
@@ -105,12 +167,15 @@ export function PortfolioPage() {
         ))}
       </div>
 
-      {cases.isLoading ? <Empty>{t('common.loading')}</Empty> : null}
-
       <h3 className={styles.sectionTitle}>Кейсы</h3>
+      {cases.isLoading ? <Empty>{t('common.loading')}</Empty> : null}
       <div className={ui.grid2}>
         {(cases.data ?? []).map((item) => (
-          <Card key={item.id} title={`${item.code} · ${text(item.product).value}`} meta={text(item.manufacturer).value}>
+          <Card
+            key={item.id}
+            title={`${item.code} · ${text(l10n(item.product)).value}`}
+            meta={text(l10n(item.manufacturer)).value}
+          >
             <div className={ui.row}>
               <StatusBadge tone="accent">{t(`stage.${item.currentStage}`)}</StatusBadge>
               <StatusBadge>{t(`track.${item.track}`)}</StatusBadge>
@@ -120,7 +185,7 @@ export function PortfolioPage() {
             </div>
             <KeyValue
               items={[
-                { key: t('portfolio.waiting'), value: text(item.waitingFor).value },
+                { key: t('portfolio.waiting'), value: text(l10n(item.waitingFor)).value },
                 {
                   key: t('portfolio.due'),
                   value: (

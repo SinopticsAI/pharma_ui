@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useIdentity } from '@demo/api-client'
+import { useAuth } from '@demo/auth'
 import type { Locale } from '@demo/domain'
+import { l10n } from '@demo/domain'
 import { LOCALE_LABEL, useI18n } from '@demo/i18n'
-import { resetDemo } from '@demo/mock'
-import { AppShell, DemoBanner, LocaleSwitch } from '@demo/ui'
+import { AppShell, Button, LocaleSwitch } from '@demo/ui'
 
 const LOCALES: { value: Locale; label: string }[] = [
   { value: 'zh', label: LOCALE_LABEL.zh },
@@ -21,8 +22,9 @@ export function Shell({
   brandMeta?: string
   children: ReactNode
 }) {
-  const { t, locale, setLocale } = useI18n()
-  const queryClient = useQueryClient()
+  const { t, locale, setLocale, text } = useI18n()
+  const identity = useIdentity()
+  const { logout } = useAuth()
 
   useEffect(() => {
     document.documentElement.dataset.locale = locale
@@ -30,22 +32,21 @@ export function Shell({
     document.documentElement.lang = locale === 'zh' ? 'zh' : locale
   }, [locale])
 
+  const account = text(l10n(identity.account.name, identity.accountId)).value
+
   return (
     <AppShell
-      banner={
-        <DemoBanner
-          text={t('demo.banner')}
-          resetLabel={t('demo.reset')}
-          onReset={() => {
-            resetDemo()
-            void queryClient.invalidateQueries()
-          }}
-        />
-      }
       brandTitle={t('app.title')}
-      brandMeta={brandMeta}
+      brandMeta={brandMeta ?? `${account} · ${identity.displayName || identity.subject}`}
       contour={t('app.contour')}
-      actions={<LocaleSwitch value={locale} options={LOCALES} onChange={setLocale} />}
+      actions={
+        <>
+          <LocaleSwitch value={locale} options={LOCALES} onChange={setLocale} />
+          <Button variant="secondary" onClick={logout}>
+            {t('session.logout')}
+          </Button>
+        </>
+      }
       nav={nav}
       sidebarNote={t('mandate.noCrypto')}
     >

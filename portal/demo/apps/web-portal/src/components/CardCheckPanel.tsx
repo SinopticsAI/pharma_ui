@@ -1,4 +1,5 @@
 import { Check, TriangleAlert } from 'lucide-react'
+import type { CaseDetail } from '@demo/domain'
 import type { Application } from '../data/types'
 import { Callout } from './Ui'
 import { useI18n } from '../i18n'
@@ -10,8 +11,12 @@ interface Rule {
   hint: string
 }
 
-/** Работа 0.2: карточка проверяется по формальным правилам, без «магии квалификации». */
-export function CardCheckPanel({ application }: { application: Application }) {
+/**
+ * Работа 0.2: карточка проверяется по формальным правилам, без «магии
+ * квалификации». Инварианты кейса дублируются здесь, но не заменяют серверные:
+ * подачу всё равно блокирует ядро.
+ */
+export function CardCheckPanel({ application, detail }: { application: Application; detail: CaseDetail }) {
   const { t, kind } = useI18n()
 
   const rules: Rule[] = [
@@ -26,18 +31,18 @@ export function CardCheckPanel({ application }: { application: Application }) {
       hint: t('card.kindHint', { kind: kind(application.kind) }),
     },
     {
-      label: t('card.country'),
-      ok: application.country.trim().length > 1,
-      hint: t('card.countryHint'),
-    },
-    {
       label: t('card.manufacturer'),
       ok: application.manufacturer.trim().length > 2,
       hint: t('card.manufacturerHint'),
     },
     {
+      label: t('case.track'),
+      ok: Boolean(detail.case.trackConfirmed),
+      hint: t('case.planHint'),
+    },
+    {
       label: t('card.sites'),
-      ok: application.sites.trim().length > 2,
+      ok: detail.case.modelsLocked,
       hint: t('card.sitesHint'),
     },
   ]

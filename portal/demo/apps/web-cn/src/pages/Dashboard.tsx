@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { STAGE_ORDER, stagePosition } from '@demo/domain'
+import { STAGE_ORDER, l10n, stagePosition } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
 import {
   Callout,
@@ -8,7 +8,6 @@ import {
   Estimate,
   KeyValue,
   Metric,
-  Money,
   PageHeader,
   StagePills,
   StatusBadge,
@@ -17,43 +16,27 @@ import {
   ui,
 } from '@demo/ui'
 import { useCaseId } from '../CaseLayout'
-import { useCase, useDocuments, useLedger, useStatuses } from '../queries'
+import { useCase, useStatuses } from '../queries'
 
 export function DashboardPage() {
   const caseId = useCaseId()
-  const { t, text, money, dateTime } = useI18n()
+  const { t, text, dateTime } = useI18n()
   const caseQuery = useCase(caseId)
-  const documents = useDocuments(caseId)
-  const ledger = useLedger(caseId)
   const statuses = useStatuses(caseId)
 
-  const current = caseQuery.data
-  if (!current) return <Empty>{t('common.loading')}</Empty>
+  const detail = caseQuery.data
+  if (!detail) return <Empty>{t('common.loading')}</Empty>
 
-  const pending = [
-    ...(documents.data ?? [])
-      .filter((document) => document.versions.length === 0)
-      .map((document) => ({
-        id: document.id,
-        label: text(document.title).value,
-        owner: document.preparedBy,
-        note: document.awaitingFrom ? text(document.awaitingFrom).value : undefined,
-      })),
-    ...(ledger.data ?? [])
-      .filter((line) => line.status === 'accepted')
-      .map((line) => ({
-        id: line.id,
-        label: `${text(line.supplier).value} · ${text(line.purpose).value}`,
-        owner: 'ru' as const,
-        note: line.paymentDeadline ? text(line.paymentDeadline).value : undefined,
-      })),
-  ]
-
-  const recentLedger = (ledger.data ?? []).slice(-3).reverse()
+  const current = detail.case
+  const critical = detail.criticalNode
+  const entries = statuses.data ?? []
 
   return (
     <>
-      <PageHeader title={`${current.code} · ${text(current.product).value}`} lead={text(current.manufacturer).value} />
+      <PageHeader
+        title={`${current.code} · ${text(l10n(current.product)).value}`}
+        lead={text(l10n(current.manufacturer)).value}
+      />
 
       <Card>
         <StagePills
@@ -67,8 +50,17 @@ export function DashboardPage() {
 
       <div className={ui.split}>
         <div className={ui.stack}>
-          <Callout tone="deadline">
-            <strong>{t('case.waitingFor')}:</strong> {text(current.waitingFor).value} ·{' '}
+          {/* Одно следующее действие. Карта и список задач не должны расходиться. */}
+          {critical ? (
+            <Callout tone="deadline">
+              <strong>{t('map.critical')}:</strong> {critical.code} · {text(l10n(critical.title)).value} ·{' '}
+              <strong>{t('map.owner')}:</strong> {t(`nodeOwner.${critical.owner}`)}
+              {critical.dueHint ? ` · ${text(l10n(critical.dueHint)).value}` : ''}
+            </Callout>
+          ) : null}
+
+          <Callout tone="quiet">
+            <strong>{t('case.waitingFor')}:</strong> {text(l10n(current.waitingFor)).value} ·{' '}
             <strong>{t('case.deadline')}:</strong> {current.dueWorkingDays} {t('common.workingDays')} ·{' '}
             <strong>{t('case.nextStep')}:</strong> {t(`actor.${current.nextActor}`)}
           </Callout>
@@ -76,31 +68,13 @@ export function DashboardPage() {
           {!current.mandateComplete ? <Callout tone="deadline">{t('case.mandateOpen')}</Callout> : null}
           {!current.modelsLocked ? <Callout tone="quiet">{t('case.modelsOpen')}</Callout> : null}
 
-          <Card title={t('case.checklist')}>
-            {pending.length === 0 ? (
-              <Empty>{t('common.none')}</Empty>
-            ) : (
-              <ul className={ui.stack} style={{ margin: 0, paddingLeft: 18 }}>
-                {pending.map((item) => (
-                  <li key={item.id}>
-                    <div className={ui.row}>
-                      <span>{item.label}</span>
-                      <StatusBadge tone="quiet">{t(`actor.${item.owner}`)}</StatusBadge>
-                    </div>
-                    {item.note ? <span className={ui.muted}>{item.note}</span> : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-
           <Card title={t('case.digest')}>
-            {(statuses.data ?? []).length === 0 ? (
+            {entries.length === 0 ? (
               <Empty>{t('inbox.empty')}</Empty>
             ) : (
               <Timeline>
-                {(statuses.data ?? []).slice(0, 3).map((entry) => {
-                  const resolved = text(entry.text)
+                {entries.slice(0, 3).map((entry) => {
+                  const resolved = text(l10n(entry.text))
                   return (
                     <TimelineItem key={entry.id} date={dateTime(entry.enteredAt)}>
                       <span>{resolved.value}</span>
@@ -132,21 +106,20 @@ export function DashboardPage() {
             />
           </Card>
 
-          <Card title={t('case.miniLedger')}>
+          <Card title={t('map.title')}>
             <div className={ui.stack}>
-              {recentLedger.map((line) => (
-                <div key={line.id} className={ui.stack} style={{ gap: 4 }}>
-                  <div className={ui.cardHeader}>
-                    <span>{text(line.supplier).value}</span>
-                    <Money value={money(line.amount, line.currency)} />
-                  </div>
-                  <StatusBadge tone={line.type === 'commission' ? 'accent' : 'quiet'}>
-                    {line.type === 'commission' ? t('ledger.commission') : t('ledger.passThrough')}
+              {detail.nodeMap.slice(0, 5).map((node) => (
+                <div key={node.code} className={ui.cardHeader}>
+                  <span>
+                    {node.code} · {text(l10n(node.title)).value}
+                  </span>
+                  <StatusBadge tone={node.status === 'done' ? 'accent' : 'quiet'}>
+                    {t(`nodeStatus.${node.status}`)}
                   </StatusBadge>
                 </div>
               ))}
-              <Link to="/case/$caseId/ledger" params={{ caseId }}>
-                {t('case.openLedger')} →
+              <Link to="/case/$caseId/roadmap" params={{ caseId }}>
+                {t('map.title')} →
               </Link>
             </div>
           </Card>

@@ -1,13 +1,15 @@
-import { ORGANIZATION, USER } from '../data/types'
-import { usePortalStore } from '../data/store'
+import { useIdentity } from '@demo/api-client'
+import { useAuth } from '@demo/auth'
+import { l10n } from '@demo/domain'
 import { Button, Callout, Card, KeyValue, PageHeader } from '../components/Ui'
 import { LocaleSwitch } from '../components/LocaleSwitch'
 import { useI18n } from '../i18n'
 import styles from '../styles/ui.module.css'
 
 export function SettingsPage() {
-  const { resetDemo } = usePortalStore()
-  const { t } = useI18n()
+  const identity = useIdentity()
+  const { logout } = useAuth()
+  const { t, text } = useI18n()
 
   return (
     <>
@@ -16,22 +18,17 @@ export function SettingsPage() {
         <Card title={t('settings.profile')}>
           <KeyValue
             items={[
-              { key: t('settings.name'), value: USER.fullName },
-              { key: t('settings.role'), value: t('user.role') },
-              { key: t('settings.email'), value: USER.email },
+              { key: t('settings.name'), value: identity.displayName || t('common.unspecified') },
+              { key: t('settings.role'), value: t(`role.${identity.role}`) },
+              { key: t('settings.subject'), value: identity.subject },
             ]}
           />
-          <div style={{ marginTop: 16 }}>
-            <Button type="button" variant="secondary" disabled>
-              {t('settings.editProfile')}
-            </Button>
-          </div>
         </Card>
         <Card title={t('settings.org')}>
           <KeyValue
             items={[
-              { key: t('settings.legalEntity'), value: ORGANIZATION.name },
-              { key: t('settings.inn'), value: ORGANIZATION.inn },
+              { key: t('settings.legalEntity'), value: text(l10n(identity.account.name, identity.accountId).ru) },
+              { key: t('settings.accountStatus'), value: identity.account.status },
               { key: t('settings.regRole'), value: t('settings.regRoleValue') },
             ]}
           />
@@ -45,12 +42,13 @@ export function SettingsPage() {
         </div>
       </Card>
 
-      <Card title={t('settings.demo')}>
+      <Card title={t('settings.session')}>
         <div className={styles.list}>
-          <Callout tone="quiet">{t('settings.demoHint')}</Callout>
+          {/* Личностью владеет система входа, арендатором — продукт: роль меняет менеджер. */}
+          <Callout tone="quiet">{t('settings.sessionHint')}</Callout>
           <div>
-            <Button type="button" variant="secondary" onClick={resetDemo}>
-              {t('settings.reset')}
+            <Button type="button" variant="secondary" onClick={logout}>
+              {t('settings.logout')}
             </Button>
           </div>
         </div>

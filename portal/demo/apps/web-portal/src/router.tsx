@@ -1,7 +1,7 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
 import { AppShell } from './components/AppShell'
-import { ShellUiProvider } from './components/shell-ui'
-import { PortalStoreProvider } from './data/store'
+import { Session } from './Session'
 import { I18nProvider } from './i18n'
 import { ApplicationDetailPage } from './pages/ApplicationDetail'
 import { ApplicationsPage } from './pages/Applications'
@@ -13,14 +13,21 @@ import { SettingsPage } from './pages/Settings'
 import { TasksPage } from './pages/Tasks'
 import { WorkDetailPage } from './pages/WorkDetail'
 
+/** Обновления в кейсе приходят опросом: поток событий добавится позже. */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 15_000, refetchOnWindowFocus: true, retry: 1 },
+  },
+})
+
 function Root() {
   return (
     <I18nProvider defaultLocale="ru">
-      <PortalStoreProvider>
-        <ShellUiProvider>
+      <Session>
+        <QueryClientProvider client={queryClient}>
           <AppShell />
-        </ShellUiProvider>
-      </PortalStoreProvider>
+        </QueryClientProvider>
+      </Session>
     </I18nProvider>
   )
 }

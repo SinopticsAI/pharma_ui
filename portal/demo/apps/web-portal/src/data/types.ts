@@ -48,81 +48,21 @@ export interface Application {
   registry: RegistryCheck
   works: WorkItem[]
   journal: JournalEntry[]
-  nextDue: string
+  /** Нормативный отрезок в рабочих днях: ядро считает его, а не календарную дату. */
+  dueWorkingDays: number
+  waitingFor: string
   expert: string
   updatedAt: string
   createdAt: string
   owner: string
 }
 
-export interface AttentionItem {
-  id: string
-  applicationId: string
-  title: string
-  detail: string
-  due: string
-  severity: 'action' | 'remarks' | 'review'
-}
-
-export interface PortalDocument {
-  id: string
-  applicationId: string
-  name: string
-  kind: string
-  version: string
-  updatedAt: string
-  status: 'актуален' | 'ожидает загрузки' | 'на редактуре'
-}
-
-export interface Certificate {
-  id: string
-  number: string
-  product: string
-  registry: string
-  issuedOn: string
-  validUntil: string
-  status: 'действует' | 'ожидает записи' | 'истекает'
-}
-
-export interface Task {
-  id: string
-  title: string
-  applicationId: string
-  assignee: string
-  due: string
-  status: 'открыта' | 'в работе' | 'закрыта'
-}
-
-export interface Message {
-  id: string
-  from: string
-  role: string
-  applicationId: string
-  preview: string
-  at: string
-  unread: boolean
-}
-
-export interface NotificationItem {
-  id: string
-  title: string
-  body: string
-  at: string
-  unread: boolean
-  applicationId?: string
-}
-
-export const USER = {
-  firstName: 'Ирина',
-  lastName: 'Волкова',
-  fullName: 'Ирина Волкова',
-  initials: 'ИВ',
-  role: 'Руководитель регистрационного портфеля',
-  email: 'i.volkova@nordpharm.ru',
-}
-
-export const ORGANIZATION = {
-  name: 'ООО «НордФарм»',
-  inn: '7708123456',
-  short: 'НордФарм',
+/** Инициалы для аватара: имя приходит из личности, а не из сида. */
+export function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '—'
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
 }

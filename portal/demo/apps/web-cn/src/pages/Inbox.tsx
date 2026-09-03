@@ -1,8 +1,13 @@
+import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
 import { Card, Empty, PageHeader, StatusBadge, Timeline, TimelineItem, ui } from '@demo/ui'
 import { useCaseId } from '../CaseLayout'
 import { useStatuses } from '../queries'
 
+/**
+ * Статусы вносит оператор российской компании и прикладывает артефакт.
+ * Кабинет производителя читает их: писать статус здесь нечем и незачем.
+ */
 export function InboxPage() {
   const caseId = useCaseId()
   const { t, text, dateTime } = useI18n()
@@ -22,7 +27,7 @@ export function InboxPage() {
         ) : (
           <Timeline>
             {entries.map((entry) => {
-              const resolved = text(entry.text)
+              const resolved = text(l10n(entry.text))
               return (
                 <TimelineItem key={entry.id} date={dateTime(entry.enteredAt)}>
                   <span>{resolved.value}</span>

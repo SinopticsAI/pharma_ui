@@ -53,12 +53,14 @@ export type Track = 'pp1684' | 'eaeu46' | 'eaeu78'
 
 export type RiskClass = '1' | '2a' | '2b' | '3'
 
+export type ProductKind = 'device' | 'drug'
+
 export interface RegistrationCase {
   id: string
   code: string
   product: L10n
   manufacturer: L10n
-  kind: 'device' | 'drug'
+  kind: ProductKind
   track: Track
   riskClass: RiskClass
   currentStage: StageKey
@@ -69,6 +71,11 @@ export interface RegistrationCase {
   cycleMonths: [number, number]
   mandateComplete: boolean
   modelsLocked: boolean
+  accountId?: string
+  organizationId?: string
+  productId?: string
+  intakeSessionId?: string
+  trackConfirmed?: boolean
 }
 
 /**
@@ -156,6 +163,7 @@ export interface Mandate {
   operator: string
   role: 'upp' | 'mah-representative'
   steps: MandateStep[]
+  complete?: boolean
 }
 
 /**
@@ -219,4 +227,288 @@ export function ledgerTotals(lines: LedgerLine[]): { passThrough: number; commis
     },
     { passThrough: 0, commission: 0 },
   )
+}
+
+// --------------------------------------------------------------- контур Edge --
+//
+// Типы ниже повторяют мапперы `pharma-edge/scr/_shared/edge_domain.py`. Аккаунт
+// не берётся из токена: Keycloak владеет личностью, продукт — арендаторами, и
+// `sub` разрешается в аккаунт на стороне ядра.
+
+export type Role = 'client' | 'specialist' | 'operator' | 'admin'
+
+/** Контур запроса. Определяет маску полей, а не язык интерфейса. */
+export type Contour = 'cn' | 'ru'
+
+export interface Account {
+  id: string
+  name: Partial<L10n>
+  status: string
+}
+
+export interface Identity {
+  accountId: string
+  subject: string
+  role: Role
+  displayName: string
+  account: Account
+  can: {
+    approveAsSpecialist: boolean
+    operate: boolean
+  }
+}
+
+/** Что контур вправе показать. Решение принимает сервер, UI его повторяет. */
+export interface FieldMask {
+  mandateCredentials: boolean
+  ledgerPay: boolean
+  statusWrite: boolean
+  audit: boolean
+  chat: boolean
+  roadmap: boolean
+}
+
+export type OrganizationStatus = 'collecting' | 'draft' | 'profile_approved'
+
+export type SlotSection = 'identity' | 'documents' | 'authority' | 'banking' | 'risk'
+
+export type SlotStatus = 'pending' | 'in_progress' | 'filled' | 'not_required'
+
+/** Разбивка комплектности по разделам: её показывает панель диалога. */
+export interface ProgressSection {
+  key: SlotSection
+  filled: number
+  total: number
+}
+
+export interface Completeness {
+  filled: number
+  total: number
+  percent: number
+  ready: boolean
+  sections: ProgressSection[]
+}
+
+export interface OrganizationSlot {
+  key: string
+  section: SlotSection
+  title: Partial<L10n>
+  requirement?: Partial<L10n> | null
+  needsNotary: boolean
+  needsApostille: boolean
+  needsTranslation: boolean
+  optional: boolean
+  status: SlotStatus
+  documentId: string
+}
+
+export interface Organization {
+  id: string
+  accountId: string
+  kind: string
+  name: Partial<L10n>
+  status: OrganizationStatus
+  draft: DraftFields
+  profile: DraftFields
+  createdAt: string
+  updatedAt: string
+  slots?: OrganizationSlot[]
+  completeness?: Completeness
+}
+
+/**
+ * Черновик хранит происхождение, а не голое значение: поле без источника
+ * нельзя проверить, поэтому его нельзя показывать как факт.
+ */
+export interface DraftField {
+  value: string
+  source?: string
+  confidence?: number | null
+}
+
+export type DraftFields = Record<string, DraftField | string | undefined>
+
+export function draftValue(draft: DraftFields | undefined, key: string): string {
+  const entry = draft?.[key]
+  if (typeof entry === 'string') return entry
+  return entry?.value ?? ''
+}
+
+export type RiskLevel = 'low' | 'medium' | 'high' | 'unknown'
+
+export interface RiskReport {
+  id: string
+  organizationId: string
+  level: RiskLevel
+  verdict: 'pending' | 'accepted' | 'rejected'
+  reasoning: Partial<L10n>
+  checks: { key: string; outcome: string; note?: Partial<L10n> }[]
+  checkedBy: string
+  checkedAt: string
+}
+
+/**
+ * Документ компании после подтверждения получает `uploaded`, документ досье —
+ * `confirmed`: это две разные функции ядра, и статусы у них разные.
+ */
+export type ItemStatus = 'pending_upload' | 'uploaded' | 'confirmed' | 'parsed' | 'rejected'
+
+/** Документ интейка: уровня компании или продукта, до появления кейса. */
+export interface OrganizationItem {
+  id: string
+  organizationId: string
+  productId: string
+  level: 'company' | 'product'
+  itemType: string
+  title: Partial<L10n>
+  fileName: string
+  objectKey: string
+  status: ItemStatus
+  parcedData?: Record<string, unknown> | null
+  version: number
+  promotedFrom: string
+  promotedAt: string
+  updatedAt: string
+}
+
+/** Документ досье кейса. */
+export interface CaseItem {
+  id: string
+  caseId: string
+  itemType: string
+  title: Partial<L10n>
+  fileName: string
+  objectKey: string
+  status: ItemStatus
+  parcedData?: Record<string, unknown> | null
+}
+
+export interface UploadTicket {
+  uploadUrl: string
+  itemId: string
+  objectKey: string
+  expiresIn: number
+}
+
+export type ProductStatus =
+  | 'collecting'
+  | 'draft'
+  | 'data_approved'
+  | 'variants_pending'
+  | 'variant_selected'
+  | 'ru_confirmed'
+
+export interface Product {
+  id: string
+  accountId: string
+  organizationId: string
+  name: Partial<L10n>
+  kind: ProductKind | ''
+  status: ProductStatus
+  draft: DraftFields
+  completeness: number
+  selectedVariantId: string
+  specialistApprovedBy: string
+  specialistApprovedAt: string
+  clientApprovedBy: string
+  clientApprovedAt: string
+  caseId: string
+  updatedAt: string
+  documents?: OrganizationItem[]
+  missing?: string[]
+  variants?: ClassificationVariant[]
+}
+
+/**
+ * Вариант классификации. `forbidden` существует, чтобы его объяснить, а не
+ * выбрать: платформа отказывается подавать класс, который знает неверным.
+ */
+export interface ClassificationVariant {
+  id: string
+  productId: string
+  variantType: 'recommended' | 'alternative' | 'forbidden'
+  kind: ProductKind
+  track: Track
+  riskClass: RiskClass
+  title: Partial<L10n>
+  summary: Partial<L10n>
+  pros: Partial<L10n>[]
+  cons: Partial<L10n>[]
+  reason?: Partial<L10n> | null
+  budget: { currency?: string; baskets?: { key: string; amount: number }[] }
+  distribution: Record<string, unknown>
+  cycleMonths: [number, number]
+  selected: boolean
+}
+
+export type NodeStatus = 'done' | 'in_progress' | 'planned' | 'later' | 'goal'
+
+export type NodeOwner = 'you' | 'us' | 'contractor' | 'gov'
+
+/**
+ * Узел карты M0–M12. Узлы после подачи приходят со статусом `later`, а не
+ * скрываются: горизонт в 12–16 месяцев виден с первого дня и есть смысл карты.
+ */
+export interface NodeMapItem {
+  code: string
+  position: number
+  title: Partial<L10n>
+  note?: Partial<L10n> | null
+  status: NodeStatus
+  owner: NodeOwner
+  dueHint?: Partial<L10n> | null
+  blockedBy: string[]
+  critical: boolean
+}
+
+export interface CaseDetail {
+  case: RegistrationCase
+  fieldMask: FieldMask
+  nodeMap: NodeMapItem[]
+  criticalNode: NodeMapItem | null
+  mandate?: Mandate | MandateWithCredentials
+}
+
+export type IntakeScope = 'organization' | 'product'
+
+export interface IntakeSession {
+  id: string
+  accountId: string
+  scope: IntakeScope
+  organizationId: string
+  productId: string
+  status: string
+  locale: Locale
+  planeCaseId: string
+}
+
+export interface IntakeMessage {
+  id: string
+  sessionId: string
+  role: 'user' | 'agent' | 'system'
+  text: Partial<L10n>
+  itemId: string
+  payload?: Record<string, unknown> | null
+  at: string
+}
+
+/** Реестр — источник истины по номерам, а этот ответ лишь кэш: `truth` всегда false. */
+export interface RegistrySearch {
+  hits: { number?: string; holder?: string; title?: string; url?: string }[]
+  source: 'elk' | 'grls'
+  query: string
+  cached: boolean
+  truth: boolean
+}
+
+export function hasCredentials(mandate: Mandate | MandateWithCredentials | undefined): mandate is MandateWithCredentials {
+  return Boolean(mandate && Array.isArray((mandate as MandateWithCredentials).credentials))
+}
+
+/**
+ * Строка из ядра может прийти пустой или без русского варианта, а `resolveText`
+ * опирается на `ru`. Здесь этот разрыв закрывается один раз, а не в каждом экране.
+ */
+export function l10n(value: Partial<L10n> | undefined, fallback = ''): Translatable {
+  return { ...value, ru: value?.ru || value?.en || value?.zh || fallback }
 }

@@ -1,26 +1,27 @@
-import { StrictMode, type ReactNode } from 'react'
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
-import { useDemoSync } from '@demo/mock'
 import '@demo/ui/tokens.css'
+import { Session } from './Session'
 import { router } from './router'
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 0, refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: {
+      staleTime: 15_000,
+      refetchOnWindowFocus: true,
+      retry: 1,
+    },
+  },
 })
-
-function DemoSync({ children }: { children: ReactNode }) {
-  useDemoSync(useQueryClient())
-  return <>{children}</>
-}
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <DemoSync>
+    <Session>
+      <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
-      </DemoSync>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </Session>
   </StrictMode>,
 )

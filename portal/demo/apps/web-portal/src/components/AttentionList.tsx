@@ -12,7 +12,7 @@ interface AttentionRow {
   workCode: string
   title: string
   detail: string
-  due: string
+  dueWorkingDays: number
   severity: 'action' | 'remarks' | 'review'
 }
 
@@ -30,7 +30,7 @@ function severityOf(work: WorkItem): AttentionRow['severity'] {
 
 /** Блок внимания собирается из работ, а не из отдельного списка предупреждений. */
 export function AttentionList({ applications }: { applications: Application[] }) {
-  const { t, due, work, text } = useI18n()
+  const { t, work, text } = useI18n()
 
   const rows: AttentionRow[] = applications
     .flatMap((item) =>
@@ -42,11 +42,12 @@ export function AttentionList({ applications }: { applications: Application[] })
           workCode: itemWork.code,
           title: `${item.number} · ${itemWork.code}. ${work.title(item.kind, itemWork)}`,
           detail: itemWork.remark ? text(itemWork.remark) : work.summary(item.kind, itemWork),
-          due: item.nextDue,
+          dueWorkingDays: item.dueWorkingDays,
           severity: severityOf(itemWork),
         })),
     )
-    .sort((a, b) => a.due.localeCompare(b.due))
+    // Нормативный отрезок считает ядро в рабочих днях, календарной даты у него нет.
+    .sort((a, b) => a.dueWorkingDays - b.dueWorkingDays)
     .slice(0, 4)
 
   if (rows.length === 0) return <Empty>{t('attention.empty')}</Empty>
@@ -74,7 +75,7 @@ export function AttentionList({ applications }: { applications: Application[] })
               </span>
               <span className={`${styles.due} ${row.severity === 'remarks' ? styles.dueBad : styles.dueWarn}`}>
                 <Clock3 size={12} strokeWidth={1.75} aria-hidden="true" style={{ marginRight: 4, verticalAlign: '-1px' }} />
-                {due(row.due)}
+                {t('case.dueDays', { n: row.dueWorkingDays })}
               </span>
             </Link>
           </li>

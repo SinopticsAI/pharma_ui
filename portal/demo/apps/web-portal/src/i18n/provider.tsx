@@ -1,9 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { Certificate, Message, NotificationItem } from '../data/types'
-import type { JournalEntry, ProductKind, WorkField, WorkItem, WorkOwner, WorkStatus } from '../data/work'
+import type { ProductKind, WorkField, WorkItem, WorkOwner, WorkStatus } from '../data/work'
 import type { AppStatus, ProcedureType } from '../data/types'
 import { catalogs, type MessageKey } from './catalog'
-import { contentText, messageCopy, notificationCopy } from './content'
+import { contentText } from './content'
 import {
   fieldHint,
   fieldLabel,
@@ -40,7 +39,6 @@ interface I18nValue {
   owner: (value: WorkOwner) => string
   status: (value: AppStatus) => string
   procedure: (value: ProcedureType) => string
-  certStatus: (value: Certificate['status']) => string
   text: (value: string) => string
   product: (value: string) => string
   form: (value: string) => string
@@ -61,9 +59,6 @@ interface I18nValue {
     portalFee: (url: string, fallback?: string) => string | undefined
     portalNotThis: (url: string, fallback?: string[]) => string[] | undefined
   }
-  message: (item: Message) => { role: string; preview: string }
-  notification: (item: NotificationItem) => { title: string; body: string }
-  journal: (entry: JournalEntry, kind?: ProductKind, workTitleFallback?: string) => string
 }
 
 const I18nContext = createContext<I18nValue | null>(null)
@@ -71,12 +66,6 @@ const I18nContext = createContext<I18nValue | null>(null)
 function interpolate(template: string, vars?: Vars): string {
   if (!vars) return template
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(vars[key] ?? `{${key}}`))
-}
-
-function parseJournal(action: string): { key: string; parts: string[] } | null {
-  if (!action.startsWith('journal.')) return null
-  const [key, ...parts] = action.split('|')
-  return { key, parts }
 }
 
 export function I18nProvider({
@@ -150,7 +139,6 @@ export function I18nProvider({
       owner: (value) => t(`owner.${value}` as MessageKey),
       status: (value) => t(`status.${value}` as MessageKey),
       procedure: (value) => t(`procedure.${value}` as MessageKey),
-      certStatus: (value) => t(`certStatus.${value}` as MessageKey),
       text: (value) => contentText(value, locale),
       product: (value) => contentText(value, locale),
       form: (value) => contentText(value, locale),
@@ -170,42 +158,6 @@ export function I18nProvider({
         portalWhen: (url, fallback) => portalWhen(url, fallback, locale),
         portalFee: (url, fallback) => portalFee(url, fallback, locale),
         portalNotThis: (url, fallback) => portalNotThis(url, fallback, locale),
-      },
-      message: (item) => {
-        const copy = messageCopy(item.id, locale)
-        return { role: copy.role || contentText(item.role, locale), preview: copy.preview || item.preview }
-      },
-      notification: (item) => {
-        const copy = notificationCopy(item.id, locale)
-        return { title: copy.title || item.title, body: copy.body || item.body }
-      },
-      journal: (entry, kind, workTitleFallback) => {
-        const parsed = parseJournal(entry.action)
-        if (!parsed) {
-          const translated = contentText(entry.action, locale)
-          return translated
-        }
-        const { key, parts } = parsed
-        if (key === 'journal.caseCreated') return t('journal.caseCreated')
-        if (key === 'journal.statusChanged') return t('journal.statusChanged', { status: workStatus(parts[0] as WorkStatus) })
-        if (key === 'journal.workConfirmed') return t('journal.workConfirmed', { actor: contentText(parts[0] ?? '', locale) })
-        if (key === 'journal.fileUploaded') return t('journal.fileUploaded', { file: parts[0] ?? '' })
-        if (key === 'journal.fieldChanged') {
-          return t('journal.fieldChanged', { field: parts[0] ?? '', value: optionLabel(parts[1] ?? '—', locale) || parts[1] || '—' })
-        }
-        if (key === 'journal.remarkSet') return t('journal.remarkSet', { remark: contentText(parts[0] ?? '', locale) })
-        if (key === 'journal.remarkCleared') return t('journal.remarkCleared')
-        if (key === 'journal.registryFound') return t('journal.registryFound', { number: parts[0] || t('case.numberMissing') })
-        if (key === 'journal.registryNotFound') return t('journal.registryNotFound')
-        if (key === 'journal.workMoved') {
-          const title =
-            kind && parts[0]
-              ? workTitle(kind, parts[0], workTitleFallback ?? parts[0], locale)
-              : (workTitleFallback ?? parts[0] ?? '')
-          return t('journal.workMoved', { title, status: workStatus((parts[1] ?? 'not_started') as WorkStatus) })
-        }
-        if (key === 'journal.caseUpdated') return t('journal.caseUpdated')
-        return entry.action
       },
     }
   }, [locale, setLocale])

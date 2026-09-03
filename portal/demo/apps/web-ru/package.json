@@ -10,9 +10,10 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@demo/api-client": "*",
+    "@demo/auth": "*",
     "@demo/domain": "*",
     "@demo/i18n": "*",
-    "@demo/mock": "*",
     "@demo/ui": "*"
   }
 }

@@ -14,16 +14,24 @@ const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
 const portfolioRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: PortfolioPage })
 
-// Две точки входа: компания и продукт. Продукт всегда привязан к компании.
+// Две точки входа: компания и продукт. Идентификаторы настоящие — диалог
+// продолжается по той же сущности, а не начинается заново. Сессия диалога
+// держится в адресе, потому что у ядра нет поиска сессии по компании.
+const sessionSearch = (search: Record<string, unknown>): { session?: string } => ({
+  session: typeof search.session === 'string' ? search.session : undefined,
+})
+
 const intakeCompanyRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: 'intake/company',
+  path: 'intake/company/$organizationId',
+  validateSearch: sessionSearch,
   component: IntakeCompanyPage,
 })
 
 const intakeProductRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: 'intake/product/$companyId',
+  path: 'intake/product/$productId',
+  validateSearch: sessionSearch,
   component: IntakeProductPage,
 })
 

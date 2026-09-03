@@ -8,7 +8,7 @@ import styles from '../styles/ui.module.css'
 
 export function FeaturedApplication({ application }: { application: Application }) {
   const navigate = useNavigate()
-  const { t, kind, procedure, owner, due, expert, product, work } = useI18n()
+  const { t, kind, procedure, owner, product, work } = useI18n()
   const current = currentWork(application.works)
   const progress = caseProgress(application)
 
@@ -35,13 +35,13 @@ export function FeaturedApplication({ application }: { application: Application 
         <div>
           <dt>{t('featured.due')}</dt>
           <dd>
-            {due(application.nextDue)}
+            {t('case.dueDays', { n: application.dueWorkingDays })}
             {current ? t('featured.owner', { owner: owner(current.owner) }) : ''}
           </dd>
         </div>
         <div>
-          <dt>{t('featured.expert')}</dt>
-          <dd>{application.expert ? expert(application.expert) : t('common.unassigned')}</dd>
+          <dt>{t('case.waiting')}</dt>
+          <dd>{application.waitingFor || t('common.dash')}</dd>
         </div>
       </dl>
       <Progress

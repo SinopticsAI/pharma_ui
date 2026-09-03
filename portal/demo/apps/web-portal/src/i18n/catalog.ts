@@ -319,6 +319,82 @@ export const ru = {
   'common.unassigned': 'не назначен',
   'common.unspecified': 'не указана',
   'common.dash': '—',
+
+  'session.signingIn': 'Проверяем вход',
+  'session.loading': 'Загружаем кабинет',
+  'session.retry': 'Повторить',
+  'session.signInFailed': 'Вход не завершён',
+  'session.errorTitle': 'Ядро кабинета не ответило',
+  'session.notLinkedTitle': 'Пользователь не привязан к аккаунту',
+  'session.notLinkedLead':
+    'Вход выполнен, но этот пользователь ещё не связан с аккаунтом. Аккаунты заводит менеджер: саморегистрации в кабинете нет.',
+
+  'role.client': 'клиент',
+  'role.specialist': 'регуляторный специалист',
+  'role.operator': 'оператор',
+  'role.admin': 'администратор',
+
+  'settings.subject': 'Идентификатор пользователя',
+  'settings.accountStatus': 'Состояние аккаунта',
+  'settings.logout': 'Выйти',
+  'settings.session': 'Вход и аккаунт',
+  'settings.sessionHint':
+    'Личностью владеет система входа, аккаунтом — продукт. Смена роли и организации выполняется менеджером, не из кабинета.',
+
+  'overview.kpi.total': 'Кейсов в портфеле',
+  'overview.kpi.totalHint': 'одно будущее удостоверение — один кейс',
+
+  'cases.empty': 'Кейсов пока нет. Кейс появляется после того, как классификацию утвердят специалист и клиент.',
+  'case.dueDays': 'осталось {n} р.д.',
+  'case.waiting': 'Ждём',
+  'case.track': 'Правовой трек',
+  'case.riskClass': 'Класс риска',
+
+  'map.title': 'Карта процесса',
+  'map.lead': 'Узлы без отдельной работы в порядке: они видны, чтобы горизонт кейса читался целиком.',
+  'map.empty': 'Карта появится, когда классификацию утвердят специалист и клиент.',
+  'map.critical': 'следующий шаг',
+  'map.due': 'Ориентир',
+
+  'node.done': 'закрыт',
+  'node.in_progress': 'в работе',
+  'node.planned': 'запланирован',
+  'node.later': 'позже',
+  'node.goal': 'цель',
+  'nodeOwner.you': 'вы',
+  'nodeOwner.us': 'мы',
+  'nodeOwner.contractor': 'подрядчик',
+  'nodeOwner.gov': 'госорган',
+
+  'documents.col.type': 'Тип',
+  'documents.itemStatus.pending_upload': 'ожидает загрузки',
+  'documents.itemStatus.uploaded': 'загружен',
+  'documents.itemStatus.confirmed': 'загружен',
+  'documents.itemStatus.parsed': 'разобран',
+  'documents.itemStatus.rejected': 'отклонён',
+
+  'certificates.empty':
+    'Реестровые записи ядро кабинета пока не отдаёт. Источник истины — ГРЛС и государственный реестр медицинских изделий.',
+  'messages.empty': 'Переписку по кейсу ядро кабинета пока не отдаёт.',
+
+  'registry.lookup': 'Поиск в реестре',
+  'registry.query': 'Что искать',
+  'registry.source': 'Реестр',
+  'registry.sourceElk': 'Реестр медицинских изделий',
+  'registry.sourceGrls': 'ГРЛС',
+  'registry.searchEmpty': 'Ядро вернуло пустой ответ. Сверка выполняется вручную по ссылке на реестр.',
+  'registry.cache': 'Ответ ядра — кэш, а не источник истины. Расхождение записи и досье блокирует подачу.',
+
+  'work.draft': 'Карточка продукта из ядра',
+  'work.draftHint': 'Значения распознал агент. Поле без источника проверить нельзя, поэтому источник показан рядом.',
+  'work.draftEmpty': 'Ядро ещё не вернуло распознанных полей по этому продукту.',
+  'work.source': 'источник',
+  'work.dossier': 'Документы досье кейса',
+  'work.dossierEmpty': 'Документов досье по кейсу пока нет.',
+  'work.uploadDossier': 'Приложить в досье',
+  'work.uploading': 'Загружаем файл',
+  'work.uploadHint':
+    'Файл уходит в хранилище напрямую по подписанной ссылке: кабинет держит метаданные и версию, а не содержимое.',
 } as const
 
 export type MessageKey = keyof typeof ru
@@ -640,6 +716,82 @@ export const en: Record<MessageKey, string> = {
   'common.unassigned': 'not assigned',
   'common.unspecified': 'not specified',
   'common.dash': '—',
+
+  'session.signingIn': 'Checking the sign-in',
+  'session.loading': 'Loading the workspace',
+  'session.retry': 'Try again',
+  'session.signInFailed': 'Sign-in did not complete',
+  'session.errorTitle': 'The workspace core did not answer',
+  'session.notLinkedTitle': 'The user is not attached to an account',
+  'session.notLinkedLead':
+    'Sign-in succeeded, but this user is not linked to an account yet. Accounts are created by a manager: there is no self-registration.',
+
+  'role.client': 'client',
+  'role.specialist': 'regulatory specialist',
+  'role.operator': 'operator',
+  'role.admin': 'administrator',
+
+  'settings.subject': 'User identifier',
+  'settings.accountStatus': 'Account state',
+  'settings.logout': 'Sign out',
+  'settings.session': 'Sign-in and account',
+  'settings.sessionHint':
+    'Identity belongs to the sign-in system, tenancy to the product. Role and organization are changed by a manager, not from the workspace.',
+
+  'overview.kpi.total': 'Cases in the portfolio',
+  'overview.kpi.totalHint': 'one future authorization is one case',
+
+  'cases.empty': 'No cases yet. A case appears once a specialist and the client have confirmed the classification.',
+  'case.dueDays': '{n} working days left',
+  'case.waiting': 'Waiting for',
+  'case.track': 'Legal track',
+  'case.riskClass': 'Risk class',
+
+  'map.title': 'Process map',
+  'map.lead': 'Nodes without their own work item: they stay visible so the horizon of the case reads in full.',
+  'map.empty': 'The map appears once a specialist and the client have confirmed the classification.',
+  'map.critical': 'next step',
+  'map.due': 'Estimate',
+
+  'node.done': 'closed',
+  'node.in_progress': 'in progress',
+  'node.planned': 'planned',
+  'node.later': 'later',
+  'node.goal': 'goal',
+  'nodeOwner.you': 'you',
+  'nodeOwner.us': 'we',
+  'nodeOwner.contractor': 'contractor',
+  'nodeOwner.gov': 'government body',
+
+  'documents.col.type': 'Type',
+  'documents.itemStatus.pending_upload': 'awaiting upload',
+  'documents.itemStatus.uploaded': 'uploaded',
+  'documents.itemStatus.confirmed': 'uploaded',
+  'documents.itemStatus.parsed': 'extracted',
+  'documents.itemStatus.rejected': 'rejected',
+
+  'certificates.empty':
+    'The workspace core does not serve registry records yet. The source of truth is GRLS and the state register of medical devices.',
+  'messages.empty': 'The workspace core does not serve case correspondence yet.',
+
+  'registry.lookup': 'Registry lookup',
+  'registry.query': 'Search for',
+  'registry.source': 'Registry',
+  'registry.sourceElk': 'State register of medical devices',
+  'registry.sourceGrls': 'GRLS',
+  'registry.searchEmpty': 'The core returned an empty answer. The check is done by hand through the registry link.',
+  'registry.cache': 'The answer is a cache, not the source of truth. A mismatch with the dossier blocks filing.',
+
+  'work.draft': 'Product card from the core',
+  'work.draftHint': 'The values were extracted by the agent. A field without a source cannot be checked, so the source is shown next to it.',
+  'work.draftEmpty': 'The core has not returned extracted fields for this product yet.',
+  'work.source': 'source',
+  'work.dossier': 'Dossier documents of the case',
+  'work.dossierEmpty': 'No dossier documents for this case yet.',
+  'work.uploadDossier': 'Attach to the dossier',
+  'work.uploading': 'Uploading the file',
+  'work.uploadHint':
+    'The file goes straight to storage over a presigned link: the workspace keeps metadata and the version, not the content.',
 }
 
 export const zh: Record<MessageKey, string> = {
@@ -955,6 +1107,78 @@ export const zh: Record<MessageKey, string> = {
   'common.unassigned': '未指定',
   'common.unspecified': '未填写',
   'common.dash': '—',
+
+  'session.signingIn': '正在校验登录',
+  'session.loading': '正在加载工作台',
+  'session.retry': '重试',
+  'session.signInFailed': '登录未完成',
+  'session.errorTitle': '工作台内核未响应',
+  'session.notLinkedTitle': '该用户尚未关联账户',
+  'session.notLinkedLead': '登录成功，但该用户还未关联到账户。账户由经理创建，工作台不支持自助注册。',
+
+  'role.client': '客户',
+  'role.specialist': '注册专家',
+  'role.operator': '操作人员',
+  'role.admin': '管理员',
+
+  'settings.subject': '用户标识',
+  'settings.accountStatus': '账户状态',
+  'settings.logout': '退出',
+  'settings.session': '登录与账户',
+  'settings.sessionHint': '身份归登录系统，租户归产品。角色与组织由经理变更，不在工作台内操作。',
+
+  'overview.kpi.total': '组合内案件数',
+  'overview.kpi.totalHint': '一个未来的注册证对应一个案件',
+
+  'cases.empty': '暂无案件。在专家与客户确认定性之后才会生成案件。',
+  'case.dueDays': '剩余 {n} 个工作日',
+  'case.waiting': '等待',
+  'case.track': '法律路径',
+  'case.riskClass': '风险等级',
+
+  'map.title': '流程图',
+  'map.lead': '没有单独工作项的节点：保留显示，以便完整看到案件周期。',
+  'map.empty': '在专家与客户确认定性之后才会生成流程图。',
+  'map.critical': '下一步',
+  'map.due': '参考时间',
+
+  'node.done': '已完成',
+  'node.in_progress': '进行中',
+  'node.planned': '已计划',
+  'node.later': '稍后',
+  'node.goal': '目标',
+  'nodeOwner.you': '您',
+  'nodeOwner.us': '我们',
+  'nodeOwner.contractor': '承包方',
+  'nodeOwner.gov': '政府机构',
+
+  'documents.col.type': '类型',
+  'documents.itemStatus.pending_upload': '待上传',
+  'documents.itemStatus.uploaded': '已上传',
+  'documents.itemStatus.confirmed': '已上传',
+  'documents.itemStatus.parsed': '已识别',
+  'documents.itemStatus.rejected': '已拒绝',
+
+  'certificates.empty': '内核尚未提供登记记录。真实来源为 ГРЛС 与国家医疗器械注册登记簿。',
+  'messages.empty': '内核尚未提供案件沟通记录。',
+
+  'registry.lookup': '登记簿查询',
+  'registry.query': '查询内容',
+  'registry.source': '登记簿',
+  'registry.sourceElk': '国家医疗器械注册登记簿',
+  'registry.sourceGrls': 'ГРЛС',
+  'registry.searchEmpty': '内核返回空结果。请通过登记簿链接人工核对。',
+  'registry.cache': '该结果为缓存，并非真实来源。记录与档案不一致将阻断递交。',
+
+  'work.draft': '来自内核的产品卡片',
+  'work.draftHint': '数值由智能体识别。没有来源的字段无法核对，因此来源显示在旁边。',
+  'work.draftEmpty': '内核尚未返回该产品的识别字段。',
+  'work.source': '来源',
+  'work.dossier': '案件档案文件',
+  'work.dossierEmpty': '该案件暂无档案文件。',
+  'work.uploadDossier': '上传至档案',
+  'work.uploading': '正在上传文件',
+  'work.uploadHint': '文件通过签名链接直接进入存储：工作台只保存元数据与版本，不保存内容。',
 }
 
 export const catalogs = { ru, en, zh } as const

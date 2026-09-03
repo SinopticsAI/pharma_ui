@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   Award,
-  Bell,
   Building2,
   CheckSquare,
   FileText,
@@ -14,12 +13,12 @@ import {
   Settings,
   X,
 } from 'lucide-react'
-import { NOTIFICATIONS } from '../data/seed'
-import { ORGANIZATION, USER } from '../data/types'
+import { useIdentity } from '@demo/api-client'
+import { useAuth } from '@demo/auth'
+import { l10n } from '@demo/domain'
+import { initialsOf } from '../data/types'
 import { useI18n } from '../i18n'
-import { CreateApplicationModal } from './CreateApplicationModal'
 import { LocaleSwitch } from './LocaleSwitch'
-import { useShellUi } from './shell-ui'
 import styles from '../styles/shell.module.css'
 
 const NAV = [
@@ -35,30 +34,26 @@ const NAV = [
 export function AppShell() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const navigate = useNavigate()
-  const { createOpen, closeCreate } = useShellUi()
-  const { t, dateTime, notification } = useI18n()
+  const { t, text } = useI18n()
+  const identity = useIdentity()
+  const { logout } = useAuth()
   const [drawer, setDrawer] = useState(false)
-  const [notesOpen, setNotesOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const notesRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setDrawer(false)
-    setNotesOpen(false)
     setMenuOpen(false)
   }, [pathname])
 
   useEffect(() => {
     const onDoc = (event: MouseEvent) => {
       const target = event.target as Node
-      if (notesRef.current && !notesRef.current.contains(target)) setNotesOpen(false)
       if (menuRef.current && !menuRef.current.contains(target)) setMenuOpen(false)
     }
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setNotesOpen(false)
         setMenuOpen(false)
         setDrawer(false)
       }
@@ -71,7 +66,8 @@ export function AppShell() {
     }
   }, [])
 
-  const unread = NOTIFICATIONS.some((item) => item.unread)
+  const account = text(l10n(identity.account.name, identity.accountId).ru)
+  const userName = identity.displayName || identity.subject
 
   return (
     <div className={styles.shell}>
@@ -141,76 +137,33 @@ export function AppShell() {
 
         <span className={styles.org}>
           <Building2 size={16} strokeWidth={1.75} aria-hidden="true" />
-          {ORGANIZATION.name}
+          {account}
         </span>
 
         <LocaleSwitch />
-
-        <div className={styles.wrap} ref={notesRef}>
-          <button
-            type="button"
-            className={styles.iconBtn}
-            aria-label={t('app.notifications')}
-            aria-expanded={notesOpen}
-            aria-haspopup="dialog"
-            onClick={() => {
-              setNotesOpen((value) => !value)
-              setMenuOpen(false)
-            }}
-          >
-            <Bell size={18} strokeWidth={1.75} />
-            {unread ? <span className={styles.dot} aria-hidden="true" /> : null}
-          </button>
-          {notesOpen ? (
-            <div className={styles.popover} role="dialog" aria-label={t('app.notifications')}>
-              <div className={styles.popoverTitle}>{t('app.notifications')}</div>
-              {NOTIFICATIONS.map((item) => {
-                const copy = notification(item)
-                return (
-                  <Link
-                    key={item.id}
-                    to={item.applicationId ? '/applications/$applicationId' : '/'}
-                    params={item.applicationId ? { applicationId: item.applicationId } : undefined}
-                    className={`${styles.note} ${item.unread ? styles.unread : ''}`}
-                  >
-                    <span className={styles.noteTitle}>{copy.title}</span>
-                    <span className={styles.noteBody}>{copy.body}</span>
-                    <span className={styles.noteTime}>{dateTime(item.at)}</span>
-                  </Link>
-                )
-              })}
-            </div>
-          ) : null}
-        </div>
 
         <div className={styles.wrap} ref={menuRef}>
           <button
             type="button"
             className={styles.avatar}
-            aria-label={t('app.userMenu', { name: USER.fullName })}
+            aria-label={t('app.userMenu', { name: userName })}
             aria-expanded={menuOpen}
             aria-haspopup="menu"
-            onClick={() => {
-              setMenuOpen((value) => !value)
-              setNotesOpen(false)
-            }}
+            onClick={() => setMenuOpen((value) => !value)}
           >
-            {USER.initials}
+            {initialsOf(userName)}
           </button>
           {menuOpen ? (
             <div className={styles.menu} role="menu" aria-label={t('app.userMenuAria')}>
               <div className={styles.popoverTitle}>
-                {USER.fullName}
-                <span className={styles.noteBody}>{t('user.role')}</span>
+                {userName}
+                <span className={styles.noteBody}>{t(`role.${identity.role}`)}</span>
               </div>
               <Link to="/settings" role="menuitem" className={styles.note}>
                 {t('app.profileSettings')}
               </Link>
-              <button type="button" role="menuitem" disabled>
-                {t('app.switchOrg')}
-              </button>
-              <button type="button" role="menuitem" disabled>
-                {t('app.logout')}
+              <button type="button" role="menuitem" className={styles.note} onClick={logout}>
+                {t('settings.logout')}
               </button>
             </div>
           ) : null}
@@ -220,8 +173,6 @@ export function AppShell() {
       <main className={styles.main}>
         <Outlet />
       </main>
-
-      {createOpen ? <CreateApplicationModal onClose={closeCreate} /> : null}
     </div>
   )
 }

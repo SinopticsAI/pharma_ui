@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { resetDemo } from '@demo/mock'
-import { AppShell, DemoBanner } from '@demo/ui'
+import { useIdentity } from '@demo/api-client'
+import { useAuth } from '@demo/auth'
+import { AppShell, Button } from '@demo/ui'
+import { ROLE_LABEL } from './labels'
 
 export function Shell({ nav, brandMeta, children }: { nav: ReactNode; brandMeta?: string; children: ReactNode }) {
-  const queryClient = useQueryClient()
+  const identity = useIdentity()
+  const { logout } = useAuth()
 
   useEffect(() => {
     document.documentElement.dataset.locale = 'ru'
@@ -14,19 +16,14 @@ export function Shell({ nav, brandMeta, children }: { nav: ReactNode; brandMeta?
 
   return (
     <AppShell
-      banner={
-        <DemoBanner
-          text="Демонстрация на условных данных: кейсы, счета и статусы вымышлены"
-          resetLabel="Сбросить демо"
-          onReset={() => {
-            resetDemo()
-            void queryClient.invalidateQueries()
-          }}
-        />
-      }
       brandTitle="Консоль оператора РФ"
-      brandMeta={brandMeta}
+      brandMeta={brandMeta ?? `${identity.displayName || identity.subject} · ${ROLE_LABEL[identity.role]}`}
       contour="Контур РФ"
+      actions={
+        <Button variant="secondary" onClick={logout}>
+          Выйти
+        </Button>
+      }
       nav={nav}
       sidebarNote="Подписание идёт на рабочем месте оператора: портал хранит подписанный пакет и квитанции, но не ключи."
     >

@@ -1,85 +1,79 @@
+import { useQueries } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { usePortalStore } from '../data/store'
+import { useApi } from '@demo/api-client'
+import type { CaseItem } from '@demo/domain'
+import { l10n } from '@demo/domain'
+import { useCases } from '../data/portal'
 import { Card, Empty, PageHeader } from '../components/Ui'
 import { useI18n } from '../i18n'
 import styles from '../styles/ui.module.css'
 
-/** Документы кабинета — это слоты чеклистов внутри работ, а не отдельный архив. */
+/** Документы кабинета — досье кейсов. Отдельного архива в ядре нет. */
 export function DocumentsPage() {
-  const { applications } = usePortalStore()
-  const { t, owner, date, work } = useI18n()
+  const api = useApi()
+  const cases = useCases()
+  const applications = cases.data ?? []
+  const { t } = useI18n()
 
-  const rows = applications.flatMap((item) =>
-    item.works.flatMap((itemWork) =>
-      itemWork.slots.map((slot) => ({
-        id: `${item.id}-${itemWork.code}-${slot.id}`,
-        applicationId: item.id,
-        number: item.number,
-        kind: item.kind,
-        workCode: itemWork.code,
-        workTitle: work.title(item.kind, itemWork),
-        title: work.slotTitle(item.kind, itemWork, slot.id, slot.title),
-        preparedBy: slot.preparedBy,
-        needs: [
-          slot.needsNotary ? t('legal.notary') : null,
-          slot.needsApostille ? t('legal.apostille') : null,
-          slot.needsTranslation ? t('legal.translation') : null,
-          slot.optional ? t('legal.optional') : null,
-        ].filter(Boolean) as string[],
-        file: slot.files.at(-1),
-      })),
-    ),
-  )
+  const itemQueries = useQueries({
+    queries: applications.map((item) => ({
+      queryKey: ['case-items', item.id],
+      queryFn: () => api.listCaseItems(item.id),
+    })),
+  })
+
+  const rows = applications.flatMap((item, index) => {
+    const items: CaseItem[] = itemQueries[index]?.data ?? []
+    return items.map((entry) => ({
+      id: entry.id,
+      applicationId: item.id,
+      number: item.number,
+      title: l10n(entry.title, entry.fileName).ru,
+      itemType: entry.itemType,
+      fileName: entry.fileName,
+      status: entry.status,
+    }))
+  })
+
+  const loading = cases.isLoading || itemQueries.some((query) => query.isLoading)
 
   return (
     <>
       <PageHeader title={t('documents.title')} subtitle={t('documents.subtitle')} />
       <Card>
-        {rows.length === 0 ? (
-          <Empty>{t('documents.empty')}</Empty>
-        ) : (
+        {loading ? <Empty>{t('session.loading')}</Empty> : null}
+        {!loading && rows.length === 0 ? <Empty>{t('documents.empty')}</Empty> : null}
+        {rows.length > 0 ? (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
                 <tr>
                   <th>{t('documents.col.doc')}</th>
                   <th>{t('documents.col.case')}</th>
-                  <th>{t('documents.col.owner')}</th>
-                  <th>{t('documents.col.legal')}</th>
+                  <th>{t('documents.col.type')}</th>
                   <th>{t('documents.col.status')}</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id} style={{ cursor: 'default' }}>
-                    <td>{row.title}</td>
                     <td>
-                      <Link
-                        to="/applications/$applicationId/works/$workCode"
-                        params={{ applicationId: row.applicationId, workCode: row.workCode }}
-                      >
-                        {row.number} · {row.workCode}
+                      {row.title}
+                      <div className={styles.formHint}>{row.fileName}</div>
+                    </td>
+                    <td>
+                      <Link to="/applications/$applicationId" params={{ applicationId: row.applicationId }}>
+                        {row.number}
                       </Link>
-                      <div className={styles.formHint}>{row.workTitle}</div>
                     </td>
-                    <td>{owner(row.preparedBy)}</td>
-                    <td>{row.needs.length > 0 ? row.needs.join(', ') : t('common.dash')}</td>
-                    <td>
-                      {row.file ? (
-                        <>
-                          {row.file.name}
-                          <div className={styles.formHint}>{t('documents.uploaded', { date: date(row.file.at) })}</div>
-                        </>
-                      ) : (
-                        t('documents.awaiting')
-                      )}
-                    </td>
+                    <td>{row.itemType}</td>
+                    <td>{t(`documents.itemStatus.${row.status}`)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
+        ) : null}
       </Card>
     </>
   )

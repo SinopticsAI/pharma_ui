@@ -1,4 +1,35 @@
-import type { Actor, LedgerStatus, MandateStepKey, StageKey, Track } from '@demo/domain'
+import type {
+  Actor,
+  LedgerStatus,
+  MandateStepKey,
+  NodeOwner,
+  NodeStatus,
+  Role,
+  StageKey,
+  Track,
+} from '@demo/domain'
+
+export const ROLE_LABEL: Record<Role, string> = {
+  client: 'клиент',
+  specialist: 'регуляторный специалист',
+  operator: 'оператор',
+  admin: 'администратор',
+}
+
+export const NODE_STATUS_LABEL: Record<NodeStatus, string> = {
+  done: 'закрыт',
+  in_progress: 'в работе',
+  planned: 'запланирован',
+  later: 'позже',
+  goal: 'цель',
+}
+
+export const NODE_OWNER_LABEL: Record<NodeOwner, string> = {
+  you: 'клиент',
+  us: 'мы',
+  contractor: 'подрядчик',
+  gov: 'госорган',
+}
 
 export const STAGE_LABEL: Record<StageKey, string> = {
   onboarding: 'Онбординг',

@@ -1,5 +1,7 @@
 import { Link, Outlet, useParams } from '@tanstack/react-router'
-import { Empty, ui } from '@demo/ui'
+import { describeError } from '@demo/api-client'
+import { l10n } from '@demo/domain'
+import { Callout, Empty, ui } from '@demo/ui'
 import { Shell } from './Shell'
 import { useCase } from './queries'
 
@@ -38,11 +40,14 @@ export function CaseLayout() {
     </>
   )
 
-  const brandMeta = caseQuery.data ? `Кейс ${caseQuery.data.code} · ${caseQuery.data.product.ru}` : undefined
+  const card = caseQuery.data?.case
+  const brandMeta = card ? `Кейс ${card.code} · ${l10n(card.product).ru}` : undefined
 
   return (
     <Shell nav={nav} brandMeta={brandMeta}>
-      {caseQuery.isLoading ? <Empty>Загружаем кейс</Empty> : <Outlet />}
+      {caseQuery.isLoading ? <Empty>Загружаем кейс</Empty> : null}
+      {caseQuery.isError ? <Callout tone="deadline">{describeError(caseQuery.error)}</Callout> : null}
+      {caseQuery.data ? <Outlet /> : null}
     </Shell>
   )
 }

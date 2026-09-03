@@ -12,9 +12,40 @@
 
 **Дата среза:** 3 сентября 2026 года.
 
-Сейчас кабинеты работают на мок-данных в браузере. Live-чат и JWT — после
-подъёма Keycloak, Edge и агента; этот репозиторий по-прежнему только собирает
-и заливает статику.
+Кабинеты работают на живом ядре: вход через Keycloak realm `pharma`, данные и
+чат — на `https://pharma-edge.sinoptics.ru`. Мока на боевых экранах нет: пустой
+портфель на пустой базе — это ответ ядра, а не поломка вёрстки. Этот
+репозиторий по-прежнему только собирает и заливает статику.
+
+## Переменные сборки
+
+Публичные значения: всё, что попадает в `VITE_*`, уезжает в браузер вместе с
+бандлом. Образец — [`portal/demo/.env.example`](portal/demo/.env.example), те же
+значения заданы на шаге сборки в [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+
+| Переменная | Значение | Зачем |
+| --- | --- | --- |
+| `VITE_API_URL` | `https://pharma-edge.sinoptics.ru` | REST кабинета |
+| `VITE_AGENT_API` | `https://pharma-edge.sinoptics.ru` | `POST /chat/{agentId}` через тот же шлюз |
+| `VITE_KEYCLOAK_URL` | `https://auth.sinoptics.ru` | вход |
+| `VITE_KEYCLOAK_REALM` | `pharma` | realm |
+| `VITE_KEYCLOAK_CLIENT_ID` | `medmost-spa` | публичный клиент с PKCE |
+
+Без этих переменных сборка падает явно. `X-API-Key` в браузер не кладут: это
+служебный путь агента и вебхуков Plane.
+
+## Что нужно снаружи
+
+- **Аккаунт.** Пользователь realm `pharma` должен быть прописан в
+  `account_users`. Иначе кабинет покажет экран `account_not_linked`: аккаунты
+  заводит менеджер, саморегистрации нет.
+- **Резолв аккаунта для агента.** Инструменты агента ходят в Edge по служебному
+  ключу и требуют заголовок аккаунта, которого у браузерного вызова нет. Чат
+  отвечает текстом, но карточки с данными падают:
+  [SinopticsAI/pharma-agent#1](https://github.com/SinopticsAI/pharma-agent/issues/1).
+- **Локальный порт.** Redirect URIs клиента покрывают `5173` (`web-cn`), `5174`
+  (`web-ru`), `5175` (`web-portal`). Демо-сервер на `:4173` войти не даст, пока
+  порт не добавят в realm.
 
 ## Что появляется после прогона
 
@@ -31,15 +62,22 @@
 ```powershell
 cd portal\demo
 npm ci
-npm run demo
+Copy-Item .env.example .env
+npm run dev      # кабинет pharma_cert, :5175
+npm run dev:cn   # кабинет производителя, :5173
+npm run dev:ru   # консоль оператора, :5174
 ```
 
-| Адрес | Что |
-| --- | --- |
-| http://localhost:4173/ | кабинет pharma_cert |
-| http://localhost:4173/cn/ | кабинет производителя |
-| http://localhost:4173/ru/ | консоль оператора |
-| http://localhost:4173/split/ | режим «рядом» |
+Порты не произвольные: именно они прописаны в redirect URIs клиента
+`medmost-spa`. `npm run demo` собирает всё на `:4173` и годится для проверки
+сборки, но не для входа.
+
+| Приложение | Путь на домене | Контур запроса |
+| --- | --- | --- |
+| `web-portal` | `/` | `cn` — клиентский кабинет, без реквизитов УКЭП и ЕСИА |
+| `web-cn` | `/cn/` | `cn` |
+| `web-ru` | `/ru/` | `ru` — мандат с реквизитами, ввод статуса |
+| лаунчер | `/split/` | статика |
 
 ## Деплой
 
@@ -55,6 +93,7 @@ yc config profile activate pharma-ui
 ```powershell
 cd portal\demo
 npm ci
+Copy-Item .env.example .env   # сборка читает VITE_* отсюда
 npm run build
 cd ..\..
 Copy-Item .\infra\account.env.example .\infra\account.env

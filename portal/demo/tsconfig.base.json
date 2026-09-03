@@ -17,10 +17,12 @@
     "types": ["vite/client", "node"],
     "baseUrl": ".",
     "paths": {
+      "@demo/api-client": ["packages/api-client/src/index.tsx"],
+      "@demo/auth": ["packages/auth/src/index.tsx"],
       "@demo/domain": ["packages/domain/src/index.ts"],
       "@demo/i18n": ["packages/i18n/src/index.ts"],
       "@demo/mock": ["packages/mock/src/index.ts"],
-      "@demo/ui": ["packages/ui/src/index.ts"]
+      "@demo/ui": ["packages/ui/src/index.tsx"]
     }
   }
 }

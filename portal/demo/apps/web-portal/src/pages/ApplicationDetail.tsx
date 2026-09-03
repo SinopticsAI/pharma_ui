@@ -1,6 +1,7 @@
-import { Link } from '@tanstack/react-router'
-import { useParams } from '@tanstack/react-router'
-import { useApplication } from '../data/store'
+import { Link, useParams } from '@tanstack/react-router'
+import { describeError } from '@demo/api-client'
+import { l10n } from '@demo/domain'
+import { NODES_WITHOUT_WORK, useCase } from '../data/portal'
 import { caseProgress, caseStatus } from '../data/derive'
 import { currentWork } from '../data/work'
 import { Button, Callout, Card, Empty, KeyValue, PageHeader, Progress, StatusBadge } from '../components/Ui'
@@ -10,24 +11,29 @@ import styles from '../styles/ui.module.css'
 
 export function ApplicationDetailPage() {
   const { applicationId } = useParams({ from: '/applications/$applicationId' })
-  const application = useApplication(applicationId)
-  const { t, kind, procedure, product, form, country, sites, expert, date, dateTime, due, work, journal } = useI18n()
+  const caseQuery = useCase(applicationId)
+  const { t, kind, procedure, product, form, country, sites, date, work } = useI18n()
 
-  if (!application) {
+  if (caseQuery.isLoading) return <Empty>{t('session.loading')}</Empty>
+
+  if (caseQuery.isError || !caseQuery.data) {
     return (
       <>
         <PageHeader title={t('case.notFound')} />
         <Empty>
-          {t('case.notFoundBody')} <Link to="/applications">{t('case.backList')}</Link>
+          {caseQuery.error ? describeError(caseQuery.error) : t('case.notFoundBody')}{' '}
+          <Link to="/applications">{t('case.backList')}</Link>
         </Empty>
       </>
     )
   }
 
+  const { application, detail } = caseQuery.data
   const current = currentWork(application.works)
   const progress = caseProgress(application)
-  const registryFound = application.registry.status === 'found'
-  const registryNumber = application.registry.number || t('case.numberMissing')
+  const critical = detail.criticalNode
+  // Узлы, которых нет в порядке работ: горизонт кейса не сводится к досье.
+  const extraNodes = detail.nodeMap.filter((node) => NODES_WITHOUT_WORK.includes(node.code))
 
   return (
     <>
@@ -36,14 +42,23 @@ export function ApplicationDetailPage() {
         subtitle={`${kind(application.kind)} · ${procedure(application.procedure)}`}
         action={
           current ? (
-            <Link to="/applications/$applicationId/works/$workCode" params={{ applicationId: application.id, workCode: current.code }}>
+            <Link
+              to="/applications/$applicationId/works/$workCode"
+              params={{ applicationId: application.id, workCode: current.code }}
+            >
               <Button type="button">{t('case.goCurrent')}</Button>
             </Link>
           ) : undefined
         }
       />
 
-      {registryFound ? <Callout>{t('case.registryFound', { number: registryNumber })}</Callout> : null}
+      {critical ? (
+        <Callout>
+          <strong>{t('map.critical')}:</strong> {critical.code} · {l10n(critical.title).ru} ·{' '}
+          {t(`nodeOwner.${critical.owner}`)}
+          {critical.dueHint ? ` · ${l10n(critical.dueHint).ru}` : ''}
+        </Callout>
+      ) : null}
 
       <div className={styles.split}>
         <Card title={t('case.currentWork')}>
@@ -51,7 +66,9 @@ export function ApplicationDetailPage() {
             <>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
                 <StatusBadge status={caseStatus(application)} />
-                <span className={styles.formHint}>{t('case.due', { due: due(application.nextDue) })}</span>
+                <span className={styles.formHint}>
+                  {t('case.due', { due: t('case.dueDays', { n: application.dueWorkingDays }) })}
+                </span>
               </div>
               <p style={{ marginBottom: 12 }}>
                 {current.code}. {work.title(application.kind, current)}
@@ -75,20 +92,13 @@ export function ApplicationDetailPage() {
             items={[
               { key: t('case.kind'), value: kind(application.kind) },
               { key: t('case.form'), value: application.form ? form(application.form) : t('common.unspecified') },
-              { key: t('case.country'), value: country(application.country) },
-              { key: t('case.manufacturer'), value: application.manufacturer },
+              { key: t('case.country'), value: application.country ? country(application.country) : t('common.dash') },
+              { key: t('case.manufacturer'), value: application.manufacturer || t('common.dash') },
               { key: t('case.sites'), value: application.sites ? sites(application.sites) : t('common.dash') },
-              {
-                key: t('case.registry'),
-                value:
-                  application.registry.status === 'pending'
-                    ? t('case.registry.pending')
-                    : application.registry.status === 'found'
-                      ? t('case.registry.found', { number: registryNumber })
-                      : t('case.registry.notFound'),
-              },
-              { key: t('case.expert'), value: application.expert ? expert(application.expert) : t('common.unassigned') },
-              { key: t('case.created'), value: date(application.createdAt) },
+              { key: t('case.track'), value: detail.case.track },
+              { key: t('case.riskClass'), value: detail.case.riskClass },
+              { key: t('case.waiting'), value: application.waitingFor || t('common.dash') },
+              { key: t('case.created'), value: application.createdAt ? date(application.createdAt) : t('common.dash') },
             ]}
           />
         </Card>
@@ -98,25 +108,33 @@ export function ApplicationDetailPage() {
         <p className={styles.formHint} style={{ marginBottom: 12 }}>
           {t('case.planHint')}
         </p>
+        {detail.nodeMap.length === 0 ? <Callout tone="warn">{t('map.empty')}</Callout> : null}
         <WorkList application={application} />
       </Card>
 
-      <Card title={t('case.journal')} meta={t('case.journalMeta')}>
-        <div className={styles.list}>
-          {application.journal.slice(0, 8).map((entry) => (
-            <div key={entry.id} style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 12, fontSize: 13 }}>
-              <span className={styles.formHint}>{dateTime(entry.at)}</span>
-              <span>
-                {entry.workCode ? <strong>{entry.workCode}. </strong> : null}
-                {journal(entry, application.kind)}
-                <span className={styles.formHint} style={{ display: 'block' }}>
-                  {expert(entry.actor)}
+      {extraNodes.length > 0 ? (
+        <Card title={t('map.title')} meta={t('map.lead')}>
+          <div className={styles.list}>
+            {extraNodes.map((node) => (
+              <div key={node.code} style={{ display: 'grid', gridTemplateColumns: '60px 1fr auto', gap: 12 }}>
+                <span className={styles.formHint}>{node.code}</span>
+                <span>
+                  {l10n(node.title).ru}
+                  {node.note ? (
+                    <span className={styles.formHint} style={{ display: 'block' }}>
+                      {l10n(node.note).ru}
+                    </span>
+                  ) : null}
                 </span>
-              </span>
-            </div>
-          ))}
-        </div>
-      </Card>
+                <span className={styles.formHint}>
+                  {t(`node.${node.status}`)} · {t(`nodeOwner.${node.owner}`)}
+                  {node.dueHint ? ` · ${l10n(node.dueHint).ru}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
     </>
   )
 }

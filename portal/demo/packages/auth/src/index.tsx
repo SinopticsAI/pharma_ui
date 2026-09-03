@@ -1,0 +1,107 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import type { User } from 'oidc-client-ts'
+import { hasAuthParams, stripAuthParams, userManager } from './manager'
+
+export { appBaseUrl, userManager } from './manager'
+
+export interface AuthProfile {
+  subject: string
+  name: string
+  email: string
+}
+
+export type AuthStatus = 'signing-in' | 'ready' | 'error'
+
+interface AuthValue {
+  status: AuthStatus
+  error: unknown
+  profile: AuthProfile | null
+  getAccessToken: () => Promise<string | null>
+  logout: () => void
+}
+
+const AuthContext = createContext<AuthValue | null>(null)
+
+function profileOf(user: User): AuthProfile {
+  return {
+    subject: user.profile.sub,
+    name: String(user.profile.name ?? user.profile.preferred_username ?? ''),
+    email: String(user.profile.email ?? ''),
+  }
+}
+
+/**
+ * Обмен кода на токен выполняется один раз на загрузку страницы.
+ * Guard нужен из-за двойного вызова эффектов в StrictMode: повторный
+ * `signinCallback` упал бы, потому что `state` уже израсходован.
+ */
+let signinOnce: Promise<User | null> | null = null
+
+function resolveSession(): Promise<User | null> {
+  if (signinOnce) return signinOnce
+  const manager = userManager()
+  signinOnce = (async () => {
+    if (hasAuthParams()) {
+      const user = await manager.signinCallback()
+      stripAuthParams()
+      return user ?? null
+    }
+    const existing = await manager.getUser()
+    if (existing && !existing.expired) return existing
+    await manager.signinRedirect()
+    return null
+  })()
+  return signinOnce
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [status, setStatus] = useState<AuthStatus>('signing-in')
+  const [error, setError] = useState<unknown>(null)
+  const [profile, setProfile] = useState<AuthProfile | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    resolveSession()
+      .then((user) => {
+        if (cancelled || !user) return
+        setProfile(profileOf(user))
+        setStatus('ready')
+      })
+      .catch((cause: unknown) => {
+        if (cancelled) return
+        signinOnce = null
+        setError(cause)
+        setStatus('error')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const getAccessToken = useCallback(async () => {
+    const manager = userManager()
+    const current = await manager.getUser()
+    if (current && !current.expired) return current.access_token
+    const renewed = await manager.signinSilent().catch(() => null)
+    if (renewed) return renewed.access_token
+    await manager.signinRedirect()
+    return null
+  }, [])
+
+  const logout = useCallback(() => {
+    void userManager().signoutRedirect()
+  }, [])
+
+  const value = useMemo<AuthValue>(
+    () => ({ status, error, profile, getAccessToken, logout }),
+    [status, error, profile, getAccessToken, logout],
+  )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+export function useAuth(): AuthValue {
+  const value = useContext(AuthContext)
+  if (!value) throw new Error('useAuth вызван вне AuthProvider')
+  return value
+}

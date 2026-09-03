@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { usePortalStore } from '../data/store'
+import { useCases } from '../data/portal'
 import { openWorks } from '../data/derive'
 import { Card, Empty, PageHeader, WorkStatusBadge } from '../components/Ui'
 import { useI18n } from '../i18n'
@@ -7,20 +7,20 @@ import styles from '../styles/ui.module.css'
 
 /** Задачи — это открытые работы по всем кейсам, а не отдельный список поручений. */
 export function TasksPage() {
-  const { applications } = usePortalStore()
-  const { t, owner, date, due, work, product, text } = useI18n()
+  const cases = useCases()
+  const { t, owner, work, product, text } = useI18n()
 
-  const rows = applications
+  const rows = (cases.data ?? [])
     .flatMap((item) => openWorks(item).map((itemWork) => ({ item, work: itemWork })))
-    .sort((a, b) => a.item.nextDue.localeCompare(b.item.nextDue))
+    .sort((a, b) => a.item.dueWorkingDays - b.item.dueWorkingDays)
 
   return (
     <>
       <PageHeader title={t('tasks.title')} subtitle={t('tasks.subtitle')} />
       <Card>
-        {rows.length === 0 ? (
-          <Empty>{t('tasks.empty')}</Empty>
-        ) : (
+        {cases.isLoading ? <Empty>{t('session.loading')}</Empty> : null}
+        {!cases.isLoading && rows.length === 0 ? <Empty>{t('tasks.empty')}</Empty> : null}
+        {rows.length > 0 ? (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
@@ -51,10 +51,7 @@ export function TasksPage() {
                       <div className={styles.formHint}>{product(item.product)}</div>
                     </td>
                     <td>{owner(itemWork.owner)}</td>
-                    <td>
-                      {date(item.nextDue)}
-                      <div className={styles.formHint}>{due(item.nextDue)}</div>
-                    </td>
+                    <td>{t('case.dueDays', { n: item.dueWorkingDays })}</td>
                     <td>
                       <WorkStatusBadge status={itemWork.status} />
                     </td>
@@ -63,7 +60,7 @@ export function TasksPage() {
               </tbody>
             </table>
           </div>
-        )}
+        ) : null}
       </Card>
     </>
   )
