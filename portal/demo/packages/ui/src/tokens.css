@@ -1,0 +1,104 @@
+/*
+ * Токены наследуют визуальный язык клиентской презентации (ppt/DESIGN-CONCEPT.md §5),
+ * чтобы демо на стенде и кабинет читались как один продукт.
+ */
+:root {
+  --primary: #0b2a4a;
+  --primary-dark: #071b30;
+  --accent: #00b5d8;
+  --accent-soft: #e0f7fa;
+  --accent-warm: #ff9f1c;
+  --bg: #ffffff;
+  --bg-soft: #f5f7fa;
+  --rule: #e2e8f0;
+  --text-dark: #0f172a;
+  --text-body: #1f2a44;
+  --text-muted: #64748b;
+  --lane-cn: #e8f4fc;
+  --lane-ru: #f3f0ea;
+  --warn-bg: #fff6e8;
+  --basket-1: #0b2a4a;
+  --basket-2: #00b5d8;
+  --basket-3: #64748b;
+
+  --font-latin: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-zh: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', 'Segoe UI', sans-serif;
+  --font-mono: 'Cascadia Mono', 'Consolas', 'SF Mono', monospace;
+
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(11, 42, 74, 0.06);
+  --space: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-latin);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-body);
+  background: var(--bg-soft);
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-locale='zh'] body,
+body[data-locale='zh'] {
+  font-family: var(--font-zh);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--primary);
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+h1 {
+  font-size: 24px;
+}
+
+h2 {
+  font-size: 19px;
+}
+
+h3 {
+  font-size: 16px;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--primary);
+}
+
+button {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Контуры кодируются дорожками, а не флагами. */
+[data-contour='cn'] nav {
+  background: var(--lane-cn);
+}
+
+[data-contour='ru'] nav {
+  background: var(--lane-ru);
+}

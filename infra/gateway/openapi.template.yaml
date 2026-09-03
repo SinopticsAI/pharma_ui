@@ -1,0 +1,146 @@
+openapi: 3.0.0
+info:
+  title: pharma-portal-demo
+  version: "0.1.0"
+  description: Static demo portal served from bucket __BUCKET_NAME__ on __CUSTOM_DOMAIN__
+servers:
+  - url: https://__CUSTOM_DOMAIN__
+paths:
+  /:
+    get:
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: __BUCKET_NAME__
+        object: index.html
+        service_account_id: __SA_API_GATEWAY_ID__
+      responses:
+        "200":
+          description: Pharma_cert cabinet
+  /split:
+    get:
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: __BUCKET_NAME__
+        object: split/index.html
+        service_account_id: __SA_API_GATEWAY_ID__
+      responses:
+        "200":
+          description: Side-by-side launcher
+  /split/:
+    get:
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: __BUCKET_NAME__
+        object: split/index.html
+        service_account_id: __SA_API_GATEWAY_ID__
+      responses:
+        "200":
+          description: Side-by-side launcher
+  /split/{file+}:
+    get:
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: __BUCKET_NAME__
+        object: "split/{file}"
+        error_object: split/index.html
+        service_account_id: __SA_API_GATEWAY_ID__
+      responses:
+        "200":
+          description: Side-by-side launcher asset
+  /cn:
+    get:
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: __BUCKET_NAME__
+        object: cn/index.html
+        service_account_id: __SA_API_GATEWAY_ID__
+      responses:
+        "200":
+          description: Manufacturer cabinet
+  /cn/:
+    get:
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: __BUCKET_NAME__
+        object: cn/index.html
+        service_account_id: __SA_API_GATEWAY_ID__
+      responses:
+        "200":
+          description: Manufacturer cabinet
+  /cn/{file+}:
+    get:
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: __BUCKET_NAME__
+        object: "cn/{file}"
+        error_object: cn/index.html
+        service_account_id: __SA_API_GATEWAY_ID__
+      responses:
+        "200":
+          description: Manufacturer cabinet asset or client route
+  /ru:
+    get:
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: __BUCKET_NAME__
+        object: ru/index.html
+        service_account_id: __SA_API_GATEWAY_ID__
+      responses:
+        "200":
+          description: Operator console
+  /ru/:
+    get:
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: __BUCKET_NAME__
+        object: ru/index.html
+        service_account_id: __SA_API_GATEWAY_ID__
+      responses:
+        "200":
+          description: Operator console
+  /ru/{file+}:
+    get:
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: __BUCKET_NAME__
+        object: "ru/{file}"
+        error_object: ru/index.html
+        service_account_id: __SA_API_GATEWAY_ID__
+      responses:
+        "200":
+          description: Operator console asset or client route
+  /{file+}:
+    get:
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: __BUCKET_NAME__
+        object: "{file}"
+        error_object: index.html
+        service_account_id: __SA_API_GATEWAY_ID__
+      responses:
+        "200":
+          description: Root asset

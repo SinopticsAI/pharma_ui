@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Портал регистрации — демонстрация</title>
+    <style>
+      :root {
+        --primary: #0b2a4a;
+        --accent: #00b5d8;
+        --accent-soft: #e0f7fa;
+        --bg-soft: #f5f7fa;
+        --rule: #e2e8f0;
+        --text-dark: #0f172a;
+        --text-body: #1f2a44;
+        --text-muted: #64748b;
+        --lane-cn: #e8f4fc;
+        --lane-ru: #f3f0ea;
+        --warn-bg: #fff6e8;
+        --radius: 10px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        font-size: 15px;
+        line-height: 1.5;
+        color: var(--text-body);
+        background: var(--bg-soft);
+      }
+      .banner {
+        background: var(--warn-bg);
+        border-bottom: 1px solid var(--rule);
+        padding: 10px 20px;
+        font-size: 13px;
+        color: var(--text-body);
+      }
+      main { max-width: 60rem; margin: 0 auto; padding: 40px 20px 64px; }
+      h1 { font-size: 26px; color: var(--primary); margin: 0 0 8px; font-weight: 600; }
+      .lead { color: var(--text-muted); margin: 0 0 32px; max-width: 44rem; }
+      .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+      .card {
+        display: block;
+        padding: 20px;
+        border: 1px solid var(--rule);
+        border-radius: var(--radius);
+        background: #fff;
+        text-decoration: none;
+        color: inherit;
+      }
+      .card:hover { border-color: var(--accent); }
+      .card[data-contour='cn'] { background: var(--lane-cn); }
+      .card[data-contour='ru'] { background: var(--lane-ru); }
+      .card h2 { font-size: 17px; margin: 0 0 4px; color: var(--primary); font-weight: 600; }
+      .locale { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+      .card p { margin: 10px 0 0; font-size: 14px; }
+      .state { display: block; margin-top: 14px; font-size: 13px; }
+      .state-ready { color: var(--primary); }
+      .state-pending { color: var(--text-muted); }
+      .state-ready, .state-pending { display: none; }
+      body[data-contours~='cn'] .card[data-contour='cn'] .state-ready { display: block; }
+      body:not([data-contours~='cn']) .card[data-contour='cn'] .state-pending { display: block; }
+      body[data-contours~='ru'] .card[data-contour='ru'] .state-ready { display: block; }
+      body:not([data-contours~='ru']) .card[data-contour='ru'] .state-pending { display: block; }
+      body:not([data-contours~='cn']) .card[data-contour='cn'],
+      body:not([data-contours~='ru']) .card[data-contour='ru'] {
+        pointer-events: none;
+        opacity: 0.6;
+      }
+      footer {
+        margin-top: 40px;
+        padding-top: 16px;
+        border-top: 1px solid var(--rule);
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+    </style>
+  </head>
+  <body data-contours="">
+    <div class="banner">Демонстрация на условных данных. Цифры — ориентир, не оферта.</div>
+    <main>
+      <h1>Портал государственной регистрации</h1>
+      <p class="lead">
+        Два контура развёрнуты отдельно: кабинет производителя и консоль оператора в России.
+        Работа с электронной подписью и подача существуют только в контуре РФ.
+      </p>
+      <div class="grid">
+        <a class="card" data-contour="cn" href="/cn/">
+          <span class="locale">ZH · EN</span>
+          <h2>Кабинет производителя</h2>
+          <p>Портфель кейсов, дорожная карта, досье, реестр счетов.</p>
+          <span class="state state-ready">Открыть →</span>
+          <span class="state state-pending">Сборка ещё не выложена</span>
+        </a>
+        <a class="card" data-contour="ru" href="/ru/">
+          <span class="locale">RU</span>
+          <h2>Консоль оператора РФ</h2>
+          <p>Мандат, ввод статуса с артефактом, акцепт счетов и комиссия.</p>
+          <span class="state state-ready">Открыть →</span>
+          <span class="state state-pending">Сборка ещё не выложена</span>
+        </a>
+      </div>
+      <footer>Срез данных: 28.08.2026. Регистрационное удостоверение выдаёт государство, не портал.</footer>
+    </main>
+  </body>
+</html>

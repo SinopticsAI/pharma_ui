@@ -1,0 +1,138 @@
+# Canon of the static portal CI. pharma_cert no longer deploys on push.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  YC_CLOUD_ID: b1gip1vv7381q4bsoaso
+  YC_FOLDER_ID: b1g07nbj3q7ccru38on0
+  BUCKET_NAME: pharma-sinoptics-ru
+  API_GATEWAY_NAME: pharma-api-gateway
+  SA_API_GATEWAY_ID: ajera4c2od385cmjh3ms
+  CUSTOM_DOMAIN: pharma.sinoptics.ru
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Демо ещё собирается: падение сборки не должно снимать домен с заглушки.
+      - name: Build demo apps
+        continue-on-error: true
+        working-directory: portal/demo
+        run: |
+          npm ci || npm install
+          npm run build
+
+      - name: Assemble static bundle
+        run: node infra/scripts/assemble-static.mjs
+
+      - name: Install yc
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Configure yc
+        env:
+          YC_SA_JSON_CREDENTIALS: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+        run: |
+          test -n "$YC_SA_JSON_CREDENTIALS"
+          printf '%s\n' "$YC_SA_JSON_CREDENTIALS" > "$RUNNER_TEMP/sa.json"
+          chmod 600 "$RUNNER_TEMP/sa.json"
+          yc config profile create ci || true
+          yc config set service-account-key "$RUNNER_TEMP/sa.json"
+          yc config set cloud-id "$YC_CLOUD_ID"
+          yc config set folder-id "$YC_FOLDER_ID"
+
+      - name: Ensure bucket
+        run: |
+          if ! yc storage bucket get --name "$BUCKET_NAME" >/dev/null 2>&1; then
+            yc storage bucket create --name "$BUCKET_NAME" --folder-id "$YC_FOLDER_ID" --max-size 1073741824
+          fi
+
+      - name: Upload static bundle
+        run: |
+          while IFS= read -r -d '' file; do
+            rel="${file#out/}"
+            case "${file,,}" in
+              *.html) ctype="text/html; charset=utf-8" ;;
+              *.css) ctype="text/css; charset=utf-8" ;;
+              *.js) ctype="application/javascript; charset=utf-8" ;;
+              *.json|*.map) ctype="application/json; charset=utf-8" ;;
+              *.svg) ctype="image/svg+xml" ;;
+              *.png) ctype="image/png" ;;
+              *.jpg|*.jpeg) ctype="image/jpeg" ;;
+              *.webp) ctype="image/webp" ;;
+              *.woff2) ctype="font/woff2" ;;
+              *.woff) ctype="font/woff" ;;
+              *.ico) ctype="image/x-icon" ;;
+              *.txt) ctype="text/plain; charset=utf-8" ;;
+              *) ctype="" ;;
+            esac
+            case "${file,,}" in
+              *.html|*.txt) cache="no-cache, no-store, must-revalidate" ;;
+              *) cache="public, max-age=31536000, immutable" ;;
+            esac
+            if [ -n "$ctype" ]; then
+              yc storage s3 cp "$file" "s3://${BUCKET_NAME}/${rel}" --cache-control "$cache" --content-type "$ctype"
+            else
+              yc storage s3 cp "$file" "s3://${BUCKET_NAME}/${rel}" --cache-control "$cache"
+            fi
+          done < <(find out -type f -print0)
+
+      - name: Prune stale objects
+        run: |
+          find out -type f -printf '%P\n' | sort > /tmp/local-keys
+          yc --format json storage s3api list-objects-v2 --bucket "$BUCKET_NAME" \
+            | jq -r '.Contents[]?.Key' | sort > /tmp/remote-keys
+          comm -13 /tmp/local-keys /tmp/remote-keys | while IFS= read -r key; do
+            [ -z "$key" ] && continue
+            echo "delete $key"
+            yc storage s3api delete-object --bucket "$BUCKET_NAME" --key "$key" >/dev/null
+          done
+
+      - name: Update API Gateway spec
+        run: |
+          GW_ID=$(yc serverless api-gateway list --format json \
+            | jq -r --arg name "$API_GATEWAY_NAME" '.[] | select(.name==$name) | .id')
+          if [ -z "$GW_ID" ]; then
+            echo "::error::API Gateway $API_GATEWAY_NAME not found. Run infra/scripts/deploy-gateway.ps1 once to provision it."
+            exit 1
+          fi
+          sed -e "s|__BUCKET_NAME__|${BUCKET_NAME}|g" \
+              -e "s|__SA_API_GATEWAY_ID__|${SA_API_GATEWAY_ID}|g" \
+              -e "s|__CUSTOM_DOMAIN__|${CUSTOM_DOMAIN}|g" \
+              infra/gateway/openapi.template.yaml > infra/gateway/openapi.yaml
+          yc serverless api-gateway update --id "$GW_ID" --spec infra/gateway/openapi.yaml
+          GW_DOMAIN=$(yc serverless api-gateway get --id "$GW_ID" --format json | jq -r '.domain')
+          echo "GW_DOMAIN=$GW_DOMAIN" >> "$GITHUB_ENV"
+
+      - name: Smoke check gateway
+        run: |
+          for path in / /cn/ /ru/ /split/; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://${GW_DOMAIN}${path}")
+            echo "$path -> $code"
+            [ "$code" = "200" ] || exit 1
+          done
+
+      # Кастомный домен требует однократной привязки сертификата и CNAME,
+      # поэтому его отсутствие — предупреждение, а не падение деплоя.
+      - name: Smoke check custom domain
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' "https://${CUSTOM_DOMAIN}/")
+          echo "https://${CUSTOM_DOMAIN}/ -> $code"
+          if [ "$code" != "200" ]; then
+            echo "::warning::https://${CUSTOM_DOMAIN}/ returned $code. Run infra/scripts/deploy-gateway.ps1 and deploy-dns.ps1."
+          fi

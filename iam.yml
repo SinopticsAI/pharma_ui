@@ -1,0 +1,15 @@
+# Service account for the static portal: bucket upload and gateway spec.
+# Do not reuse logos-* accounts. Do not commit yandex_key.env.
+
+name_prefix: pharma-ui
+
+folder_id: b1g07nbj3q7ccru38on0
+cloud_id: b1gip1vv7381q4bsoaso
+
+service_accounts:
+  - name: pharma-ui-sa-ci
+    description: GitHub Actions / local yc for pharma.sinoptics.ru static
+    roles:
+      - storage.editor
+      - api-gateway.editor
+      - viewer

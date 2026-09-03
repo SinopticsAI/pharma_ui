@@ -1,0 +1,34 @@
+{
+  "name": "pharma-portal-demo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Кликабельное демо портала государственной регистрации на условных данных",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @demo/web-portal",
+    "dev:cn": "npm run dev --workspace @demo/web-cn",
+    "dev:ru": "npm run dev --workspace @demo/web-ru",
+    "build": "npm run build --workspace @demo/web-portal && npm run build --workspace @demo/web-cn && npm run build --workspace @demo/web-ru",
+    "typecheck": "npm run typecheck --workspace @demo/web-portal && npm run typecheck --workspace @demo/web-cn && npm run typecheck --workspace @demo/web-ru",
+    "check:copy": "node scripts/check-copy.mjs",
+    "serve": "node scripts/serve-demo.mjs",
+    "demo": "npm run check:copy && npm run build && npm run serve"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.83.0",
+    "@tanstack/react-router": "^1.130.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  }
+}
