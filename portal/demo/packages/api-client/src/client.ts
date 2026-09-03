@@ -87,11 +87,21 @@ export class ApiClient {
     if (token) headers.Authorization = `Bearer ${token}`
     if (init.body !== undefined) headers['Content-Type'] = 'application/json'
 
-    const response = await fetch(this.url(path, init.query), {
-      method,
-      headers,
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
-    })
+    const url = this.url(path, init.query)
+    let response: Response
+    try {
+      response = await fetch(url, {
+        method,
+        headers,
+        body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      })
+    } catch (cause) {
+      // Сюда попадает всё, до чего не дошёл HTTP: нет DNS у домена ядра, нет
+      // шлюза перед функциями, не прошёл preflight, оборвалась сеть. Браузер
+      // говорит про это одинаковое «Failed to fetch», поэтому адрес и причину
+      // называем сами — иначе оператор ищет ошибку в токене.
+      throw new ApiError(0, 'core_unreachable', String(cause), { url, baseUrl: this.options.baseUrl })
+    }
 
     const raw = await response.text()
     let payload: Record<string, unknown> = {}
@@ -255,11 +265,16 @@ export class ApiClient {
    * отвечает за прогресс и метаданные, а не за проксирование байтов.
    */
   async putFile(ticket: UploadTicket, file: File): Promise<void> {
-    const response = await fetch(ticket.uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type || 'application/octet-stream' },
-      body: file,
-    })
+    let response: Response
+    try {
+      response = await fetch(ticket.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      })
+    } catch (cause) {
+      throw new ApiError(0, 'storage_unreachable', String(cause), { objectKey: ticket.objectKey })
+    }
     if (!response.ok) {
       throw new ApiError(response.status, 'upload_failed', `storage refused ${response.status}`)
     }

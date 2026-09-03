@@ -20,6 +20,11 @@ export class ApiError extends Error {
     return this.status === 403 && this.code === 'account_not_linked'
   }
 
+  /** HTTP не состоялся: до ядра не доехали. */
+  get isUnreachable(): boolean {
+    return this.status === 0
+  }
+
   get isUnauthorized(): boolean {
     return this.status === 401
   }
@@ -35,6 +40,9 @@ export class ApiError extends Error {
 
 /** Коды, для которых у интерфейса есть собственная формулировка. */
 export const ERROR_COPY: Record<string, string> = {
+  core_unreachable:
+    'Ядро кабинета не отвечает на своём адресе. Запрос не дошёл до HTTP: обычно это значит, что домен Edge не поднят — нет шлюза или записи DNS.',
+  storage_unreachable: 'Хранилище не приняло файл: подписанная ссылка недоступна.',
   account_not_linked: 'Пользователь ещё не привязан к аккаунту. Аккаунты заводит менеджер.',
   unauthorized: 'Нужен вход.',
   forbidden: 'Недостаточно прав для этого действия.',
@@ -54,7 +62,11 @@ export const ERROR_COPY: Record<string, string> = {
 
 export function describeError(error: unknown): string {
   if (error instanceof ApiError) {
-    return ERROR_COPY[error.code] ?? error.message ?? error.code
+    const copy = ERROR_COPY[error.code] ?? error.message ?? error.code
+    // Адрес, на котором всё встало, — половина диагноза: без него не отличить
+    // недоступное ядро от неверного токена.
+    const url = error.details.url
+    return error.isUnreachable && typeof url === 'string' ? `${copy} Адрес: ${url}` : copy
   }
   return error instanceof Error ? error.message : String(error)
 }

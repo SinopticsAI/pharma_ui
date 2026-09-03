@@ -36,6 +36,11 @@
 
 ## Что нужно снаружи
 
+- **Публичный вход Edge.** `pharma-edge.sinoptics.ru` поднимает
+  [`pharma_env`](https://github.com/SinopticsAI/pharma_env): шлюз
+  `pharma-edge-api-gateway` и запись CNAME. Живых функций недостаточно — без
+  шлюза и DNS браузер не видит ядро, и кабинет показывает `core_unreachable`
+  с адресом, на котором встал запрос.
 - **Аккаунт.** Пользователь realm `pharma` должен быть прописан в
   `account_users`. Иначе кабинет покажет экран `account_not_linked`: аккаунты
   заводит менеджер, саморегистрации нет.
