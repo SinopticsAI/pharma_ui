@@ -1,6 +1,7 @@
-import { Link } from '@tanstack/react-router'
-import { STAGE_ORDER, l10n, stagePosition } from '@demo/domain'
+import { l10n, STAGE_ORDER, stagePosition } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
+import { Link } from '@tanstack/react-router'
+import { useCaseId } from '../CaseLayout'
 import {
   Callout,
   Card,
@@ -13,9 +14,8 @@ import {
   StatusBadge,
   Timeline,
   TimelineItem,
-  ui,
-} from '@demo/ui'
-import { useCaseId } from '../CaseLayout'
+} from '../kit'
+import { NodeMapView } from '../NodeMap'
 import { useCase, useStatuses } from '../queries'
 
 export function DashboardPage() {
@@ -48,9 +48,8 @@ export function DashboardPage() {
         />
       </Card>
 
-      <div className={ui.split}>
-        <div className={ui.stack}>
-          {/* Одно следующее действие. Карта и список задач не должны расходиться. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-4">
           {critical ? (
             <Callout tone="deadline">
               <strong>{t('map.critical')}:</strong> {critical.code} · {text(l10n(critical.title)).value} ·{' '}
@@ -78,7 +77,7 @@ export function DashboardPage() {
                   return (
                     <TimelineItem key={entry.id} date={dateTime(entry.enteredAt)}>
                       <span>{resolved.value}</span>
-                      <div className={ui.row}>
+                      <div className="flex flex-wrap gap-2">
                         <StatusBadge tone="quiet">{t(`stage.${entry.stage}`)}</StatusBadge>
                         <StatusBadge>{entry.artifact}</StatusBadge>
                         {!resolved.translated ? <StatusBadge tone="warm">{t('inbox.untranslated')}</StatusBadge> : null}
@@ -91,7 +90,7 @@ export function DashboardPage() {
           </Card>
         </div>
 
-        <div className={ui.stack}>
+        <div className="space-y-4">
           <Card>
             <Metric value={`${current.dueWorkingDays} ${t('common.workingDays')}`} label={t('case.deadline')} />
             <KeyValue
@@ -107,21 +106,10 @@ export function DashboardPage() {
           </Card>
 
           <Card title={t('map.title')}>
-            <div className={ui.stack}>
-              {detail.nodeMap.slice(0, 5).map((node) => (
-                <div key={node.code} className={ui.cardHeader}>
-                  <span>
-                    {node.code} · {text(l10n(node.title)).value}
-                  </span>
-                  <StatusBadge tone={node.status === 'done' ? 'accent' : 'quiet'}>
-                    {t(`nodeStatus.${node.status}`)}
-                  </StatusBadge>
-                </div>
-              ))}
-              <Link to="/case/$caseId/roadmap" params={{ caseId }}>
-                {t('map.title')} →
-              </Link>
-            </div>
+            <NodeMapView items={detail.nodeMap.slice(0, 5)} className="h-[280px]" />
+            <Link to="/case/$caseId/roadmap" params={{ caseId }}>
+              {t('map.title')} →
+            </Link>
           </Card>
         </div>
       </div>

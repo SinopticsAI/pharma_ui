@@ -22,7 +22,10 @@
       "@demo/domain": ["packages/domain/src/index.ts"],
       "@demo/i18n": ["packages/i18n/src/index.ts"],
       "@demo/mock": ["packages/mock/src/index.ts"],
-      "@demo/ui": ["packages/ui/src/index.tsx"]
+      "@demo/contracts": ["packages/contracts/src/index.ts"],
+      "@demo/ui": ["packages/ui/src/index.tsx"],
+      "@demo/ui/lib/utils": ["packages/ui/src/lib/utils.ts"],
+      "@demo/ui/components/*": ["packages/ui/src/components/ui/*"]
     }
   }
 }

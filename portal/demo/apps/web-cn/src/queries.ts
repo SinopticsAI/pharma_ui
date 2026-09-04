@@ -1,7 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useApi } from '@demo/api-client'
 import type { ApproveProductInput, UploadRequest } from '@demo/api-client'
+import { useApi } from '@demo/api-client'
 import type { IntakeScope, Locale } from '@demo/domain'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 /**
  * Все чтения идут в ядро кабинета. Мока нет: пустой портфель на пустой базе —
@@ -110,12 +110,8 @@ export const useCreateProduct = () => {
 export const useOpenIntakeSession = () => {
   const api = useApi()
   return useMutation({
-    mutationFn: (input: {
-      scope: IntakeScope
-      organizationId?: string
-      productId?: string
-      locale?: Locale
-    }) => api.createIntakeSession(input),
+    mutationFn: (input: { scope: IntakeScope; organizationId?: string; productId?: string; locale?: Locale }) =>
+      api.createIntakeSession(input),
   })
 }
 

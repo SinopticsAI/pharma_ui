@@ -1,7 +1,7 @@
 import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { Card, Empty, PageHeader, StatusBadge, Timeline, TimelineItem, ui } from '@demo/ui'
 import { useCaseId } from '../CaseLayout'
+import { Card, Empty, PageHeader, StatusBadge, Timeline, TimelineItem } from '../kit'
 import { useStatuses } from '../queries'
 
 /**
@@ -31,7 +31,7 @@ export function InboxPage() {
               return (
                 <TimelineItem key={entry.id} date={dateTime(entry.enteredAt)}>
                   <span>{resolved.value}</span>
-                  <div className={ui.row}>
+                  <div className="flex flex-wrap gap-2">
                     <StatusBadge tone="quiet">{t(`stage.${entry.stage}`)}</StatusBadge>
                     <StatusBadge>
                       {t('inbox.artifact')}: {entry.artifact}

@@ -1,11 +1,11 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
+import { I18nProvider } from '@demo/i18n'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
-import { I18nProvider } from '@demo/i18n'
-import '@demo/ui/tokens.css'
-import { Session } from './Session'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import '@demo/ui/globals.css'
 import { router } from './router'
+import { Session } from './Session'
 
 /**
  * Обновления в кейсе приходят опросом: поток событий добавится, когда появится

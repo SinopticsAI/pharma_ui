@@ -1,14 +1,14 @@
-import { Link, Outlet, useParams } from '@tanstack/react-router'
 import { describeError } from '@demo/api-client'
 import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { Callout, Empty, ui } from '@demo/ui'
-import { Shell } from './Shell'
+import { Link, Outlet, useParams } from '@tanstack/react-router'
+import { Callout, Empty, navItem, navItemActive } from './kit'
 import { useCase } from './queries'
+import { Shell } from './Shell'
 
 export function useCaseId(): string {
-  const params = useParams({ strict: false }) as { caseId?: string }
-  return params.caseId ?? ''
+  const params = useParams({ from: '/case/$caseId' })
+  return params.caseId
 }
 
 const SECTIONS = [
@@ -28,7 +28,7 @@ export function CaseLayout() {
 
   const nav = (
     <>
-      <Link to="/" className={ui.navItem}>
+      <Link to="/" className={navItem}>
         ← {t('common.back')}
       </Link>
       {SECTIONS.map((section) => (
@@ -36,8 +36,8 @@ export function CaseLayout() {
           key={section.path}
           to={section.path}
           params={{ caseId }}
-          className={ui.navItem}
-          activeProps={{ className: `${ui.navItem} ${ui.navItemActive}` }}
+          className={navItem}
+          activeProps={{ className: `${navItem} ${navItemActive}` }}
           activeOptions={{ exact: section.exact }}
         >
           {t(section.key)}

@@ -1,10 +1,17 @@
-import { useRef, useState } from 'react'
 import { describeError } from '@demo/api-client'
+import { dossierUploadSchema } from '@demo/contracts'
 import type { ItemStatus } from '@demo/domain'
 import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { Button, Callout, Card, Empty, PageHeader, StatusBadge, Table, ui } from '@demo/ui'
+import { Button } from '@demo/ui/components/button'
+import { Input } from '@demo/ui/components/input'
+import { Label } from '@demo/ui/components/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@demo/ui/components/select'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useRef } from 'react'
+import { useForm } from 'react-hook-form'
 import { useCaseId } from '../CaseLayout'
+import { Callout, Card, Empty, PageHeader, StatusBadge, Table } from '../kit'
 import { useCaseItems, useUploadDossierItem } from '../queries'
 
 const STATUS_TONE: Record<ItemStatus, 'accent' | 'warm' | 'quiet'> = {
@@ -15,13 +22,28 @@ const STATUS_TONE: Record<ItemStatus, 'accent' | 'warm' | 'quiet'> = {
   rejected: 'warm',
 }
 
+const ITEM_TYPES = [
+  'instruction-cn',
+  'instruction-ru',
+  'tech-spec',
+  'nmpa-certificate',
+  'iso-13485',
+  'lab-protocol',
+  'regulator-letter',
+  'poa-upp',
+  'other',
+] as const
+
 export function DossierPage() {
   const caseId = useCaseId()
   const { t, text } = useI18n()
   const items = useCaseItems(caseId)
   const upload = useUploadDossierItem(caseId)
   const fileInput = useRef<HTMLInputElement>(null)
-  const [itemType, setItemType] = useState('other')
+  const form = useForm({
+    resolver: zodResolver(dossierUploadSchema),
+    defaultValues: { itemType: 'other' },
+  })
 
   if (items.isLoading) return <Empty>{t('common.loading')}</Empty>
 
@@ -32,37 +54,48 @@ export function DossierPage() {
       <PageHeader title={t('dossier.title')} lead={t('dossier.lead')} />
 
       <Card>
-        <div className={ui.row}>
-          {/* Тип документа задаётся до загрузки: ядро проверяет его по списку. */}
-          <select
-            value={itemType}
-            onChange={(event) => setItemType(event.target.value)}
-            aria-label={t('dossier.preparedBy')}
-          >
-            <option value="instruction-cn">instruction-cn</option>
-            <option value="instruction-ru">instruction-ru</option>
-            <option value="tech-spec">tech-spec</option>
-            <option value="nmpa-certificate">nmpa-certificate</option>
-            <option value="iso-13485">iso-13485</option>
-            <option value="lab-protocol">lab-protocol</option>
-            <option value="regulator-letter">regulator-letter</option>
-            <option value="poa-upp">poa-upp</option>
-            <option value="other">other</option>
-          </select>
-          <Button onClick={() => fileInput.current?.click()} disabled={upload.isPending}>
+        <form
+          className="flex flex-wrap items-end gap-3"
+          onSubmit={form.handleSubmit((values) => {
+            upload.mutate({ file: values.file, itemType: values.itemType })
+            form.reset({ itemType: values.itemType })
+            if (fileInput.current) fileInput.current.value = ''
+          })}
+        >
+          <div className="space-y-1">
+            <Label htmlFor="itemType">{t('dossier.preparedBy')}</Label>
+            <Select value={form.watch('itemType')} onValueChange={(value) => form.setValue('itemType', value)}>
+              <SelectTrigger id="itemType" className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ITEM_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="dossier-file">{t('dossier.upload')}</Label>
+            <Input
+              id="dossier-file"
+              ref={fileInput}
+              type="file"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (file) form.setValue('file', file, { shouldValidate: true })
+              }}
+            />
+          </div>
+          <Button type="submit" disabled={upload.isPending}>
             {upload.isPending ? t('dossier.uploading') : t('dossier.upload')}
           </Button>
-          <input
-            ref={fileInput}
-            type="file"
-            hidden
-            onChange={(event) => {
-              const file = event.target.files?.[0]
-              event.target.value = ''
-              if (file) upload.mutate({ file, itemType })
-            }}
-          />
-        </div>
+        </form>
+        {form.formState.errors.file ? (
+          <p className="text-sm text-destructive">{form.formState.errors.file.message}</p>
+        ) : null}
         {upload.isError ? <Callout tone="deadline">{describeError(upload.error)}</Callout> : null}
       </Card>
 
@@ -75,7 +108,7 @@ export function DossierPage() {
               <tr key={item.id}>
                 <td>
                   {text(l10n(item.title, item.fileName)).value}
-                  <div className={ui.muted}>{item.itemType}</div>
+                  <div className="text-xs text-muted-foreground">{item.itemType}</div>
                 </td>
                 <td>{item.fileName}</td>
                 <td>

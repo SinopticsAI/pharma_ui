@@ -5,7 +5,15 @@
   "type": "module",
   "main": "src/index.tsx",
   "types": "src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
   "dependencies": {
-    "@demo/domain": "*"
+    "@demo/contracts": "workspace:*",
+    "@demo/domain": "workspace:*",
+    "zod": "^3.25.76"
+  },
+  "peerDependencies": {
+    "react": "^19.1.0"
   }
 }

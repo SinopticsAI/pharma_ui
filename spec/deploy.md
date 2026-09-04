@@ -4,7 +4,7 @@
 
 | Действие | Где |
 | --- | --- |
-| Сборка кабинетов | `portal/demo` → `npm ci` → `npm run build` |
+| Сборка кабинетов | `portal/demo` → `pnpm install --frozen-lockfile` → `pnpm run build` |
 | Заливка бакета | `deploy-bucket.ps1` или workflow `deploy` |
 | Первое создание шлюза и CNAME | локально, один раз |
 | Обновление spec существующего шлюза | CI после заливки |

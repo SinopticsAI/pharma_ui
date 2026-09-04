@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react'
-import { ApiProvider, IdentityProvider, describeError, useIdentityState } from '@demo/api-client'
+import { ApiProvider, describeError, IdentityProvider, useIdentityState } from '@demo/api-client'
 import { AuthProvider, useAuth } from '@demo/auth'
 import { useI18n } from '@demo/i18n'
-import { Button, Callout, Card, Empty, KeyValue, PageHeader } from '@demo/ui'
+import type { ReactNode } from 'react'
+import { Button, Callout, Card, Empty, KeyValue, PageHeader } from './kit'
 
 /**
  * Вход и разрешение аккаунта.
@@ -14,7 +14,7 @@ import { Button, Callout, Card, Empty, KeyValue, PageHeader } from '@demo/ui'
 
 function Notice({ title, lead, children }: { title: string; lead?: string; children?: ReactNode }) {
   return (
-    <div style={{ maxWidth: 640, margin: '10vh auto', padding: '0 20px' }}>
+    <div className="mx-auto max-w-xl px-5 py-[10vh]">
       <PageHeader title={title} lead={lead} />
       <Card>{children}</Card>
     </div>

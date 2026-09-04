@@ -1,7 +1,7 @@
 import { hasCredentials, l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { Callout, Card, Empty, KeyValue, PageHeader, StatusBadge, Table } from '@demo/ui'
 import { useCaseId } from '../CaseLayout'
+import { Callout, Card, Empty, KeyValue, PageHeader, StatusBadge, Table } from '../kit'
 import { useCase } from '../queries'
 
 /**
@@ -33,7 +33,9 @@ export function MandatePage() {
             <tr key={step.key}>
               <td>{t(`mandate.step.${step.key}`)}</td>
               <td>
-                <StatusBadge tone={step.status === 'done' ? 'accent' : step.status === 'in-progress' ? 'warm' : 'quiet'}>
+                <StatusBadge
+                  tone={step.status === 'done' ? 'accent' : step.status === 'in-progress' ? 'warm' : 'quiet'}
+                >
                   {t(`mandateStatus.${step.status}`)}
                 </StatusBadge>
               </td>
@@ -44,7 +46,6 @@ export function MandatePage() {
         </Table>
       </Card>
 
-      {/* Страховка на случай, если контур запроса когда-нибудь уедет на `ru`. */}
       {hasCredentials(mandate) ? null : <Callout>{t('mandate.noCrypto')}</Callout>}
     </>
   )

@@ -19,11 +19,13 @@
 
 ```powershell
 cd portal\demo
-npm install
+corepack enable
+# Если EPERM на Program Files: corepack enable --install-directory $env:LOCALAPPDATA\bin
+pnpm install
 Copy-Item .env.example .env
-npm run dev      # :5175
-npm run dev:cn   # :5173
-npm run dev:ru   # :5174
+pnpm run dev      # :5175
+pnpm run dev:cn   # :5173
+pnpm run dev:ru   # :5174
 ```
 
 | Адрес | Что открывается | Контур запроса |
@@ -33,7 +35,7 @@ npm run dev:ru   # :5174
 | `http://localhost:5174/` | Консоль оператора РФ | `ru` |
 
 Порты фиксированы: именно они прописаны в redirect URIs клиента `medmost-spa`.
-`npm run demo` собирает всё на `:4173` — этим удобно проверять сборку, но войти
+`pnpm run demo` собирает всё на `:4173` — этим удобно проверять сборку, но войти
 там нельзя, пока порт не добавят в realm.
 
 Первый запрос после входа — `GET /accounts/me`. Если пользователь realm есть, а
@@ -94,8 +96,9 @@ apps/web-portal      регуляторный кабинет: кейсы и по
 apps/web-cn          кабинет производителя, ZH основной
 apps/web-ru          консоль оператора РФ, только RU
 packages/api-client  единственная точка выхода в ядро кабинета
+packages/contracts   zod-схемы ответов Edge
 packages/auth        вход через Keycloak, Authorization Code + PKCE
-packages/ui          токены презентации, общие компоненты
+packages/ui          shadcn/ui для /cn/ и legacy CSS Modules для ru/portal
 packages/i18n        каталог ZH/EN/RU и форматтеры
 packages/domain      типы кейса, продукта, узла карты, документа, мандата
 packages/mock        сид-данные прежнего демо, приложения его не импортируют
@@ -103,7 +106,9 @@ launcher             страница показа и режим «рядом»
 scripts              проверка стоп-листа и демо-сервер
 ```
 
-Стек: Vite, React, TypeScript strict, TanStack Router и TanStack Query, CSS Modules поверх токенов из [`ppt/DESIGN-CONCEPT.md`](../../ppt/DESIGN-CONCEPT.md).
+Стек: Vite, React 19, TypeScript strict, файловый TanStack Router и TanStack Query,
+Tailwind + shadcn/ui, zod в `packages/contracts`, assistant-ui и `@xyflow/react`.
+Кабинет `/cn/` уже на этом наборе; `web-ru` и `web-portal` пока на CSS Modules.
 
 Клиент написан вручную по мапперам Edge: спецификация шлюза описывает маршруты и авторизацию, но не схемы тел, поэтому генерировать из неё нечего. Обновления в кейсе приходят опросом; поток событий добавится, когда появится нагрузка, и экраны от этого не изменятся.
 
@@ -130,7 +135,7 @@ scripts              проверка стоп-листа и демо-серве
 - Строка комиссии и строка третьей стороны — разные типы записи. Свернуть их в одну сумму нельзя.
 - Статусы кодируются формой и подписью. Светофорных индикаторов нет; дедлайн и риск — единственное применение янтарного цвета.
 - Значения из ядра не переводятся: наименование продукта в досье и в интерфейсе совпадает буква в букву. Локализуются только строки интерфейса.
-- `npm run check:copy` роняет сборку на формулировках из стоп-листа [`portal/view/05-marketingovoe.md`](../view/05-marketingovoe.md) §7.
+- `pnpm run check:copy` роняет сборку на формулировках из стоп-листа [`portal/view/05-marketingovoe.md`](../view/05-marketingovoe.md) §7.
 
 ## Отступления от целевой архитектуры
 
@@ -138,16 +143,15 @@ scripts              проверка стоп-листа и демо-серве
 | --- | --- | --- |
 | Один origin, пути `/cn` и `/ru` | Так раздаёт шлюз статики, и путь корня сохранён | Разные origin, разные OAuth-клиенты и наборы scopes |
 | Один клиент `medmost-spa` на три приложения | В realm он один | Отдельный клиент и набор scopes на приложение |
-| npm workspaces вместо pnpm | pnpm недоступен на машине сборки без прав администратора | pnpm workspaces и Turborepo |
 | Клиент API написан вручную | В спецификации шлюза нет схем тел | Генерация из OpenAPI, когда схемы появятся |
 | Консоль РФ пишет строки в коде, без каталога | Приложение одноязычное по концепции | Так же: каталог нужен только кабинету производителя |
-| Собственные компоненты вместо React Aria | Меньше зависимостей | React Aria как компонентная база `packages/ui` |
+| `web-ru` и `web-portal` на CSS Modules | Мигрирует только `/cn/` | Tailwind + shadcn в тех же пакетах |
 | Публичного сайта и калькулятора нет | Вне объёма этой волны | Отдельное приложение `web-public` |
 | Идентификатор диалога держится в адресе | У ядра нет поиска сессии интейка по компании | Маршрут поиска сессии или ссылка на сущности |
 
 ## Проверка
 
-1. `npm run check:copy` и `npm run typecheck` — без ошибок.
+1. `pnpm run check:copy`, `pnpm run lint`, `pnpm run typecheck` и `pnpm run test` — без ошибок.
 2. Войти на `:5175`, `:5173` и `:5174`; после входа приходит `GET /accounts/me`.
 3. Связанный пользователь: портфель пуст, если в базе нет кейсов, — это ответ ядра.
 4. Несвязанный пользователь: экран `account_not_linked`, а не пустой кабинет.

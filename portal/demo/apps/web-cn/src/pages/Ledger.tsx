@@ -1,5 +1,5 @@
 import { useI18n } from '@demo/i18n'
-import { Callout, Card, Empty, PageHeader } from '@demo/ui'
+import { Callout, Card, Empty, PageHeader } from '../kit'
 
 /**
  * Реестра счетов в API кабинета пока нет. Показать здесь сид означало бы

@@ -1,26 +1,22 @@
-import { useMemo, useRef, useState } from 'react'
-import {
-  AssistantRuntimeProvider,
-  ComposerPrimitive,
-  MessagePrimitive,
-  ThreadPrimitive,
-} from '@assistant-ui/react'
+import { AssistantRuntimeProvider, ComposerPrimitive, MessagePrimitive, ThreadPrimitive } from '@assistant-ui/react'
 import { useChatRuntime } from '@assistant-ui/react-ai-sdk'
 import { describeError, useIdentity } from '@demo/api-client'
 import { useAuth } from '@demo/auth'
 import type { ProgressSection } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { IntakeToolUIs } from './cards'
-import { IntakeActionsProvider, type IntakeActions } from './context'
-import { createIntakeTransport, type AgentId } from './transport'
+import { Button } from '@demo/ui/components/button'
+import { Input } from '@demo/ui/components/input'
+import { useMemo, useRef, useState } from 'react'
 import { useApproveCompanyProfile, useApproveProductData, useUploadOrgItem } from '../queries'
-import styles from './intake.module.css'
+import { IntakeToolUIs } from './cards'
+import { type IntakeActions, IntakeActionsProvider, useIntakeActions } from './context'
+import { type AgentId, createIntakeTransport } from './transport'
 
 /**
  * Экран интейка: слева нить диалога, справа комплектность по разделам.
  *
- * Примитивы assistant-ui headless, поэтому стилизуются токенами кабинета.
- * Разделы отмечает ядро по мере разбора документов — вручную их не двигают.
+ * Примитивы assistant-ui остаются теми же, что ставит регистр thread:
+ * транспорт и версии пакетов уже живые, UI собирается из shadcn.
  */
 
 const SECTION_LABEL: Record<ProgressSection['key'], string> = {
@@ -43,34 +39,31 @@ function ProgressPanel({
   title: string
 }) {
   return (
-    <aside className={styles.panel}>
-      <div className={styles.panelHead}>
+    <aside className="space-y-3 rounded-lg border bg-card p-4">
+      <div className="flex items-center justify-between text-sm">
         <span>{title}</span>
         <strong>{percent}%</strong>
       </div>
-      <ul className={styles.sections}>
+      <ul className="space-y-2 text-sm">
         {sections.map((section) => {
           const done = section.total > 0 && section.filled === section.total
           return (
-            <li key={section.key} data-done={done}>
+            <li key={section.key} className="flex items-center justify-between gap-2">
               <span>{SECTION_LABEL[section.key] ?? section.key}</span>
-              <span className={styles.sectionCount}>
-                {done ? 'готово' : `${section.filled} из ${section.total}`}
-              </span>
+              <span className="text-muted-foreground">{done ? 'готово' : `${section.filled} из ${section.total}`}</span>
             </li>
           )
         })}
-        {/* У продукта разделов нет: ядро возвращает список незаполненных полей. */}
         {sections.length === 0
           ? missing.map((field) => (
-              <li key={field} data-done={false}>
+              <li key={field} className="flex items-center justify-between gap-2">
                 <span>{field}</span>
-                <span className={styles.sectionCount}>нужно</span>
+                <span className="text-muted-foreground">нужно</span>
               </li>
             ))
           : null}
       </ul>
-      <p className={styles.panelNote}>
+      <p className="text-xs text-muted-foreground">
         Разделы отмечает агент по мере разбора документов, а не вы вручную.
       </p>
     </aside>
@@ -81,54 +74,52 @@ function Thread() {
   const { attach, busy } = useIntakeActions()
 
   return (
-    <ThreadPrimitive.Root className={styles.thread}>
-      <ThreadPrimitive.Viewport className={styles.viewport}>
+    <ThreadPrimitive.Root className="flex h-[560px] flex-col rounded-lg border bg-card">
+      <ThreadPrimitive.Viewport className="flex-1 space-y-3 overflow-y-auto p-4">
         <ThreadPrimitive.Empty>
-          <p className={styles.empty}>
-            Приложите документ компании — агент разберёт его и заполнит карточку. Анкету писать не
-            нужно.
+          <p className="text-sm text-muted-foreground">
+            Приложите документ компании — агент разберёт его и заполнит карточку. Анкету писать не нужно.
           </p>
         </ThreadPrimitive.Empty>
 
         <ThreadPrimitive.Messages
           components={{
             UserMessage: () => (
-              <MessagePrimitive.Root className={styles.msgUser} data-role="user">
+              <MessagePrimitive.Root
+                className="ml-auto max-w-[80%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
+                data-role="user"
+              >
                 <MessagePrimitive.Parts />
               </MessagePrimitive.Root>
             ),
             AssistantMessage: () => (
-              <MessagePrimitive.Root className={styles.msgAgent} data-role="assistant">
+              <MessagePrimitive.Root
+                className="max-w-[90%] space-y-2 rounded-lg bg-muted px-3 py-2 text-sm"
+                data-role="assistant"
+              >
                 <MessagePrimitive.Parts />
               </MessagePrimitive.Root>
             ),
           }}
         />
 
-        {/* Потока нет: контейнер завершает ход до ответа, пауза читается как зависание. */}
         <ThreadPrimitive.If running>
-          <div className={styles.thinking}>
-            <span className={styles.spinner} aria-hidden="true" />
-            Агент читает документ
-          </div>
+          <div className="text-sm text-muted-foreground">Агент читает документ</div>
         </ThreadPrimitive.If>
       </ThreadPrimitive.Viewport>
 
-      <ComposerPrimitive.Root className={styles.composer}>
+      <ComposerPrimitive.Root className="flex items-end gap-2 border-t p-3">
         <ComposerPrimitive.Input
-          className={styles.composerInput}
+          className="min-h-9 flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm"
           placeholder="Напишите агенту"
           rows={1}
         />
-        <button
-          type="button"
-          className={styles.secondary}
-          disabled={busy}
-          onClick={() => attach('other')}
-        >
+        <Button type="button" variant="outline" disabled={busy} onClick={() => attach('other')}>
           Приложить документ
-        </button>
-        <ComposerPrimitive.Send className={styles.primary}>Отправить</ComposerPrimitive.Send>
+        </Button>
+        <ComposerPrimitive.Send className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground">
+          Отправить
+        </ComposerPrimitive.Send>
       </ComposerPrimitive.Root>
     </ThreadPrimitive.Root>
   )
@@ -201,14 +192,14 @@ export function IntakeChat({
     <AssistantRuntimeProvider runtime={runtime}>
       <IntakeActionsProvider value={actions}>
         <IntakeToolUIs />
-        <div className={styles.layout}>
-          <div>
-            {failure ? <p className={styles.cardWhy}>{describeError(failure)}</p> : null}
+        <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
+          <div className="space-y-2">
+            {failure ? <p className="text-sm text-destructive">{describeError(failure)}</p> : null}
             <Thread />
-            <input
+            <Input
               ref={fileInput}
               type="file"
-              hidden
+              className="hidden"
               accept=".pdf,.png,.jpg,.jpeg,.webp,.tif,.tiff,.doc,.docx,.xls,.xlsx"
               onChange={(event) => {
                 const file = event.target.files?.[0]

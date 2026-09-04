@@ -36,7 +36,7 @@ const MIME = {
 for (const mount of [{ prefix: '/', dir: portalDir }, ...mounts]) {
   const index = join(mount.dir, 'index.html')
   if (!existsSync(index)) {
-    console.error(`Нет сборки ${mount.prefix}: ожидается ${index}. Сначала выполните npm run build.`)
+    console.error(`Нет сборки ${mount.prefix}: ожидается ${index}. Сначала выполните pnpm run build.`)
     process.exit(1)
   }
 }

@@ -1,12 +1,12 @@
-import { useEffect, useRef } from 'react'
-import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { describeError } from '@demo/api-client'
 import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { Callout, Empty, PageHeader } from '@demo/ui'
-import { Shell } from '../Shell'
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
+import { useEffect, useRef } from 'react'
 import { IntakeChat } from '../intake/IntakeChat'
+import { Callout, Empty, PageHeader } from '../kit'
 import { useOpenIntakeSession, useOrganization, useProduct } from '../queries'
+import { Shell } from '../Shell'
 
 /**
  * Диалог интейка.
@@ -23,7 +23,6 @@ function useSessionId(
   const { locale } = useI18n()
   const openSession = useOpenIntakeSession()
   const ready = Boolean(input.organizationId || input.productId)
-  // Двойной прогон эффекта в StrictMode иначе открыл бы две сессии.
   const requested = useRef(false)
 
   useEffect(() => {
@@ -36,7 +35,6 @@ function useSessionId(
         requested.current = false
       })
     // Сессия открывается один раз на сущность: перезапуск по смене локали не нужен.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current, ready])
 
   return { sessionId: current ?? openSession.data?.id ?? '', error: openSession.error }

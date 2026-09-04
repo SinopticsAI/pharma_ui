@@ -1,10 +1,9 @@
-import { Link, useNavigate } from '@tanstack/react-router'
 import { describeError } from '@demo/api-client'
 import type { Organization, OrganizationStatus, ProductStatus } from '@demo/domain'
 import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { Callout, Card, Empty, Estimate, KeyValue, PageHeader, StatusBadge, ui } from '@demo/ui'
-import { Shell } from '../Shell'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { Callout, Card, Empty, Estimate, KeyValue, navItem, navItemActive, PageHeader, StatusBadge } from '../kit'
 import {
   useAllProducts,
   useCases,
@@ -13,7 +12,7 @@ import {
   useOpenIntakeSession,
   useOrganizations,
 } from '../queries'
-import styles from './portfolio.module.css'
+import { Shell } from '../Shell'
 
 /**
  * Главная отвечает на вопрос «что делать дальше» по каждому объекту. Отсюда два
@@ -78,8 +77,8 @@ export function PortfolioPage() {
       key={item.id}
       to="/case/$caseId"
       params={{ caseId: item.id }}
-      className={ui.navItem}
-      activeProps={{ className: `${ui.navItem} ${ui.navItemActive}` }}
+      className={navItem}
+      activeProps={{ className: `${navItem} ${navItemActive}` }}
     >
       {item.code} · {text(l10n(item.product)).value}
     </Link>
@@ -91,20 +90,26 @@ export function PortfolioPage() {
 
       {failure ? <Callout tone="deadline">{describeError(failure)}</Callout> : null}
 
-      <div className={styles.cta}>
-        <button type="button" className={styles.ctaCard} onClick={() => void startCompany()} disabled={busy}>
+      <div className="mb-6 grid gap-3 md:grid-cols-2">
+        <button
+          type="button"
+          className="flex flex-col gap-1 rounded-lg border bg-card px-4 py-4 text-left hover:border-primary disabled:opacity-50"
+          onClick={() => void startCompany()}
+          disabled={busy}
+        >
           <strong>Зарегистрировать компанию</strong>
-          <span>Диалог с агентом ≈ 15 минут — он заполнит профиль по вашим документам</span>
+          <span className="text-sm text-muted-foreground">
+            Диалог с агентом ≈ 15 минут — он заполнит профиль по вашим документам
+          </span>
         </button>
         <button
           type="button"
-          className={styles.ctaCard}
-          // Продукт без одобренного профиля ядро не создаёт: 409 profile_not_approved.
+          className="flex flex-col gap-1 rounded-lg border bg-card px-4 py-4 text-left hover:border-primary disabled:opacity-50"
           disabled={busy || !readyCompany}
           onClick={() => readyCompany && void startProduct(readyCompany)}
         >
           <strong>Добавить продукт</strong>
-          <span>
+          <span className="text-sm text-muted-foreground">
             {readyCompany
               ? 'Агент соберёт данные, предложит классификацию и построит карту'
               : 'Доступно после того, как профиль компании одобрен'}
@@ -114,19 +119,19 @@ export function PortfolioPage() {
 
       {organizations.isError ? <Callout tone="deadline">{describeError(organizations.error)}</Callout> : null}
 
-      <h3 className={styles.sectionTitle}>Компании</h3>
+      <h3 className="mb-2 mt-6 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Компании</h3>
       {organizations.isLoading ? <Empty>{t('common.loading')}</Empty> : null}
       {!organizations.isLoading && companies.length === 0 ? (
         <Empty>Компаний пока нет. Начните с диалога — агент заполнит профиль.</Empty>
       ) : null}
-      <div className={ui.grid2}>
+      <div className="grid gap-4 md:grid-cols-2">
         {companies.map((company) => (
           <Card
             key={company.id}
             title={text(l10n(company.name, company.id)).value}
             meta={company.completeness ? `${company.completeness.percent}%` : undefined}
           >
-            <div className={ui.row}>
+            <div className="flex flex-wrap gap-2">
               <StatusBadge tone={company.status === 'profile_approved' ? 'accent' : 'quiet'}>
                 {ORG_STATUS_LABEL[company.status]}
               </StatusBadge>
@@ -140,16 +145,16 @@ export function PortfolioPage() {
         ))}
       </div>
 
-      <h3 className={styles.sectionTitle}>Продукты</h3>
+      <h3 className="mb-2 mt-6 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Продукты</h3>
       {products.isLoading ? <Empty>{t('common.loading')}</Empty> : null}
-      <div className={ui.grid2}>
+      <div className="grid gap-4 md:grid-cols-2">
         {(products.data ?? []).map((product) => (
           <Card
             key={product.id}
             title={text(l10n(product.name, product.id)).value}
             meta={`Комплектность ${product.completeness}%`}
           >
-            <div className={ui.row}>
+            <div className="flex flex-wrap gap-2">
               <StatusBadge tone={product.caseId ? 'accent' : 'quiet'}>
                 {PRODUCT_STATUS_LABEL[product.status]}
               </StatusBadge>
@@ -167,16 +172,16 @@ export function PortfolioPage() {
         ))}
       </div>
 
-      <h3 className={styles.sectionTitle}>Кейсы</h3>
+      <h3 className="mb-2 mt-6 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Кейсы</h3>
       {cases.isLoading ? <Empty>{t('common.loading')}</Empty> : null}
-      <div className={ui.grid2}>
+      <div className="grid gap-4 md:grid-cols-2">
         {(cases.data ?? []).map((item) => (
           <Card
             key={item.id}
             title={`${item.code} · ${text(l10n(item.product)).value}`}
             meta={text(l10n(item.manufacturer)).value}
           >
-            <div className={ui.row}>
+            <div className="flex flex-wrap gap-2">
               <StatusBadge tone="accent">{t(`stage.${item.currentStage}`)}</StatusBadge>
               <StatusBadge>{t(`track.${item.track}`)}</StatusBadge>
               <StatusBadge tone="quiet">

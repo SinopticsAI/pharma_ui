@@ -28,6 +28,9 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Enable pnpm
+        run: corepack enable
+
       # Кабинет живой, поэтому падение сборки — это провал деплоя, а не повод
       # выложить заглушку: старое демо на домене хуже честной ошибки.
       # VITE_* публичны: они и так уезжают в браузер вместе с бандлом.
@@ -40,9 +43,12 @@ jobs:
           VITE_KEYCLOAK_REALM: pharma
           VITE_KEYCLOAK_CLIENT_ID: medmost-spa
         run: |
-          npm ci || npm install
-          npm run check:copy
-          npm run build
+          pnpm install --frozen-lockfile
+          pnpm run lint
+          pnpm run typecheck
+          pnpm run test
+          pnpm run check:copy
+          pnpm run build
 
       - name: Assemble static bundle
         run: node infra/scripts/assemble-static.mjs

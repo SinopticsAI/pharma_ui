@@ -1,3 +1,24 @@
+import {
+  caseDetailSchema,
+  caseItemListSchema,
+  caseItemSchema,
+  identitySchema,
+  intakeMessageListSchema,
+  intakeSessionSchema,
+  organizationItemListSchema,
+  organizationItemSchema,
+  organizationListSchema,
+  organizationSchema,
+  productListSchema,
+  productSchema,
+  registrationCaseListSchema,
+  registrySearchSchema,
+  riskReportOrNullSchema,
+  statusEntryListSchema,
+  statusEntrySchema,
+  uploadTicketSchema,
+  variantListSchema,
+} from '@demo/contracts'
 import type {
   CaseDetail,
   CaseItem,
@@ -18,6 +39,7 @@ import type {
   StatusEntry,
   UploadTicket,
 } from '@demo/domain'
+import type { ZodType } from 'zod'
 import { ApiError } from './errors'
 
 /**
@@ -77,7 +99,7 @@ export class ApiClient {
   private async request<T>(
     method: string,
     path: string,
-    init: { body?: unknown; query?: Query } = {},
+    init: { body?: unknown; query?: Query; schema?: ZodType<T> } = {},
   ): Promise<T> {
     const token = await this.options.getToken()
     const headers: Record<string, string> = {
@@ -124,84 +146,100 @@ export class ApiClient {
       )
     }
 
-    return payload.data as T
+    const data = payload.data
+    if (init.schema) {
+      const parsed = init.schema.safeParse(data)
+      if (!parsed.success) {
+        console.warn(`Ответ Edge не совпал со схемой ${method} ${path}`, parsed.error.flatten())
+        return data as T
+      }
+      return parsed.data
+    }
+    return data as T
   }
 
   // ---------------------------------------------------------------- личность --
 
   getMe(): Promise<Identity> {
-    return this.request('GET', '/accounts/me')
+    return this.request('GET', '/accounts/me', { schema: identitySchema })
   }
 
   // ---------------------------------------------------------------- компании --
 
   listOrganizations(): Promise<Organization[]> {
-    return this.request('GET', '/organizations')
+    return this.request('GET', '/organizations', { schema: organizationListSchema })
   }
 
   createOrganization(input: { name?: string; kind?: string } = {}): Promise<Organization> {
-    return this.request('POST', '/organizations', { body: input })
+    return this.request('POST', '/organizations', { body: input, schema: organizationSchema })
   }
 
   getOrganization(organizationId: string): Promise<Organization> {
-    return this.request('GET', `/organizations/${organizationId}`)
+    return this.request('GET', `/organizations/${organizationId}`, { schema: organizationSchema })
   }
 
   patchOrganization(
     organizationId: string,
     body: { draft?: Record<string, unknown>; status?: string; name?: string },
   ): Promise<Organization> {
-    return this.request('PATCH', `/organizations/${organizationId}`, { body })
+    return this.request('PATCH', `/organizations/${organizationId}`, { body, schema: organizationSchema })
   }
 
   getOrganizationRisk(organizationId: string): Promise<RiskReport | null> {
-    return this.request('GET', `/organizations/${organizationId}/risk`)
+    return this.request('GET', `/organizations/${organizationId}/risk`, { schema: riskReportOrNullSchema })
   }
 
   listOrganizationItems(organizationId: string): Promise<OrganizationItem[]> {
-    return this.request('GET', `/organizations/${organizationId}/items`)
+    return this.request('GET', `/organizations/${organizationId}/items`, { schema: organizationItemListSchema })
   }
 
   requestOrgUploadUrl(organizationId: string, body: UploadRequest): Promise<UploadTicket> {
-    return this.request('POST', `/organizations/${organizationId}/items/upload-url`, { body })
+    return this.request('POST', `/organizations/${organizationId}/items/upload-url`, {
+      body,
+      schema: uploadTicketSchema,
+    })
   }
 
   confirmOrgUpload(organizationId: string, itemId: string): Promise<OrganizationItem> {
-    return this.request('POST', `/organizations/${organizationId}/items/${itemId}/confirm-upload`)
+    return this.request('POST', `/organizations/${organizationId}/items/${itemId}/confirm-upload`, {
+      schema: organizationItemSchema,
+    })
   }
 
   promoteOrgItem(organizationId: string, itemId: string): Promise<OrganizationItem> {
-    return this.request('POST', `/organizations/${organizationId}/items/${itemId}/promote`)
+    return this.request('POST', `/organizations/${organizationId}/items/${itemId}/promote`, {
+      schema: organizationItemSchema,
+    })
   }
 
   // ---------------------------------------------------------------- продукты --
 
   listProducts(organizationId: string): Promise<Product[]> {
-    return this.request('GET', `/organizations/${organizationId}/products`)
+    return this.request('GET', `/organizations/${organizationId}/products`, { schema: productListSchema })
   }
 
   createProduct(organizationId: string, input: { name?: string; kind?: string } = {}): Promise<Product> {
-    return this.request('POST', `/organizations/${organizationId}/products`, { body: input })
+    return this.request('POST', `/organizations/${organizationId}/products`, { body: input, schema: productSchema })
   }
 
   getProduct(productId: string): Promise<Product> {
-    return this.request('GET', `/products/${productId}`)
+    return this.request('GET', `/products/${productId}`, { schema: productSchema })
   }
 
   patchProduct(
     productId: string,
     body: { draft?: Record<string, unknown>; status?: string; name?: string; kind?: string },
   ): Promise<Product> {
-    return this.request('PATCH', `/products/${productId}`, { body })
+    return this.request('PATCH', `/products/${productId}`, { body, schema: productSchema })
   }
 
   listVariants(productId: string): Promise<ClassificationVariant[]> {
-    return this.request('GET', `/products/${productId}/variants`)
+    return this.request('GET', `/products/${productId}/variants`, { schema: variantListSchema })
   }
 
   /** Сначала специалист с `variantId`, затем клиент — и только тогда строится кейс. */
   approveProduct(productId: string, input: ApproveProductInput): Promise<Product> {
-    return this.request('POST', `/products/${productId}/approve`, { body: input })
+    return this.request('POST', `/products/${productId}/approve`, { body: input, schema: productSchema })
   }
 
   // ------------------------------------------------------------------ интейк --
@@ -212,52 +250,52 @@ export class ApiClient {
     productId?: string
     locale?: Locale
   }): Promise<IntakeSession> {
-    return this.request('POST', '/intake/sessions', { body: input })
+    return this.request('POST', '/intake/sessions', { body: input, schema: intakeSessionSchema })
   }
 
   getIntakeSession(sessionId: string): Promise<IntakeSession> {
-    return this.request('GET', `/intake/sessions/${sessionId}`)
+    return this.request('GET', `/intake/sessions/${sessionId}`, { schema: intakeSessionSchema })
   }
 
   /** Журнал только на чтение: пишет его агент тулом `append-chat-message`. */
   listIntakeMessages(sessionId: string): Promise<IntakeMessage[]> {
-    return this.request('GET', `/intake/sessions/${sessionId}/messages`)
+    return this.request('GET', `/intake/sessions/${sessionId}/messages`, { schema: intakeMessageListSchema })
   }
 
   // ------------------------------------------------------------------- кейсы --
 
   /** Список отдаёт только карточки: карта приходит в `getCase`. */
   listCases(): Promise<RegistrationCase[]> {
-    return this.request('GET', '/cases')
+    return this.request('GET', '/cases', { schema: registrationCaseListSchema })
   }
 
   getCase(caseId: string): Promise<CaseDetail> {
-    return this.request('GET', `/cases/${caseId}`)
+    return this.request('GET', `/cases/${caseId}`, { schema: caseDetailSchema })
   }
 
   listCaseItems(caseId: string): Promise<CaseItem[]> {
-    return this.request('GET', `/cases/${caseId}/items`)
+    return this.request('GET', `/cases/${caseId}/items`, { schema: caseItemListSchema })
   }
 
   requestDossierUploadUrl(caseId: string, body: UploadRequest): Promise<UploadTicket> {
-    return this.request('POST', `/cases/${caseId}/items/upload-url`, { body })
+    return this.request('POST', `/cases/${caseId}/items/upload-url`, { body, schema: uploadTicketSchema })
   }
 
   confirmDossierUpload(caseId: string, itemId: string): Promise<CaseItem> {
-    return this.request('POST', `/cases/${caseId}/items/${itemId}/confirm-upload`)
+    return this.request('POST', `/cases/${caseId}/items/${itemId}/confirm-upload`, { schema: caseItemSchema })
   }
 
   listStatuses(caseId: string): Promise<StatusEntry[]> {
-    return this.request('GET', `/cases/${caseId}/statuses`)
+    return this.request('GET', `/cases/${caseId}/statuses`, { schema: statusEntryListSchema })
   }
 
   /** Пишет только оператор: у роли `client` маршрут отдаёт 403. */
   addStatus(caseId: string, input: AddStatusInput): Promise<StatusEntry> {
-    return this.request('POST', `/cases/${caseId}/statuses`, { body: input })
+    return this.request('POST', `/cases/${caseId}/statuses`, { body: input, schema: statusEntrySchema })
   }
 
   searchRegistry(query: string, source: 'elk' | 'grls' = 'elk'): Promise<RegistrySearch> {
-    return this.request('GET', '/registry/search', { query: { q: query, source } })
+    return this.request('GET', '/registry/search', { query: { q: query, source }, schema: registrySearchSchema })
   }
 
   /**

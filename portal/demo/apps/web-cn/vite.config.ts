@@ -1,6 +1,8 @@
 import { fileURLToPath, URL } from 'node:url'
-import { defineConfig, loadEnv } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
+import { defineConfig, loadEnv } from 'vite'
 
 const fromHere = (relative: string) => fileURLToPath(new URL(relative, import.meta.url))
 
@@ -31,13 +33,21 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: '/cn/',
-    // Один .env на дерево кабинетов: адреса ядра и входа общие для трёх сборок.
     envDir: fromHere('../..'),
-    plugins: [react()],
+    plugins: [
+      tanstackRouter({
+        target: 'react',
+        autoCodeSplitting: true,
+      }),
+      tailwindcss(),
+      react(),
+    ],
     resolve: {
       alias: [
-        { find: '@demo/ui/tokens.css', replacement: fromHere('../../packages/ui/src/tokens.css') },
-        { find: '@demo/ui', replacement: fromHere('../../packages/ui/src/index.tsx') },
+        { find: '@demo/ui/globals.css', replacement: fromHere('../../packages/ui/src/styles/globals.css') },
+        { find: '@demo/ui/lib/utils', replacement: fromHere('../../packages/ui/src/lib/utils.ts') },
+        { find: '@demo/ui/components', replacement: fromHere('../../packages/ui/src/components/ui') },
+        { find: '@demo/contracts', replacement: fromHere('../../packages/contracts/src/index.ts') },
         { find: '@demo/api-client', replacement: fromHere('../../packages/api-client/src/index.tsx') },
         { find: '@demo/auth', replacement: fromHere('../../packages/auth/src/index.tsx') },
         { find: '@demo/domain', replacement: fromHere('../../packages/domain/src/index.ts') },

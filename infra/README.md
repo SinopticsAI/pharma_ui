@@ -34,8 +34,9 @@ yc config profile activate pharma-ui
 
 ```powershell
 cd portal\demo
-npm ci
-npm run build
+corepack enable
+pnpm install
+pnpm run build
 ```
 
 Повседневное обновление UI:
@@ -58,5 +59,5 @@ npm run build
 ## Если что-то не так
 
 - **403.** SA шлюза не читает бакет: выдать `storage.viewer` на `pharma-sinoptics-ru`.
-- **404 на `/cn/` или `/ru/`.** Нет `portal/demo/apps/*/dist` — сначала `npm run build`.
+- **404 на `/cn/` или `/ru/`.** Нет `portal/demo/apps/*/dist` — сначала `pnpm run build`.
 - **Домен не отвечает.** CNAME или `add-domain` ещё не делали.

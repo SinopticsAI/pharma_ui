@@ -2,6 +2,9 @@ node_modules/
 dist/
 out/
 .vite/
+.turbo
+playwright-report
+test-results/
 *.tsbuildinfo
 
 yandex_key.env

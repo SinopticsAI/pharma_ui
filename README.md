@@ -66,15 +66,17 @@
 
 ```powershell
 cd portal\demo
-npm ci
+corepack enable
+# Если EPERM на Program Files: corepack enable --install-directory $env:LOCALAPPDATA\bin
+pnpm install
 Copy-Item .env.example .env
-npm run dev      # кабинет pharma_cert, :5175
-npm run dev:cn   # кабинет производителя, :5173
-npm run dev:ru   # консоль оператора, :5174
+pnpm run dev      # кабинет pharma_cert, :5175
+pnpm run dev:cn   # кабинет производителя, :5173
+pnpm run dev:ru   # консоль оператора, :5174
 ```
 
 Порты не произвольные: именно они прописаны в redirect URIs клиента
-`medmost-spa`. `npm run demo` собирает всё на `:4173` и годится для проверки
+`medmost-spa`. `pnpm run demo` собирает всё на `:4173` и годится для проверки
 сборки, но не для входа.
 
 | Приложение | Путь на домене | Контур запроса |
@@ -97,9 +99,10 @@ yc config profile activate pharma-ui
 
 ```powershell
 cd portal\demo
-npm ci
+corepack enable
+pnpm install
 Copy-Item .env.example .env   # сборка читает VITE_* отсюда
-npm run build
+pnpm run build
 cd ..\..
 Copy-Item .\infra\account.env.example .\infra\account.env
 .\infra\scripts\discover.ps1
@@ -124,6 +127,7 @@ Copy-Item .\infra\account.env.example .\infra\account.env
 | [`portal/demo/README.md`](portal/demo/README.md) | как устроены кабинеты и локальный запуск |
 | [`infra/README.md`](infra/README.md) | скрипты, бакет, шлюз, диагностика |
 | [`spec/deploy.md`](spec/deploy.md) | CI, секреты, что не трогать |
+| [`spec/frontend_framework.md`](spec/frontend_framework.md) | стек кабинетов: сборка, маршруты, данные, UI |
 
 ## Каталог Yandex Cloud
 

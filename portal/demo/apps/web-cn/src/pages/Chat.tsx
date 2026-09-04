@@ -1,5 +1,5 @@
 import { useI18n } from '@demo/i18n'
-import { Card, Empty, PageHeader } from '@demo/ui'
+import { Card, Empty, PageHeader } from '../kit'
 
 /** Переписки по кейсу ядро пока не отдаёт: диалог интейка живёт отдельно. */
 export function ChatPage() {
