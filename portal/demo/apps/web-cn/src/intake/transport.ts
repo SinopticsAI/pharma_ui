@@ -1,5 +1,4 @@
 import { AssistantChatTransport } from '@assistant-ui/react-ai-sdk'
-import type { Locale } from '@demo/domain'
 
 /**
  * Транспорт диалога интейка.
@@ -27,15 +26,23 @@ export function createIntakeTransport(options: {
   agentId: AgentId
   sessionId: string
   accountId: string
-  locale: Locale
   getToken: () => Promise<string | null>
 }) {
   return new AssistantChatTransport({
     api: `${agentApiBase()}/chat/${options.agentId}`,
+    // Заголовки ограничены списком `allowHeaders` шлюза: всё лишнее роняет
+    // preflight, и запрос до агента не доходит. Поэтому локаль диалога
+    // заголовком не уходит — агент берёт `zh`, основной язык этого кабинета.
+    // Вернуть выбор языка можно, когда шлюз разрешит `X-Pharma-Locale`.
+    //
+    // `X-Pharma-Account` — временный обход: инструменты агента резолвят аккаунт
+    // из этого заголовка, потому что `accountId` в JWT пустой. Как только агент
+    // начнёт резолвить его по `sub` (SinopticsAI/pharma-agent#1), заголовок
+    // уйдёт: доверять аккаунту из браузера нельзя.
     headers: async () => {
       const token = await options.getToken()
       return {
-        'X-Pharma-Locale': options.locale,
+        'X-Pharma-Account': options.accountId,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       }
     },

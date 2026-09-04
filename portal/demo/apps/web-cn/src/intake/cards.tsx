@@ -49,7 +49,7 @@ interface AskDocumentArgs {
 
 function AskDocument({ args }: { args: AskDocumentArgs }) {
   const asText = useText()
-  const { attach, send, busy } = useIntakeActions()
+  const { attachDocument, send, busy } = useIntakeActions()
   const form = useForm({
     resolver: zodResolver(askDocumentFormSchema),
     defaultValues: { answer: '' },
@@ -60,7 +60,8 @@ function AskDocument({ args }: { args: AskDocumentArgs }) {
       <h4 className="text-sm font-semibold">{asText(args.question, args.itemType)}</h4>
       {args.why ? <p className="text-sm text-muted-foreground">{asText(args.why)}</p> : null}
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" disabled={busy} onClick={() => attach(args.itemType)}>
+        {/* Тип документа берётся из запроса агента: вложение уйдёт именно этим типом. */}
+        <Button type="button" disabled={busy} onClick={() => attachDocument(args.itemType)}>
           Приложить файл
         </Button>
         {args.acceptsText ? (

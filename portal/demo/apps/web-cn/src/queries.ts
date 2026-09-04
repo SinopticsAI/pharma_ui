@@ -116,31 +116,9 @@ export const useOpenIntakeSession = () => {
 }
 
 /**
- * Документ интейка. Без productId файл ложится на уровень компании и
- * переиспользуется всеми её продуктами.
+ * Документ интейка грузит адаптер вложений чата (`intake/attachments.ts`):
+ * файл живёт в нити диалога, поэтому отдельной мутации у экранов интейка нет.
  */
-export const useUploadOrgItem = (organizationId: string, productId?: string) => {
-  const api = useApi()
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ file, itemType }: { file: File; itemType: string }) => {
-      const request: UploadRequest = {
-        itemType,
-        fileName: file.name,
-        contentType: file.type || 'application/octet-stream',
-        title: file.name,
-        productId,
-      }
-      const ticket = await api.requestOrgUploadUrl(organizationId, request)
-      await api.putFile(ticket, file)
-      return api.confirmOrgUpload(organizationId, ticket.itemId)
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['organization', organizationId] })
-      if (productId) void queryClient.invalidateQueries({ queryKey: ['product', productId] })
-    },
-  })
-}
 
 /** Профиль одобряет человек. Ядро проверит полноту и вердикт по рискам. */
 export const useApproveCompanyProfile = (organizationId: string) => {

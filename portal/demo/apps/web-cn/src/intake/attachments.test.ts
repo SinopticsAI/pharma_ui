@@ -1,0 +1,88 @@
+import type { ApiClient } from '@demo/api-client'
+import type { OrganizationItem, UploadTicket } from '@demo/domain'
+import { QueryClient } from '@tanstack/react-query'
+import { describe, expect, it, vi } from 'vitest'
+import { createIntakeAttachmentAdapter } from './attachments'
+
+const TICKET: UploadTicket = {
+  uploadUrl: 'https://storage.yandexcloud.net/pharma-dossier/org-1/doc',
+  itemId: 'item-1',
+  objectKey: 'org-1/doc',
+  expiresIn: 900,
+}
+
+function fakeApi(calls: string[], overrides: Partial<Record<'putFile', () => Promise<void>>> = {}) {
+  return {
+    requestOrgUploadUrl: vi.fn(async () => {
+      calls.push('upload-url')
+      return TICKET
+    }),
+    putFile: vi.fn(
+      overrides.putFile ??
+        (async () => {
+          calls.push('put')
+        }),
+    ),
+    confirmOrgUpload: vi.fn(async () => {
+      calls.push('confirm')
+      return {} as OrganizationItem
+    }),
+  }
+}
+
+function adapterWith(api: ReturnType<typeof fakeApi>, onError?: (error: unknown) => void) {
+  return createIntakeAttachmentAdapter({
+    api: api as unknown as ApiClient,
+    queryClient: new QueryClient(),
+    organizationId: 'org-1',
+    productId: 'prod-1',
+    itemType: () => 'poa-upp',
+    onError,
+  })
+}
+
+const file = () => new File(['x'], 'doverennost.pdf', { type: 'application/pdf' })
+
+describe('createIntakeAttachmentAdapter', () => {
+  it('грузит документ presigned-контрактом и кладёт itemId в текстовую часть', async () => {
+    const calls: string[] = []
+    const api = fakeApi(calls)
+    const adapter = adapterWith(api)
+
+    const pending = await adapter.add({ file: file() })
+    expect(pending.status).toEqual({ type: 'requires-action', reason: 'composer-send' })
+
+    const complete = await adapter.send(pending)
+
+    expect(calls).toEqual(['upload-url', 'put', 'confirm'])
+    expect(api.requestOrgUploadUrl).toHaveBeenCalledWith('org-1', {
+      itemType: 'poa-upp',
+      fileName: 'doverennost.pdf',
+      contentType: 'application/pdf',
+      title: 'doverennost.pdf',
+      productId: 'prod-1',
+    })
+    expect(complete.status).toEqual({ type: 'complete' })
+    expect(complete.content).toEqual([
+      { type: 'text', text: 'Документ «doverennost.pdf» загружен в ядро. itemType: poa-upp, itemId: item-1' },
+    ])
+  })
+
+  it('не подтверждает загрузку, если хранилище отказало, и отдаёт ошибку экрану', async () => {
+    const calls: string[] = []
+    const api = fakeApi(calls, {
+      putFile: async () => {
+        throw new Error('storage refused 403')
+      },
+    })
+    const onError = vi.fn()
+    const adapter = adapterWith(api, onError)
+
+    const pending = await adapter.add({ file: file() })
+
+    await expect(adapter.send(pending)).rejects.toThrow('storage refused 403')
+    expect(calls).toEqual(['upload-url'])
+    expect(api.confirmOrgUpload).not.toHaveBeenCalled()
+    expect(onError).toHaveBeenCalledTimes(1)
+  })
+})

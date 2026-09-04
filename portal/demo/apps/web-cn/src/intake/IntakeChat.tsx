@@ -1,22 +1,27 @@
-import { AssistantRuntimeProvider, ComposerPrimitive, MessagePrimitive, ThreadPrimitive } from '@assistant-ui/react'
+import {
+  AssistantRuntimeProvider,
+  AttachmentPrimitive,
+  ComposerPrimitive,
+  MessagePrimitive,
+  ThreadPrimitive,
+} from '@assistant-ui/react'
 import { useChatRuntime } from '@assistant-ui/react-ai-sdk'
-import { describeError, useIdentity } from '@demo/api-client'
+import { describeError, useApi, useIdentity } from '@demo/api-client'
 import { useAuth } from '@demo/auth'
 import type { ProgressSection } from '@demo/domain'
-import { useI18n } from '@demo/i18n'
-import { Button } from '@demo/ui/components/button'
-import { Input } from '@demo/ui/components/input'
+import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useRef, useState } from 'react'
-import { useApproveCompanyProfile, useApproveProductData, useUploadOrgItem } from '../queries'
+import { useApproveCompanyProfile, useApproveProductData } from '../queries'
+import { createIntakeAttachmentAdapter, pickIntakeFile } from './attachments'
 import { IntakeToolUIs } from './cards'
 import { type IntakeActions, IntakeActionsProvider, useIntakeActions } from './context'
 import { type AgentId, createIntakeTransport } from './transport'
 
 /**
- * Экран интейка: слева нить диалога, справа комплектность по разделам.
+ * Экран интейка: слева нить диалога и загрузки, справа комплектность по разделам.
  *
- * Примитивы assistant-ui остаются теми же, что ставит регистр thread:
- * транспорт и версии пакетов уже живые, UI собирается из shadcn.
+ * Документ прикладывается скрепкой в самом композере: файл становится вложением
+ * сообщения, а не отдельной загрузкой рядом с чатом.
  */
 
 const SECTION_LABEL: Record<ProgressSection['key'], string> = {
@@ -71,14 +76,14 @@ function ProgressPanel({
 }
 
 function Thread() {
-  const { attach, busy } = useIntakeActions()
+  const { setItemType } = useIntakeActions()
 
   return (
     <ThreadPrimitive.Root className="flex h-[560px] flex-col rounded-lg border bg-card">
       <ThreadPrimitive.Viewport className="flex-1 space-y-3 overflow-y-auto p-4">
         <ThreadPrimitive.Empty>
           <p className="text-sm text-muted-foreground">
-            Приложите документ компании — агент разберёт его и заполнит карточку. Анкету писать не нужно.
+            Приложите документ компании скрепкой — агент разберёт его и заполнит карточку. Анкету писать не нужно.
           </p>
         </ThreadPrimitive.Empty>
 
@@ -86,10 +91,17 @@ function Thread() {
           components={{
             UserMessage: () => (
               <MessagePrimitive.Root
-                className="ml-auto max-w-[80%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
+                className="ml-auto max-w-[80%] space-y-1 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
                 data-role="user"
               >
                 <MessagePrimitive.Parts />
+                <MessagePrimitive.Attachments>
+                  {() => (
+                    <AttachmentPrimitive.Root className="flex items-center gap-2 text-xs opacity-80">
+                      <AttachmentPrimitive.Name />
+                    </AttachmentPrimitive.Root>
+                  )}
+                </MessagePrimitive.Attachments>
               </MessagePrimitive.Root>
             ),
             AssistantMessage: () => (
@@ -108,18 +120,41 @@ function Thread() {
         </ThreadPrimitive.If>
       </ThreadPrimitive.Viewport>
 
-      <ComposerPrimitive.Root className="flex items-end gap-2 border-t p-3">
-        <ComposerPrimitive.Input
-          className="min-h-9 flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-          placeholder="Напишите агенту"
-          rows={1}
-        />
-        <Button type="button" variant="outline" disabled={busy} onClick={() => attach('other')}>
-          Приложить документ
-        </Button>
-        <ComposerPrimitive.Send className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground">
-          Отправить
-        </ComposerPrimitive.Send>
+      <ComposerPrimitive.Root className="space-y-2 border-t p-3">
+        <div className="flex flex-wrap gap-2 empty:hidden">
+          <ComposerPrimitive.Attachments>
+            {() => (
+              <AttachmentPrimitive.Root className="inline-flex items-center gap-2 rounded-md border bg-background px-2 py-1 text-xs">
+                <AttachmentPrimitive.Name />
+                <AttachmentPrimitive.Remove
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Убрать вложение"
+                >
+                  ×
+                </AttachmentPrimitive.Remove>
+              </AttachmentPrimitive.Root>
+            )}
+          </ComposerPrimitive.Attachments>
+        </div>
+
+        <div className="flex items-end gap-2">
+          <ComposerPrimitive.Input
+            className="min-h-9 flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+            placeholder="Напишите агенту"
+            rows={1}
+          />
+          {/* Скрепка без карточки: тип документа определит агент по содержимому. */}
+          <ComposerPrimitive.AddAttachment
+            multiple={false}
+            onClick={() => setItemType('other')}
+            className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm hover:bg-accent"
+          >
+            Приложить документ
+          </ComposerPrimitive.AddAttachment>
+          <ComposerPrimitive.Send className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground">
+            Отправить
+          </ComposerPrimitive.Send>
+        </div>
       </ComposerPrimitive.Root>
     </ThreadPrimitive.Root>
   )
@@ -144,13 +179,16 @@ export function IntakeChat({
   missing?: string[]
   percent: number
 }) {
-  const { locale } = useI18n()
+  const api = useApi()
+  const queryClient = useQueryClient()
   const identity = useIdentity()
   const { getAccessToken } = useAuth()
-  const fileInput = useRef<HTMLInputElement>(null)
-  const [pendingType, setPendingType] = useState('other')
+  const [uploadError, setUploadError] = useState<unknown>(null)
 
-  const upload = useUploadOrgItem(organizationId, productId)
+  // Тип документа называет карточка `ask-document` перед выбором файла, а нужен
+  // он адаптеру в момент отправки — поэтому не состояние, а ссылка.
+  const itemType = useRef('other')
+
   const approveCompany = useApproveCompanyProfile(organizationId)
   const approveProduct = useApproveProductData(productId ?? '')
 
@@ -160,33 +198,56 @@ export function IntakeChat({
         agentId,
         sessionId,
         accountId: identity.accountId,
-        locale,
         getToken: getAccessToken,
       }),
-    [agentId, sessionId, identity.accountId, locale, getAccessToken],
+    [agentId, sessionId, identity.accountId, getAccessToken],
   )
 
-  const runtime = useChatRuntime({ transport })
+  const attachments = useMemo(
+    () =>
+      createIntakeAttachmentAdapter({
+        api,
+        queryClient,
+        organizationId,
+        productId,
+        itemType: () => itemType.current,
+        onError: (error) => setUploadError(() => error),
+      }),
+    [api, queryClient, organizationId, productId],
+  )
+
+  const runtime = useChatRuntime({ transport, adapters: { attachments } })
 
   const actions = useMemo<IntakeActions>(
     () => ({
       send: (text) => {
         void runtime.thread.append({ role: 'user', content: [{ type: 'text', text }] })
       },
-      attach: (itemType) => {
-        setPendingType(itemType)
-        fileInput.current?.click()
+      setItemType: (value) => {
+        itemType.current = value
+      },
+      attachDocument: (value) => {
+        itemType.current = value
+        void pickIntakeFile().then((file) => {
+          if (!file) return
+          setUploadError(null)
+          return runtime.thread.composer.addAttachment(file).catch((error: unknown) => {
+            setUploadError(() => error)
+          })
+        })
       },
       approveDraft: (scope, _entityId) => {
         if (scope === 'company') approveCompany.mutate()
         else if (productId) approveProduct.mutate()
       },
-      busy: upload.isPending || approveCompany.isPending || approveProduct.isPending,
+      busy: approveCompany.isPending || approveProduct.isPending,
     }),
-    [runtime, upload.isPending, approveCompany, approveProduct, productId],
+    [runtime, approveCompany, approveProduct, productId],
   )
 
-  const failure = upload.error ?? approveCompany.error ?? approveProduct.error
+  // Загрузка падает вне нити: сообщение агенту не уходит, вложение остаётся в
+  // композере. Показываем причину рядом с чатом, чтобы можно было повторить.
+  const failure = uploadError ?? approveCompany.error ?? approveProduct.error
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
@@ -196,25 +257,6 @@ export function IntakeChat({
           <div className="space-y-2">
             {failure ? <p className="text-sm text-destructive">{describeError(failure)}</p> : null}
             <Thread />
-            <Input
-              ref={fileInput}
-              type="file"
-              className="hidden"
-              accept=".pdf,.png,.jpg,.jpeg,.webp,.tif,.tiff,.doc,.docx,.xls,.xlsx"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                event.target.value = ''
-                if (!file) return
-                upload.mutate(
-                  { file, itemType: pendingType },
-                  {
-                    onSuccess: () => {
-                      actions.send(`Приложил документ: ${file.name}`)
-                    },
-                  },
-                )
-              }}
-            />
           </div>
           <ProgressPanel sections={sections} missing={missing} percent={percent} title={title} />
         </div>
