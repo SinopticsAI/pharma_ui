@@ -78,13 +78,15 @@ function ProgressPanel({
 }
 
 function Thread() {
+  const { attach, busy } = useIntakeActions()
+
   return (
     <ThreadPrimitive.Root className={styles.thread}>
       <ThreadPrimitive.Viewport className={styles.viewport}>
         <ThreadPrimitive.Empty>
           <p className={styles.empty}>
-            Диалог примерно на пятнадцать минут. Агент заполнит профиль по вашим документам —
-            анкету заполнять не нужно.
+            Приложите документ компании — агент разберёт его и заполнит карточку. Анкету писать не
+            нужно.
           </p>
         </ThreadPrimitive.Empty>
 
@@ -115,9 +117,17 @@ function Thread() {
       <ComposerPrimitive.Root className={styles.composer}>
         <ComposerPrimitive.Input
           className={styles.composerInput}
-          placeholder="Напишите агенту или приложите документ"
+          placeholder="Напишите агенту"
           rows={1}
         />
+        <button
+          type="button"
+          className={styles.secondary}
+          disabled={busy}
+          onClick={() => attach('other')}
+        >
+          Приложить документ
+        </button>
         <ComposerPrimitive.Send className={styles.primary}>Отправить</ComposerPrimitive.Send>
       </ComposerPrimitive.Root>
     </ThreadPrimitive.Root>
@@ -199,10 +209,19 @@ export function IntakeChat({
               ref={fileInput}
               type="file"
               hidden
+              accept=".pdf,.png,.jpg,.jpeg,.webp,.tif,.tiff,.doc,.docx,.xls,.xlsx"
               onChange={(event) => {
                 const file = event.target.files?.[0]
                 event.target.value = ''
-                if (file) upload.mutate({ file, itemType: pendingType })
+                if (!file) return
+                upload.mutate(
+                  { file, itemType: pendingType },
+                  {
+                    onSuccess: () => {
+                      actions.send(`Приложил документ: ${file.name}`)
+                    },
+                  },
+                )
               }}
             />
           </div>

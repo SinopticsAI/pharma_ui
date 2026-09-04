@@ -57,7 +57,7 @@ export const ERROR_COPY: Record<string, string> = {
   no_variant: 'Вариант классификации не выбран.',
   invalid_variant: 'Вариант не относится к этому продукту.',
   not_found: 'Запись не найдена.',
-  internal_error: 'Ядро вернуло ошибку. Повторите позже.',
+  internal_error: 'Ядро приняло запрос, но не смогло его выполнить. Это поломка контура, не входа.',
 }
 
 export function describeError(error: unknown): string {
@@ -66,7 +66,13 @@ export function describeError(error: unknown): string {
     // Адрес, на котором всё встало, — половина диагноза: без него не отличить
     // недоступное ядро от неверного токена.
     const url = error.details.url
-    return error.isUnreachable && typeof url === 'string' ? `${copy} Адрес: ${url}` : copy
+    if (error.isUnreachable && typeof url === 'string') return `${copy} Адрес: ${url}`
+    // 5xx несёт причину в message (сокет, сертификат, SQL). Без неё экран
+    // выглядит как «попробуйте позже», хотя чинить нужно контур.
+    if (error.status >= 500 && error.message && error.message !== copy) {
+      return `${copy} ${error.message}`
+    }
+    return copy
   }
   return error instanceof Error ? error.message : String(error)
 }
