@@ -76,7 +76,7 @@ function ProgressPanel({
 }
 
 function Thread() {
-  const { setItemType } = useIntakeActions()
+  const { setItemType, composerItemType } = useIntakeActions()
 
   return (
     <ThreadPrimitive.Root className="flex h-[560px] flex-col rounded-lg border bg-card">
@@ -143,10 +143,9 @@ function Thread() {
             placeholder="Напишите агенту"
             rows={1}
           />
-          {/* Скрепка без карточки: тип документа определит агент по содержимому. */}
           <ComposerPrimitive.AddAttachment
             multiple={false}
-            onClick={() => setItemType('other')}
+            onClick={() => setItemType(composerItemType)}
             className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm hover:bg-accent"
           >
             Приложить документ
@@ -187,7 +186,8 @@ export function IntakeChat({
 
   // Тип документа называет карточка `ask-document` перед выбором файла, а нужен
   // он адаптеру в момент отправки — поэтому не состояние, а ссылка.
-  const itemType = useRef('other')
+  const composerItemType = agentId === 'companyIntake' ? 'business-license' : 'other'
+  const itemType = useRef(composerItemType)
 
   const approveCompany = useApproveCompanyProfile(organizationId)
   const approveProduct = useApproveProductData(productId ?? '')
@@ -223,6 +223,7 @@ export function IntakeChat({
       send: (text) => {
         void runtime.thread.append({ role: 'user', content: [{ type: 'text', text }] })
       },
+      composerItemType,
       setItemType: (value) => {
         itemType.current = value
       },
@@ -242,7 +243,7 @@ export function IntakeChat({
       },
       busy: approveCompany.isPending || approveProduct.isPending,
     }),
-    [runtime, approveCompany, approveProduct, productId],
+    [runtime, approveCompany, approveProduct, productId, composerItemType],
   )
 
   // Загрузка падает вне нити: сообщение агенту не уходит, вложение остаётся в

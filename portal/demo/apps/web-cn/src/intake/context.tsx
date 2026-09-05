@@ -15,6 +15,8 @@ export interface IntakeActions {
   send: (text: string) => void
   /** Тип следующего вложения: его подставит адаптер в запрос загрузки. */
   setItemType: (itemType: string) => void
+  /** Скрепка композера без карточки: на регистрации компании это 营业执照. */
+  composerItemType: string
   /** Тип документа плюс выбор файла: вложение появляется чипом в композере. */
   attachDocument: (itemType: string) => void
   approveDraft: (scope: 'company' | 'product', entityId: string) => void
