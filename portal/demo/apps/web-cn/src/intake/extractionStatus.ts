@@ -120,8 +120,9 @@ export function isExtractionPending(
   if (!Array.isArray(items)) return false
   return items.some((item) => {
     if (!isInFlightStatus(item.status)) return false
-    if (!item.updatedAt) return true
-    return itemAgeMs(item, nowMs) < EXTRACTION_GIVE_UP_MS
+    const updatedAt = item.updatedAt
+    if (!updatedAt) return true
+    return itemAgeMs({ updatedAt }, nowMs) < EXTRACTION_GIVE_UP_MS
   })
 }
 
