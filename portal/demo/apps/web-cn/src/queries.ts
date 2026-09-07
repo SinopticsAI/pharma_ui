@@ -1,6 +1,7 @@
 import type { ApproveProductInput, UploadRequest } from '@demo/api-client'
 import { useApi } from '@demo/api-client'
 import type { IntakeScope, ItemStatus, Locale } from '@demo/domain'
+import { readPlaneEnabled } from '@demo/domain'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 /**
@@ -9,9 +10,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
  */
 
 /**
- * Разбор документа асинхронный: браузер подтверждает загрузку, кабинет зовёт
- * POST /extract, Mastra пишет черновик через вебхук. Экрану об этом никто не
- * сообщает, поэтому пока есть неразобранный документ, чтения повторяются сами.
+ * Разбор документа асинхронный: без галочки кабинет зовёт POST /extract,
+ * с галочкой Edge стартует Plane. Экрану об этом никто не сообщает, поэтому
+ * пока есть неразобранный документ, чтения повторяются сами.
  */
 const EXTRACTION_POLL_MS = 10_000
 const SETTLED_ITEM_STATUSES: ItemStatus[] = ['parsed', 'rejected']
@@ -240,6 +241,7 @@ export const useUploadDossierItem = (caseId: string) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ file, itemType }: { file: File; itemType: string }) => {
+      const usePlane = readPlaneEnabled()
       const request: UploadRequest = {
         itemType,
         fileName: file.name,
@@ -248,7 +250,15 @@ export const useUploadDossierItem = (caseId: string) => {
       }
       const ticket = await api.requestDossierUploadUrl(caseId, request)
       await api.putFile(ticket, file)
-      return api.confirmDossierUpload(caseId, ticket.itemId)
+      const item = await api.confirmDossierUpload(caseId, ticket.itemId, { usePlane })
+      if (usePlane) {
+        try {
+          await api.startCase(caseId)
+        } catch {
+          // Edge уже стартовал на confirm, или Plane недоступен — файл всё равно лежит.
+        }
+      }
+      return item
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['case-items', caseId] }),
   })

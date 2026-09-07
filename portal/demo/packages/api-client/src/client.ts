@@ -224,12 +224,20 @@ export class ApiClient {
   }
 
   /**
-   * `sessionId` называет диалог, в котором пришёл документ. Разбор после
-   * confirm — отдельный POST /extract на агенте, не этот метод.
+   * `sessionId` называет диалог. `usePlane: true` просит Edge стартовать
+   * pharma-intake; без флага разбор — POST /extract на агенте.
    */
-  confirmOrgUpload(organizationId: string, itemId: string, sessionId?: string): Promise<OrganizationItem> {
+  confirmOrgUpload(
+    organizationId: string,
+    itemId: string,
+    sessionId?: string,
+    extras?: { usePlane?: boolean },
+  ): Promise<OrganizationItem> {
+    const body: { sessionId?: string; usePlane?: boolean } = {}
+    if (sessionId) body.sessionId = sessionId
+    if (extras?.usePlane) body.usePlane = true
     return this.request('POST', `/organizations/${organizationId}/items/${itemId}/confirm-upload`, {
-      body: sessionId ? { sessionId } : {},
+      body,
       schema: organizationItemSchema,
     })
   }
@@ -340,8 +348,16 @@ export class ApiClient {
     return this.request('POST', `/cases/${caseId}/items/upload-url`, { body, schema: uploadTicketSchema })
   }
 
-  confirmDossierUpload(caseId: string, itemId: string): Promise<CaseItem> {
-    return this.request('POST', `/cases/${caseId}/items/${itemId}/confirm-upload`, { schema: caseItemSchema })
+  confirmDossierUpload(caseId: string, itemId: string, extras?: { usePlane?: boolean }): Promise<CaseItem> {
+    return this.request('POST', `/cases/${caseId}/items/${itemId}/confirm-upload`, {
+      body: extras?.usePlane ? { usePlane: true } : {},
+      schema: caseItemSchema,
+    })
+  }
+
+  /** Явный старт Plane по кейсу. Кабинет зовёт только при включённой галочке. */
+  startCase(caseId: string, body: { workflow?: string; language?: string } = {}): Promise<unknown> {
+    return this.request('POST', `/cases/${caseId}/actions/start`, { body })
   }
 
   listStatuses(caseId: string): Promise<StatusEntry[]> {

@@ -42,6 +42,8 @@ export interface IntakeAttachmentOptions {
   onError?: (error: unknown) => void
   /** Текст, который видят человек и агент: в нём обязаны остаться itemId и organizationId. */
   uploadedText?: (parts: { name: string; organizationId: string; itemType: string; itemId: string }) => string
+  /** На момент confirm: галочка Plane читается здесь, не из замыкания add. */
+  usePlane?: () => boolean
 }
 
 export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions): IntakeAttachmentAdapter {
@@ -78,7 +80,9 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
       try {
         const ticket = await options.api.requestOrgUploadUrl(options.organizationId, request)
         await options.api.putFile(ticket, attachment.file)
-        await options.api.confirmOrgUpload(options.organizationId, ticket.itemId, options.sessionId)
+        await options.api.confirmOrgUpload(options.organizationId, ticket.itemId, options.sessionId, {
+          usePlane: options.usePlane?.() === true,
+        })
 
         // Комплектность считает ядро: панель разделов пересчитается сама.
         void options.queryClient.invalidateQueries({ queryKey: ['organization', options.organizationId] })

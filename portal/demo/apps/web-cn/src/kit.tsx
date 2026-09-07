@@ -10,6 +10,33 @@ export const navItem =
   'block border-l-[3px] border-transparent px-4 py-2 text-sm text-foreground no-underline hover:bg-background'
 export const navItemActive = 'border-l-primary bg-background font-medium'
 
+export function PlaneToggle({
+  checked,
+  onChange,
+  label,
+  hint,
+}: {
+  checked: boolean
+  onChange: (next: boolean) => void
+  label: string
+  hint: string
+}) {
+  return (
+    <label className="flex max-w-xs cursor-pointer items-start gap-2 text-left text-sm">
+      <input
+        type="checkbox"
+        className="mt-1"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span>
+        <span className="font-medium">{label}</span>
+        <span className="mt-0.5 block text-xs font-normal text-muted-foreground">{hint}</span>
+      </span>
+    </label>
+  )
+}
+
 export function PageHeader({ title, lead, actions }: { title: string; lead?: string; actions?: ReactNode }) {
   return (
     <div className="mb-4 space-y-2">

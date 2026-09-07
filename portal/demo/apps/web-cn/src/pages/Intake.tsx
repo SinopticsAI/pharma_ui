@@ -7,7 +7,8 @@ import { CabinetNav } from '../cabinet-nav'
 import { DocumentsPanel } from '../intake/DocumentsPanel'
 import { IntakeChat } from '../intake/IntakeChat'
 import { RequisitesPanel } from '../intake/RequisitesPanel'
-import { Callout, Empty, PageHeader } from '../kit'
+import { Callout, Empty, PageHeader, PlaneToggle } from '../kit'
+import { usePlaneEnabled } from '../planeToggle'
 import { extractionPending, useOrganization, useOrganizationItems, useProduct } from '../queries'
 import { Shell } from '../Shell'
 
@@ -67,6 +68,7 @@ export function IntakeCompanyPage() {
   const { organizationId } = useParams({ from: '/intake/company/$organizationId' })
   const { session } = useSearch({ from: '/intake/company/$organizationId' })
   const { t, text } = useI18n()
+  const [usePlane, setUsePlane] = usePlaneEnabled()
   // Реквизиты дописывает разбор документов, поэтому карточка перечитывается,
   // пока хотя бы по одному документу ядро ещё ждёт ответа от Plane.
   const items = useOrganizationItems(organizationId)
@@ -86,6 +88,14 @@ export function IntakeCompanyPage() {
           company
             ? `${text(l10n(company.name, organizationId)).value}. ${t('intake.company.leadNamed')}`
             : t('intake.company.lead')
+        }
+        actions={
+          <PlaneToggle
+            checked={usePlane}
+            onChange={setUsePlane}
+            label={t('intake.plane.toggle')}
+            hint={t('intake.plane.toggleHint')}
+          />
         }
       />
       {error ? <Callout tone="deadline">{describeError(error)}</Callout> : null}
@@ -128,6 +138,7 @@ export function IntakeProductPage() {
   const { productId } = useParams({ from: '/intake/product/$productId' })
   const { session } = useSearch({ from: '/intake/product/$productId' })
   const { t, text } = useI18n()
+  const [usePlane, setUsePlane] = usePlaneEnabled()
   const product = useProduct(productId)
   const { sessionId, error } = useSessionId(session, { scope: 'product', productId })
 
@@ -147,6 +158,14 @@ export function IntakeProductPage() {
           card
             ? `${text(l10n(card.name, productId)).value}. ${t('intake.product.leadNamed')}`
             : t('intake.product.lead')
+        }
+        actions={
+          <PlaneToggle
+            checked={usePlane}
+            onChange={setUsePlane}
+            label={t('intake.plane.toggle')}
+            hint={t('intake.plane.toggleHint')}
+          />
         }
       />
       {error ? <Callout tone="deadline">{describeError(error)}</Callout> : null}

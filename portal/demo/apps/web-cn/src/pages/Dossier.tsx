@@ -11,7 +11,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useCaseId } from '../CaseLayout'
-import { Callout, Card, Empty, PageHeader, StatusBadge, Table } from '../kit'
+import { Callout, Card, Empty, PageHeader, PlaneToggle, StatusBadge, Table } from '../kit'
+import { usePlaneEnabled } from '../planeToggle'
 import { useCaseItems, useUploadDossierItem } from '../queries'
 
 const STATUS_TONE: Record<ItemStatus, 'accent' | 'warm' | 'quiet'> = {
@@ -37,6 +38,7 @@ const ITEM_TYPES = [
 export function DossierPage() {
   const caseId = useCaseId()
   const { t, text } = useI18n()
+  const [usePlane, setUsePlane] = usePlaneEnabled()
   const items = useCaseItems(caseId)
   const upload = useUploadDossierItem(caseId)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -51,7 +53,18 @@ export function DossierPage() {
 
   return (
     <>
-      <PageHeader title={t('dossier.title')} lead={t('dossier.lead')} />
+      <PageHeader
+        title={t('dossier.title')}
+        lead={t('dossier.lead')}
+        actions={
+          <PlaneToggle
+            checked={usePlane}
+            onChange={setUsePlane}
+            label={t('intake.plane.toggle')}
+            hint={t('intake.plane.toggleHint')}
+          />
+        }
+      />
 
       <Card>
         <form

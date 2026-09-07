@@ -38,6 +38,7 @@ function adapterWith(api: ReturnType<typeof fakeApi>, onError?: (error: unknown)
     productId: 'prod-1',
     sessionId: 'ses-1',
     itemType: () => 'poa-upp',
+    usePlane: () => false,
     onError,
   })
 }
@@ -64,7 +65,7 @@ describe('createIntakeAttachmentAdapter', () => {
       productId: 'prod-1',
     })
     // Сессия называет диалог: по ней ядро адресует разбор обратно в ту же нить.
-    expect(api.confirmOrgUpload).toHaveBeenCalledWith('org-1', 'item-1', 'ses-1')
+    expect(api.confirmOrgUpload).toHaveBeenCalledWith('org-1', 'item-1', 'ses-1', { usePlane: false })
     expect(complete.status).toEqual({ type: 'complete' })
     expect(complete.content).toEqual([
       {
@@ -90,5 +91,20 @@ describe('createIntakeAttachmentAdapter', () => {
     expect(calls).toEqual(['upload-url'])
     expect(api.confirmOrgUpload).not.toHaveBeenCalled()
     expect(onError).toHaveBeenCalledTimes(1)
+  })
+
+  it('передаёт usePlane на confirm, когда галочка включена', async () => {
+    const api = fakeApi([])
+    const adapter = createIntakeAttachmentAdapter({
+      api: api as unknown as ApiClient,
+      queryClient: new QueryClient(),
+      organizationId: 'org-1',
+      sessionId: 'ses-1',
+      itemType: () => 'business-license',
+      usePlane: () => true,
+    })
+    const pending = await adapter.add({ file: file() })
+    await adapter.send(pending)
+    expect(api.confirmOrgUpload).toHaveBeenCalledWith('org-1', 'item-1', 'ses-1', { usePlane: true })
   })
 })

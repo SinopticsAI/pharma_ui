@@ -21,6 +21,7 @@ import {
   useProduct,
 } from '../queries'
 import { createIntakeAttachmentAdapter, pickIntakeFile } from './attachments'
+import { usePlaneEnabled } from '../planeToggle'
 import { startIntakeExtract } from './extract'
 import { IntakeToolUIs } from './cards'
 import { type IntakeActions, IntakeActionsProvider, useIntakeActions } from './context'
@@ -33,6 +34,7 @@ import {
   formatExtractionReady,
   itemsNeedingExtract,
   nextAutoTurnItem,
+  shouldKickMastraExtract,
   nextPendingSeen,
   readAutoturnFired,
   scopeExtractionItems,
@@ -335,6 +337,9 @@ function IntakeChatRuntime({
   const [fillingFileName, setFillingFileName] = useState('')
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [threadRunning, setThreadRunning] = useState(false)
+  const [usePlane] = usePlaneEnabled()
+  const usePlaneRef = useRef(usePlane)
+  usePlaneRef.current = usePlane
 
   const transport = useMemo(
     () =>
@@ -359,6 +364,7 @@ function IntakeChatRuntime({
         productId,
         sessionId,
         itemType: () => itemType.current,
+        usePlane: () => usePlaneRef.current,
         onError: (error) => setUploadError(() => error),
         uploadedText: ({ name, organizationId: orgId, itemType: type, itemId }) =>
           t('intake.chat.uploaded')
@@ -425,6 +431,7 @@ function IntakeChatRuntime({
   useEffect(() => {
     const accountId = identity.accountId
     if (!accountId || !organizationId) return
+    if (!shouldKickMastraExtract(usePlane)) return
     for (const item of itemsNeedingExtract(extractionItems, extractStarted.current)) {
       extractStarted.current.add(item.id)
       void startIntakeExtract({
@@ -436,7 +443,7 @@ function IntakeChatRuntime({
         extractStarted.current.delete(item.id)
       })
     }
-  }, [extractionItems, getAccessToken, identity.accountId, organizationId])
+  }, [extractionItems, getAccessToken, identity.accountId, organizationId, usePlane])
 
   useEffect(() => {
     const flying = extractionItems.filter((item) => item.status === 'uploaded' || item.status === 'confirmed')

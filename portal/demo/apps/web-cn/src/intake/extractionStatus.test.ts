@@ -13,6 +13,7 @@ import {
   pendingItemIds,
   scopeExtractionItems,
   shouldAutoTurn,
+  shouldKickMastraExtract,
   textsFromUnknownMessages,
   userMessagePresentation,
 } from './extractionStatus'
@@ -140,6 +141,11 @@ describe('scope and banner', () => {
     ]
     expect(itemsNeedingExtract(rows, new Set()).map((row) => row.id)).toEqual(['it-1', 'it-2'])
     expect(itemsNeedingExtract(rows, new Set(['it-1'])).map((row) => row.id)).toEqual(['it-2'])
+  })
+
+  it('при галочке Plane кабинет не стартует Mastra /extract', () => {
+    expect(shouldKickMastraExtract(false)).toBe(true)
+    expect(shouldKickMastraExtract(true)).toBe(false)
   })
 })
 

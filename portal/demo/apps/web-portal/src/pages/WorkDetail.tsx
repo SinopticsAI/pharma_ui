@@ -6,6 +6,7 @@ import { describeError } from '@demo/api-client'
 import type { CaseItem, ItemStatus } from '@demo/domain'
 import { draftValue, l10n } from '@demo/domain'
 import { useCase, useCaseItems, useProductDraft, useUploadDossierItem } from '../data/portal'
+import { usePlaneEnabled } from '../data/planeToggle'
 import { blockingWorks, isUnlocked } from '../data/work'
 import { Button, Callout, Card, Empty, PageHeader, WorkStatusBadge } from '../components/Ui'
 import { CardCheckPanel } from '../components/CardCheckPanel'
@@ -52,6 +53,7 @@ export function WorkDetailPage() {
   const caseQuery = useCase(applicationId)
   const items = useCaseItems(applicationId)
   const upload = useUploadDossierItem(applicationId)
+  const [usePlane, setUsePlane] = usePlaneEnabled()
   const { t, owner, work, product } = useI18n()
   const fileInput = useRef<HTMLInputElement>(null)
   const [pending, setPending] = useState<{ itemType: string; title: string } | null>(null)
@@ -105,7 +107,22 @@ export function WorkDetailPage() {
       <PageHeader
         title={`${item.code}. ${title}`}
         subtitle={work.summary(application.kind, item)}
-        action={<WorkStatusBadge status={item.status} />}
+        action={
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+            <WorkStatusBadge status={item.status} />
+            <label className={uiStyles.formHint} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 280, textAlign: 'left' }}>
+              <input
+                type="checkbox"
+                checked={usePlane}
+                onChange={(event) => setUsePlane(event.target.checked)}
+              />
+              <span>
+                <span style={{ fontWeight: 600 }}>{t('work.plane.toggle')}</span>
+                <span style={{ display: 'block' }}>{t('work.plane.toggleHint')}</span>
+              </span>
+            </label>
+          </div>
+        }
       />
 
       {!unlocked ? (

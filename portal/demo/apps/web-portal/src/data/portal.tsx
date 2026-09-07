@@ -8,7 +8,7 @@ import type {
   RegistrationCase,
   StageKey,
 } from '@demo/domain'
-import { l10n } from '@demo/domain'
+import { l10n, readPlaneEnabled } from '@demo/domain'
 import type { Application } from './types'
 import { DEFAULT_PROCEDURE } from './types'
 import type { ProductKind, WorkItem, WorkStatus } from './work'
@@ -203,6 +203,7 @@ export const useUploadDossierItem = (caseId: string) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ file, itemType, title }: { file: File; itemType: string; title: string }) => {
+      const usePlane = readPlaneEnabled()
       const request: UploadRequest = {
         itemType,
         fileName: file.name,
@@ -211,7 +212,15 @@ export const useUploadDossierItem = (caseId: string) => {
       }
       const ticket = await api.requestDossierUploadUrl(caseId, request)
       await api.putFile(ticket, file)
-      return api.confirmDossierUpload(caseId, ticket.itemId)
+      const item = await api.confirmDossierUpload(caseId, ticket.itemId, { usePlane })
+      if (usePlane) {
+        try {
+          await api.startCase(caseId)
+        } catch {
+          // Edge уже стартовал на confirm, или Plane недоступен — файл всё равно лежит.
+        }
+      }
+      return item
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['case-items', caseId] }),
   })

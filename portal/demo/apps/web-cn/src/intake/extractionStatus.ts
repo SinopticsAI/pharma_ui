@@ -96,6 +96,11 @@ export function itemsNeedingExtract(
   return inFlightItems(items).filter((item) => !alreadyStarted.has(item.id))
 }
 
+/** При включённом Plane кабинет не зовёт Mastra /extract — разбор идёт из Edge. */
+export function shouldKickMastraExtract(usePlane: boolean): boolean {
+  return !usePlane
+}
+
 export function pendingItemIds(items: ExtractionItem[]): Set<string> {
   return new Set(inFlightItems(items).map((item) => item.id))
 }

@@ -395,6 +395,8 @@ export const ru = {
   'work.uploading': 'Загружаем файл',
   'work.uploadHint':
     'Файл уходит в хранилище напрямую по подписанной ссылке: кабинет держит метаданные и версию, а не содержимое.',
+  'work.plane.toggle': 'Разбирать сканы через Plane',
+  'work.plane.toggleHint': 'Без галочки файл только сохраняется. С галочкой — воркфлоу Plane.',
 } as const
 
 export type MessageKey = keyof typeof ru
@@ -792,6 +794,8 @@ export const en: Record<MessageKey, string> = {
   'work.uploading': 'Uploading the file',
   'work.uploadHint':
     'The file goes straight to storage over a presigned link: the workspace keeps metadata and the version, not the content.',
+  'work.plane.toggle': 'Extract scans with Plane',
+  'work.plane.toggleHint': 'Off: the file is stored only. On: the Plane workflow runs.',
 }
 
 export const zh: Record<MessageKey, string> = {
@@ -1179,6 +1183,8 @@ export const zh: Record<MessageKey, string> = {
   'work.uploadDossier': '上传至档案',
   'work.uploading': '正在上传文件',
   'work.uploadHint': '文件通过签名链接直接进入存储：工作台只保存元数据与版本，不保存内容。',
+  'work.plane.toggle': '通过 Plane 解析扫描件',
+  'work.plane.toggleHint': '未勾选时文件仅保存；勾选后启动 Plane 工作流。',
 }
 
 export const catalogs = { ru, en, zh } as const
