@@ -36,6 +36,7 @@ function adapterWith(api: ReturnType<typeof fakeApi>, onError?: (error: unknown)
     queryClient: new QueryClient(),
     organizationId: 'org-1',
     productId: 'prod-1',
+    sessionId: 'ses-1',
     itemType: () => 'poa-upp',
     onError,
   })
@@ -62,9 +63,14 @@ describe('createIntakeAttachmentAdapter', () => {
       title: 'doverennost.pdf',
       productId: 'prod-1',
     })
+    // Сессия называет диалог: по ней ядро адресует разбор обратно в ту же нить.
+    expect(api.confirmOrgUpload).toHaveBeenCalledWith('org-1', 'item-1', 'ses-1')
     expect(complete.status).toEqual({ type: 'complete' })
     expect(complete.content).toEqual([
-      { type: 'text', text: 'Документ «doverennost.pdf» загружен в ядро. itemType: poa-upp, itemId: item-1' },
+      {
+        type: 'text',
+        text: 'Документ «doverennost.pdf» загружен в ядро. organizationId: org-1, itemType: poa-upp, itemId: item-1',
+      },
     ])
   })
 

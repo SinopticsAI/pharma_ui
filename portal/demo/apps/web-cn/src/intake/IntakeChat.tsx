@@ -210,10 +210,11 @@ export function IntakeChat({
         queryClient,
         organizationId,
         productId,
+        sessionId,
         itemType: () => itemType.current,
         onError: (error) => setUploadError(() => error),
       }),
-    [api, queryClient, organizationId, productId],
+    [api, queryClient, organizationId, productId, sessionId],
   )
 
   const runtime = useChatRuntime({ transport, adapters: { attachments } })

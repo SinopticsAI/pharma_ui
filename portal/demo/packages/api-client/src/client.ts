@@ -2,6 +2,7 @@ import {
   caseDetailSchema,
   caseItemListSchema,
   caseItemSchema,
+  downloadTicketSchema,
   identitySchema,
   intakeMessageListSchema,
   intakeSessionSchema,
@@ -24,6 +25,7 @@ import type {
   CaseItem,
   ClassificationVariant,
   Contour,
+  DownloadTicket,
   Identity,
   IntakeMessage,
   IntakeScope,
@@ -200,9 +202,21 @@ export class ApiClient {
     })
   }
 
-  confirmOrgUpload(organizationId: string, itemId: string): Promise<OrganizationItem> {
+  /**
+   * `sessionId` называет диалог, в котором пришёл документ: по нему ядро строит
+   * идентификатор кейса Plane, и результат разбора возвращается в ту же нить.
+   */
+  confirmOrgUpload(organizationId: string, itemId: string, sessionId?: string): Promise<OrganizationItem> {
     return this.request('POST', `/organizations/${organizationId}/items/${itemId}/confirm-upload`, {
+      body: sessionId ? { sessionId } : {},
       schema: organizationItemSchema,
+    })
+  }
+
+  /** Ссылка на просмотр скана. Открывать в новой вкладке, а не читать fetch-ем. */
+  requestOrgItemDownloadUrl(organizationId: string, itemId: string): Promise<DownloadTicket> {
+    return this.request('POST', `/organizations/${organizationId}/items/${itemId}/download-url`, {
+      schema: downloadTicketSchema,
     })
   }
 

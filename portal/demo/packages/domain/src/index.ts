@@ -390,6 +390,13 @@ export interface UploadTicket {
   expiresIn: number
 }
 
+/** Ссылка на просмотр загруженного скана: подписана ядром и живёт час. */
+export interface DownloadTicket {
+  url: string
+  fileName: string
+  expiresIn: number
+}
+
 export type ProductStatus =
   | 'collecting'
   | 'draft'

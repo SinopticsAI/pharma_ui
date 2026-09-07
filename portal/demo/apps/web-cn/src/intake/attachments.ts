@@ -34,6 +34,8 @@ export interface IntakeAttachmentOptions {
   organizationId: string
   /** Без него документ ложится на уровень компании и виден всем её продуктам. */
   productId?: string
+  /** Диалог, в котором пришёл файл: по нему ядро адресует разбор в Plane. */
+  sessionId: string
   /** Тип документа, который последней назвала карточка `ask-document`. */
   itemType: () => string
   /** Загрузка падает вне нити: ошибку показывает экран, а вложение остаётся в композере. */
@@ -74,10 +76,11 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
       try {
         const ticket = await options.api.requestOrgUploadUrl(options.organizationId, request)
         await options.api.putFile(ticket, attachment.file)
-        await options.api.confirmOrgUpload(options.organizationId, ticket.itemId)
+        await options.api.confirmOrgUpload(options.organizationId, ticket.itemId, options.sessionId)
 
         // Комплектность считает ядро: панель разделов пересчитается сама.
         void options.queryClient.invalidateQueries({ queryKey: ['organization', options.organizationId] })
+        void options.queryClient.invalidateQueries({ queryKey: ['organization-items', options.organizationId] })
         if (options.productId) {
           void options.queryClient.invalidateQueries({ queryKey: ['product', options.productId] })
         }
@@ -89,7 +92,7 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
           content: [
             {
               type: 'text',
-              text: `Документ «${attachment.file.name}» загружен в ядро. itemType: ${itemType}, itemId: ${ticket.itemId}`,
+              text: `Документ «${attachment.file.name}» загружен в ядро. organizationId: ${options.organizationId}, itemType: ${itemType}, itemId: ${ticket.itemId}`,
             },
           ],
         }

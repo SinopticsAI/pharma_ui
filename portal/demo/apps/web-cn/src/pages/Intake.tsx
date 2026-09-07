@@ -3,9 +3,11 @@ import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useEffect, useRef } from 'react'
+import { DocumentsPanel } from '../intake/DocumentsPanel'
 import { IntakeChat } from '../intake/IntakeChat'
+import { RequisitesPanel } from '../intake/RequisitesPanel'
 import { Callout, Empty, PageHeader } from '../kit'
-import { useOpenIntakeSession, useOrganization, useProduct } from '../queries'
+import { extractionPending, useOpenIntakeSession, useOrganization, useOrganizationItems, useProduct } from '../queries'
 import { Shell } from '../Shell'
 
 /**
@@ -44,11 +46,15 @@ export function IntakeCompanyPage() {
   const { organizationId } = useParams({ from: '/intake/company/$organizationId' })
   const { session } = useSearch({ from: '/intake/company/$organizationId' })
   const { t, text } = useI18n()
-  const organization = useOrganization(organizationId)
+  // Реквизиты дописывает разбор документов, поэтому карточка перечитывается,
+  // пока хотя бы по одному документу ядро ещё ждёт ответа от Plane.
+  const items = useOrganizationItems(organizationId)
+  const organization = useOrganization(organizationId, extractionPending(items.data))
   const { sessionId, error } = useSessionId(session, { scope: 'organization', organizationId })
 
   const company = organization.data
   const completeness = company?.completeness
+  const companyDocuments = (items.data ?? []).filter((item) => item.level === 'company')
 
   return (
     <Shell nav={null}>
@@ -65,14 +71,30 @@ export function IntakeCompanyPage() {
       {!sessionId ? (
         <Empty>{t('common.loading')}</Empty>
       ) : (
-        <IntakeChat
-          agentId="companyIntake"
-          sessionId={sessionId}
-          organizationId={organizationId}
-          title="Профиль компании"
-          sections={completeness?.sections ?? []}
-          percent={completeness?.percent ?? 0}
-        />
+        <>
+          <IntakeChat
+            agentId="companyIntake"
+            sessionId={sessionId}
+            organizationId={organizationId}
+            title="Профиль компании"
+            sections={completeness?.sections ?? []}
+            percent={completeness?.percent ?? 0}
+          />
+          <div className="mt-4">
+            <RequisitesPanel
+              scope="company"
+              draft={company?.draft}
+              profile={company?.profile}
+              approved={company?.status === 'profile_approved'}
+            />
+            {items.isError ? <Callout tone="deadline">{describeError(items.error)}</Callout> : null}
+            <DocumentsPanel
+              organizationId={organizationId}
+              items={companyDocuments}
+              title="intake.documents.companyTitle"
+            />
+          </div>
+        </>
       )}
     </Shell>
   )
@@ -87,6 +109,11 @@ export function IntakeProductPage() {
 
   const card = product.data
   const organizationId = card?.organizationId ?? ''
+  // Ядро отдаёт вместе с продуктом и его документы, и документы компании:
+  // второй запрос за инвентарём здесь не нужен.
+  const documents = card?.documents ?? []
+  const ownDocuments = documents.filter((item) => item.level === 'product')
+  const inheritedDocuments = documents.filter((item) => item.level === 'company')
 
   return (
     <Shell nav={null}>
@@ -103,16 +130,33 @@ export function IntakeProductPage() {
       {!sessionId || !organizationId ? (
         <Empty>{t('common.loading')}</Empty>
       ) : (
-        <IntakeChat
-          agentId="productIntake"
-          sessionId={sessionId}
-          organizationId={organizationId}
-          productId={productId}
-          title="Комплектность продукта"
-          sections={[]}
-          missing={card?.missing ?? []}
-          percent={card?.completeness ?? 0}
-        />
+        <>
+          <IntakeChat
+            agentId="productIntake"
+            sessionId={sessionId}
+            organizationId={organizationId}
+            productId={productId}
+            title="Комплектность продукта"
+            sections={[]}
+            missing={card?.missing ?? []}
+            percent={card?.completeness ?? 0}
+          />
+          <div className="mt-4">
+            <RequisitesPanel scope="product" draft={card?.draft} />
+            <DocumentsPanel
+              organizationId={organizationId}
+              items={ownDocuments}
+              title="intake.documents.productTitle"
+              canPromote
+            />
+            <DocumentsPanel
+              organizationId={organizationId}
+              items={inheritedDocuments}
+              title="intake.documents.inheritedTitle"
+              lead="intake.documents.inheritedLead"
+            />
+          </div>
+        </>
       )}
     </Shell>
   )

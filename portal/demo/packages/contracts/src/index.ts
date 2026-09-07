@@ -4,6 +4,7 @@ import type {
   CaseItem,
   ClassificationVariant,
   Completeness,
+  DownloadTicket,
   DraftField,
   DraftFields,
   FieldMask,
@@ -389,6 +390,14 @@ export const uploadTicketSchema: z.ZodType<UploadTicket> = z
     uploadUrl: z.string(),
     itemId: z.string(),
     objectKey: z.string(),
+    expiresIn: z.number(),
+  })
+  .passthrough()
+
+export const downloadTicketSchema: z.ZodType<DownloadTicket> = z
+  .object({
+    url: z.string(),
+    fileName: z.string(),
     expiresIn: z.number(),
   })
   .passthrough()
