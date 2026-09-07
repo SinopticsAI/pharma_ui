@@ -40,6 +40,8 @@ export interface IntakeAttachmentOptions {
   itemType: () => string
   /** Загрузка падает вне нити: ошибку показывает экран, а вложение остаётся в композере. */
   onError?: (error: unknown) => void
+  /** Текст, который видят человек и агент: в нём обязаны остаться itemId и organizationId. */
+  uploadedText?: (parts: { name: string; organizationId: string; itemType: string; itemId: string }) => string
 }
 
 export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions): IntakeAttachmentAdapter {
@@ -92,7 +94,16 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
           content: [
             {
               type: 'text',
-              text: `Документ «${attachment.file.name}» загружен в ядро. organizationId: ${options.organizationId}, itemType: ${itemType}, itemId: ${ticket.itemId}`,
+              text: (
+                options.uploadedText ??
+                ((parts) =>
+                  `Документ «${parts.name}» загружен в ядро. organizationId: ${parts.organizationId}, itemType: ${parts.itemType}, itemId: ${parts.itemId}`)
+              )({
+                name: attachment.file.name,
+                organizationId: options.organizationId,
+                itemType,
+                itemId: ticket.itemId,
+              }),
             },
           ],
         }

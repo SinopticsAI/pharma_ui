@@ -2,7 +2,7 @@ import { makeAssistantToolUI } from '@assistant-ui/react'
 import { askDocumentFormSchema } from '@demo/contracts'
 import type { NodeMapItem, NodeOwner, NodeStatus, RiskLevel } from '@demo/domain'
 import { l10n } from '@demo/domain'
-import { useI18n } from '@demo/i18n'
+import { useI18n, type MessageKey } from '@demo/i18n'
 import { Button } from '@demo/ui/components/button'
 import { Input } from '@demo/ui/components/input'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -48,6 +48,7 @@ interface AskDocumentArgs {
 }
 
 function AskDocument({ args }: { args: AskDocumentArgs }) {
+  const { t } = useI18n()
   const asText = useText()
   const { attachDocument, send, busy } = useIntakeActions()
   const form = useForm({
@@ -62,7 +63,7 @@ function AskDocument({ args }: { args: AskDocumentArgs }) {
       <div className="flex flex-wrap items-center gap-2">
         {/* Тип документа берётся из запроса агента: вложение уйдёт именно этим типом. */}
         <Button type="button" disabled={busy} onClick={() => attachDocument(args.itemType)}>
-          Приложить файл
+          {t('intake.card.attachFile')}
         </Button>
         {args.acceptsText ? (
           <form
@@ -72,9 +73,13 @@ function AskDocument({ args }: { args: AskDocumentArgs }) {
               form.reset()
             })}
           >
-            <Input {...form.register('answer')} placeholder="…или ответьте одной строкой" aria-label="Ответ текстом" />
+            <Input
+              {...form.register('answer')}
+              placeholder={t('intake.card.answerPlaceholder')}
+              aria-label={t('intake.card.answerAria')}
+            />
             <Button type="submit" variant="outline">
-              Отправить
+              {t('intake.chat.send')}
             </Button>
           </form>
         ) : null}
@@ -100,13 +105,14 @@ interface ShowDraftArgs {
 }
 
 function ShowDraft({ args }: { args: ShowDraftArgs }) {
+  const { t } = useI18n()
   const asText = useText()
   const { approveDraft, send, busy } = useIntakeActions()
   const missing = args.missing ?? []
 
   return (
     <section className="space-y-2 rounded-lg border bg-card p-3">
-      <h4 className="text-sm font-semibold">Проверьте распознанное</h4>
+      <h4 className="text-sm font-semibold">{t('intake.card.reviewTitle')}</h4>
       <table className="w-full text-sm">
         <tbody>
           {(args.fields ?? []).map((field) => (
@@ -122,17 +128,19 @@ function ShowDraft({ args }: { args: ShowDraftArgs }) {
           ))}
         </tbody>
       </table>
-      {missing.length > 0 ? <p className="text-sm text-muted-foreground">Не хватает: {missing.join(', ')}</p> : null}
+      {missing.length > 0 ? (
+        <p className="text-sm text-muted-foreground">{t('intake.card.missing').replace('{list}', missing.join(', '))}</p>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
           disabled={!args.canApprove || busy}
           onClick={() => approveDraft(args.scope, args.entityId)}
         >
-          Одобрить данные
+          {t('intake.card.approve')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => send('Нужно исправить поле')}>
-          Исправить в диалоге
+        <Button type="button" variant="outline" onClick={() => send(t('intake.card.fixInChatMessage'))}>
+          {t('intake.card.fixInChat')}
         </Button>
       </div>
     </section>
@@ -151,23 +159,25 @@ interface VariantArg {
   cycleMonths?: [number, number]
 }
 
-const VARIANT_TAG: Record<VariantArg['variantType'], string> = {
-  recommended: 'рекомендуем',
-  alternative: 'альтернатива',
-  forbidden: 'так делать нельзя',
+const VARIANT_TAG: Record<VariantArg['variantType'], MessageKey> = {
+  recommended: 'intake.card.variant.recommended',
+  alternative: 'intake.card.variant.alternative',
+  forbidden: 'intake.card.variant.forbidden',
 }
 
 function Variant({ variant }: { variant: VariantArg }) {
+  const { t, locale } = useI18n()
   const asText = useText()
   const { send, busy } = useIntakeActions()
   const forbidden = variant.variantType === 'forbidden'
+  const numberLocale = locale === 'zh' ? 'zh-CN' : locale === 'en' ? 'en-GB' : 'ru-RU'
 
   return (
     <article
       className={`space-y-2 rounded-md border p-3 ${forbidden ? 'opacity-70' : ''} ${variant.variantType === 'recommended' ? 'border-primary' : ''}`}
     >
       <header className="space-y-1">
-        <span className="text-xs text-muted-foreground">{VARIANT_TAG[variant.variantType]}</span>
+        <span className="text-xs text-muted-foreground">{t(VARIANT_TAG[variant.variantType])}</span>
         <h4 className="text-sm font-semibold">{asText(variant.title, variant.id)}</h4>
       </header>
       <p className="text-sm">{asText(variant.summary)}</p>
@@ -196,7 +206,7 @@ function Variant({ variant }: { variant: VariantArg }) {
               <dt className="text-muted-foreground">{basket.key}</dt>
               <dd className="m-0">
                 {variant.budget?.currency === 'RMB' ? '¥ ' : ''}
-                {basket.amount.toLocaleString('ru-RU')}
+                {basket.amount.toLocaleString(numberLocale)}
               </dd>
             </div>
           ))}
@@ -205,13 +215,19 @@ function Variant({ variant }: { variant: VariantArg }) {
 
       {variant.cycleMonths ? (
         <p className="text-sm text-muted-foreground">
-          {variant.cycleMonths[0]}–{variant.cycleMonths[1]} мес. до продаж
+          {t('intake.card.cycleMonths')
+            .replace('{from}', String(variant.cycleMonths[0]))
+            .replace('{to}', String(variant.cycleMonths[1]))}
         </p>
       ) : null}
 
       {forbidden ? null : (
-        <Button type="button" disabled={busy} onClick={() => send(`Выбираю вариант ${variant.id}`)}>
-          Выбрать этот вариант
+        <Button
+          type="button"
+          disabled={busy}
+          onClick={() => send(t('intake.card.chooseVariantMessage').replace('{id}', variant.id))}
+        >
+          {t('intake.card.chooseVariant')}
         </Button>
       )}
     </article>
@@ -223,14 +239,14 @@ function ShowVariants({ args }: { args: { productId: string; variants: VariantAr
 
   return (
     <section className="space-y-2 rounded-lg border bg-card p-3">
-      <h4 className="text-sm font-semibold">Варианты классификации</h4>
+      <h4 className="text-sm font-semibold">{t('intake.card.variantsTitle')}</h4>
       <div className="grid gap-3 md:grid-cols-2">
         {(args.variants ?? []).map((variant) => (
           <Variant key={variant.id} variant={variant} />
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        Классификацию подтверждает специалист, затем клиент. {t('common.estimate')}
+        {t('intake.card.variantsLead')} {t('common.estimate')}
       </p>
     </section>
   )
@@ -244,26 +260,27 @@ interface RiskArgs {
   checks?: { name: string; result: string; detail?: string }[]
 }
 
-const RISK_LEVEL_LABEL: Record<RiskLevel, string> = {
-  low: 'риск низкий',
-  medium: 'риск средний',
-  high: 'риск высокий',
-  unknown: 'риск не определён',
+const RISK_LEVEL_LABEL: Record<RiskLevel, MessageKey> = {
+  low: 'intake.card.risk.low',
+  medium: 'intake.card.risk.medium',
+  high: 'intake.card.risk.high',
+  unknown: 'intake.card.risk.unknown',
 }
 
-const VERDICT_LABEL: Record<RiskArgs['verdict'], string> = {
-  pending: 'проверка не завершена',
-  accepted: 'берём в работу',
-  rejected: 'в работу не берём',
+const VERDICT_LABEL: Record<RiskArgs['verdict'], MessageKey> = {
+  pending: 'intake.card.verdict.pending',
+  accepted: 'intake.card.verdict.accepted',
+  rejected: 'intake.card.verdict.rejected',
 }
 
 function ShowRiskReport({ args }: { args: RiskArgs }) {
+  const { t } = useI18n()
   const asText = useText()
 
   return (
     <section className="space-y-2 rounded-lg border bg-card p-3">
       <h4 className="text-sm font-semibold">
-        {RISK_LEVEL_LABEL[args.level]} · {VERDICT_LABEL[args.verdict]}
+        {t(RISK_LEVEL_LABEL[args.level])} · {t(VERDICT_LABEL[args.verdict])}
       </h4>
       <p className="text-sm">{asText(args.reasoning)}</p>
       {(args.checks ?? []).length > 0 ? (
@@ -318,11 +335,12 @@ function ShowNodeMap({ args }: { args: { caseId: string; nodes: NodeArg[] } }) {
 }
 
 function EscalateToCounsel({ args }: { args: { productId: string; reason: L10nArg } }) {
+  const { t } = useI18n()
   const asText = useText()
 
   return (
     <section className="rounded-lg border bg-muted/40 p-3 text-sm">
-      Вопрос передан юристу: {asText(args.reason)}
+      {t('intake.card.escalated').replace('{reason}', asText(args.reason))}
     </section>
   )
 }

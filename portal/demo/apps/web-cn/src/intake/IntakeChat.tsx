@@ -9,13 +9,40 @@ import { useChatRuntime } from '@assistant-ui/react-ai-sdk'
 import { describeError, useApi, useIdentity } from '@demo/api-client'
 import { useAuth } from '@demo/auth'
 import type { ProgressSection } from '@demo/domain'
+import { type MessageKey, useI18n } from '@demo/i18n'
 import { useQueryClient } from '@tanstack/react-query'
-import { useMemo, useRef, useState } from 'react'
-import { useApproveCompanyProfile, useApproveProductData } from '../queries'
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { Empty } from '../kit'
+import {
+  useApproveCompanyProfile,
+  useApproveProductData,
+  useIntakeMessages,
+  useOrganizationItems,
+  useProduct,
+} from '../queries'
 import { createIntakeAttachmentAdapter, pickIntakeFile } from './attachments'
 import { IntakeToolUIs } from './cards'
 import { type IntakeActions, IntakeActionsProvider, useIntakeActions } from './context'
+import {
+  EXTRACTION_SLOW_MS,
+  type ExtractionBanner,
+  type ExtractionItem,
+  extractionBanner,
+  extractionReadyIdsFromTexts,
+  formatExtractionReady,
+  nextAutoTurnItem,
+  nextPendingSeen,
+  readAutoturnFired,
+  scopeExtractionItems,
+  shouldAutoTurn,
+  textsFromUnknownMessages,
+  userMessagePresentation,
+  writeAutoturnFired,
+} from './extractionStatus'
+import { journalText, journalToUiMessages, toJournalRole, uiMessageText } from './history'
 import { type AgentId, createIntakeTransport } from './transport'
+
+const ExtractionUiContext = createContext<{ banner: ExtractionBanner | null }>({ banner: null })
 
 /**
  * Экран интейка: слева нить диалога и загрузки, справа комплектность по разделам.
@@ -24,12 +51,12 @@ import { type AgentId, createIntakeTransport } from './transport'
  * сообщения, а не отдельной загрузкой рядом с чатом.
  */
 
-const SECTION_LABEL: Record<ProgressSection['key'], string> = {
-  identity: 'Реквизиты и реестр',
-  documents: 'Документы компании',
-  authority: 'Полномочия и подписи',
-  banking: 'Банк и счета',
-  risk: 'Проверка рисков',
+const SECTION_KEY: Record<ProgressSection['key'], MessageKey> = {
+  identity: 'intake.section.identity',
+  documents: 'intake.section.documents',
+  authority: 'intake.section.authority',
+  banking: 'intake.section.banking',
+  risk: 'intake.section.risk',
 }
 
 function ProgressPanel({
@@ -43,6 +70,8 @@ function ProgressPanel({
   percent: number
   title: string
 }) {
+  const { t } = useI18n()
+
   return (
     <aside className="space-y-3 rounded-lg border bg-card p-4">
       <div className="flex items-center justify-between text-sm">
@@ -54,8 +83,12 @@ function ProgressPanel({
           const done = section.total > 0 && section.filled === section.total
           return (
             <li key={section.key} className="flex items-center justify-between gap-2">
-              <span>{SECTION_LABEL[section.key] ?? section.key}</span>
-              <span className="text-muted-foreground">{done ? 'готово' : `${section.filled} из ${section.total}`}</span>
+              <span>{t(SECTION_KEY[section.key])}</span>
+              <span className="text-muted-foreground">
+                {done
+                  ? t('intake.chat.progressDone')
+                  : `${section.filled} ${t('intake.chat.progressOf')} ${section.total}`}
+              </span>
             </li>
           )
         })}
@@ -63,47 +96,63 @@ function ProgressPanel({
           ? missing.map((field) => (
               <li key={field} className="flex items-center justify-between gap-2">
                 <span>{field}</span>
-                <span className="text-muted-foreground">нужно</span>
+                <span className="text-muted-foreground">{t('intake.chat.progressNeeded')}</span>
               </li>
             ))
           : null}
       </ul>
-      <p className="text-xs text-muted-foreground">
-        Разделы отмечает агент по мере разбора документов, а не вы вручную.
-      </p>
+      <p className="text-xs text-muted-foreground">{t('intake.chat.progressHint')}</p>
     </aside>
   )
 }
 
+function bannerText(banner: ExtractionBanner, t: (key: MessageKey) => string): string {
+  if (banner.kind === 'slow') return t('intake.chat.extractingSlow').replace('{name}', banner.fileName)
+  if (banner.kind === 'filling') return t('intake.chat.fillingCard')
+  return t('intake.chat.extracting').replace('{name}', banner.fileName)
+}
+
+function UserText({ text }: { text: string }) {
+  const { t } = useI18n()
+  if (userMessagePresentation(text) === 'extraction-ready') {
+    return <span data-extraction-ready>{t('intake.chat.extractionReady')}</span>
+  }
+  return <span>{text}</span>
+}
+
+function UserMessage() {
+  return (
+    <MessagePrimitive.Root
+      className="max-w-[80%] space-y-1 rounded-lg px-3 py-2 text-sm [&:has([data-extraction-ready])]:bg-transparent [&:has([data-extraction-ready])]:text-muted-foreground [&:not(:has([data-extraction-ready]))]:ml-auto [&:not(:has([data-extraction-ready]))]:bg-primary [&:not(:has([data-extraction-ready]))]:text-primary-foreground"
+      data-role="user"
+    >
+      <MessagePrimitive.Parts components={{ Text: ({ text }) => <UserText text={text} /> }} />
+      <MessagePrimitive.Attachments>
+        {() => (
+          <AttachmentPrimitive.Root className="flex items-center gap-2 text-xs opacity-80">
+            <AttachmentPrimitive.Name />
+          </AttachmentPrimitive.Root>
+        )}
+      </MessagePrimitive.Attachments>
+    </MessagePrimitive.Root>
+  )
+}
+
 function Thread() {
+  const { t } = useI18n()
   const { setItemType, composerItemType } = useIntakeActions()
+  const { banner } = useContext(ExtractionUiContext)
 
   return (
-    <ThreadPrimitive.Root className="flex h-[560px] flex-col rounded-lg border bg-card">
+    <ThreadPrimitive.Root className="flex h-[min(72vh,720px)] flex-col rounded-lg border bg-card">
       <ThreadPrimitive.Viewport className="flex-1 space-y-3 overflow-y-auto p-4">
         <ThreadPrimitive.Empty>
-          <p className="text-sm text-muted-foreground">
-            Приложите документ компании скрепкой — агент разберёт его и заполнит карточку. Анкету писать не нужно.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('intake.chat.empty')}</p>
         </ThreadPrimitive.Empty>
 
         <ThreadPrimitive.Messages
           components={{
-            UserMessage: () => (
-              <MessagePrimitive.Root
-                className="ml-auto max-w-[80%] space-y-1 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
-                data-role="user"
-              >
-                <MessagePrimitive.Parts />
-                <MessagePrimitive.Attachments>
-                  {() => (
-                    <AttachmentPrimitive.Root className="flex items-center gap-2 text-xs opacity-80">
-                      <AttachmentPrimitive.Name />
-                    </AttachmentPrimitive.Root>
-                  )}
-                </MessagePrimitive.Attachments>
-              </MessagePrimitive.Root>
-            ),
+            UserMessage,
             AssistantMessage: () => (
               <MessagePrimitive.Root
                 className="max-w-[90%] space-y-2 rounded-lg bg-muted px-3 py-2 text-sm"
@@ -115,9 +164,13 @@ function Thread() {
           }}
         />
 
-        <ThreadPrimitive.If running>
-          <div className="text-sm text-muted-foreground">Агент читает документ</div>
-        </ThreadPrimitive.If>
+        {banner ? (
+          <div className="text-sm text-muted-foreground">{bannerText(banner, t)}</div>
+        ) : (
+          <ThreadPrimitive.If running>
+            <div className="text-sm text-muted-foreground">{t('intake.chat.reading')}</div>
+          </ThreadPrimitive.If>
+        )}
       </ThreadPrimitive.Viewport>
 
       <ComposerPrimitive.Root className="space-y-2 border-t p-3">
@@ -128,7 +181,7 @@ function Thread() {
                 <AttachmentPrimitive.Name />
                 <AttachmentPrimitive.Remove
                   className="text-muted-foreground hover:text-foreground"
-                  aria-label="Убрать вложение"
+                  aria-label={t('intake.chat.removeAttachment')}
                 >
                   ×
                 </AttachmentPrimitive.Remove>
@@ -140,7 +193,7 @@ function Thread() {
         <div className="flex items-end gap-2">
           <ComposerPrimitive.Input
             className="min-h-9 flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-            placeholder="Напишите агенту"
+            placeholder={t('intake.chat.placeholder')}
             rows={1}
           />
           <ComposerPrimitive.AddAttachment
@@ -148,10 +201,10 @@ function Thread() {
             onClick={() => setItemType(composerItemType)}
             className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm hover:bg-accent"
           >
-            Приложить документ
+            {t('intake.chat.attach')}
           </ComposerPrimitive.AddAttachment>
           <ComposerPrimitive.Send className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground">
-            Отправить
+            {t('intake.chat.send')}
           </ComposerPrimitive.Send>
         </div>
       </ComposerPrimitive.Root>
@@ -168,6 +221,7 @@ export function IntakeChat({
   sections,
   missing = [],
   percent,
+  aside,
 }: {
   agentId: AgentId
   sessionId: string
@@ -177,12 +231,60 @@ export function IntakeChat({
   sections: ProgressSection[]
   missing?: string[]
   percent: number
+  /** Реквизиты и документы: иначе они уезжают под чат и их не видно. */
+  aside?: ReactNode
+}) {
+  const { t } = useI18n()
+  const journal = useIntakeMessages(sessionId)
+
+  if (journal.isLoading) {
+    return <Empty>{t('common.loading')}</Empty>
+  }
+
+  return (
+    <IntakeChatRuntime
+      agentId={agentId}
+      sessionId={sessionId}
+      organizationId={organizationId}
+      productId={productId}
+      title={title}
+      sections={sections}
+      missing={missing}
+      percent={percent}
+      aside={aside}
+    />
+  )
+}
+
+function IntakeChatRuntime({
+  agentId,
+  sessionId,
+  organizationId,
+  productId,
+  title,
+  sections,
+  missing = [],
+  percent,
+  aside,
+}: {
+  agentId: AgentId
+  sessionId: string
+  organizationId: string
+  productId?: string
+  title: string
+  sections: ProgressSection[]
+  missing?: string[]
+  percent: number
+  aside?: ReactNode
 }) {
   const api = useApi()
   const queryClient = useQueryClient()
   const identity = useIdentity()
+  const { locale, t } = useI18n()
   const { getAccessToken } = useAuth()
   const [uploadError, setUploadError] = useState<unknown>(null)
+  const journal = useIntakeMessages(sessionId)
+  const persisted = useRef(new Set((journal.data ?? []).map((message) => message.id)))
 
   // Тип документа называет карточка `ask-document` перед выбором файла, а нужен
   // он адаптеру в момент отправки — поэтому не состояние, а ссылка.
@@ -191,6 +293,19 @@ export function IntakeChat({
 
   const approveCompany = useApproveCompanyProfile(organizationId)
   const approveProduct = useApproveProductData(productId ?? '')
+  const orgItems = useOrganizationItems(organizationId)
+  const product = useProduct(productId ?? '')
+  const extractionItems = useMemo<ExtractionItem[]>(() => {
+    const rows = productId ? (product.data?.documents ?? []) : (orgItems.data ?? [])
+    return scopeExtractionItems(rows, productId)
+  }, [orgItems.data, product.data?.documents, productId])
+  const pendingSeen = useRef(new Set<string>())
+  const firedIds = useRef(new Set<string>())
+  const fillingRef = useRef(false)
+  const [filling, setFilling] = useState(false)
+  const [fillingFileName, setFillingFileName] = useState('')
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  const [threadRunning, setThreadRunning] = useState(false)
 
   const transport = useMemo(
     () =>
@@ -198,9 +313,10 @@ export function IntakeChat({
         agentId,
         sessionId,
         accountId: identity.accountId,
+        locale,
         getToken: getAccessToken,
       }),
-    [agentId, sessionId, identity.accountId, getAccessToken],
+    [agentId, sessionId, identity.accountId, locale, getAccessToken],
   )
 
   const attachments = useMemo(
@@ -213,11 +329,115 @@ export function IntakeChat({
         sessionId,
         itemType: () => itemType.current,
         onError: (error) => setUploadError(() => error),
+        uploadedText: ({ name, organizationId: orgId, itemType: type, itemId }) =>
+          t('intake.chat.uploaded')
+            .replace('{name}', name)
+            .replace('{organizationId}', orgId)
+            .replace('{itemType}', type)
+            .replace('{itemId}', itemId),
       }),
-    [api, queryClient, organizationId, productId, sessionId],
+    [api, queryClient, organizationId, productId, sessionId, t],
   )
 
-  const runtime = useChatRuntime({ transport, adapters: { attachments } })
+  const runtime = useChatRuntime({
+    transport,
+    adapters: { attachments },
+    messages: journalToUiMessages(journal.data ?? [], locale),
+    onFinish: ({ messages }) => {
+      for (const message of messages) {
+        if (persisted.current.has(message.id)) continue
+        const role = toJournalRole(message.role)
+        const text = uiMessageText(message)
+        if (!role || !text) continue
+        persisted.current.add(message.id)
+        void api.appendIntakeMessage(sessionId, { role, text }).catch(() => {
+          persisted.current.delete(message.id)
+        })
+      }
+    },
+  })
+
+  useEffect(() => {
+    const thread = runtime.thread as {
+      getState?: () => { isRunning?: boolean }
+      subscribe?: (listener: () => void) => () => void
+    }
+    let seenRunning = false
+    const sync = () => {
+      const running = Boolean(thread.getState?.().isRunning)
+      setThreadRunning(running)
+      if (running) {
+        seenRunning = true
+        return
+      }
+      if (!seenRunning || !fillingRef.current) return
+      fillingRef.current = false
+      setFilling(false)
+    }
+    sync()
+    return thread.subscribe?.(sync)
+  }, [runtime])
+
+  useEffect(() => {
+    const flying = extractionItems.filter((item) => item.status === 'uploaded' || item.status === 'confirmed')
+    if (flying.length === 0) return
+    const oldest = flying.reduce((min, item) => {
+      const ts = Date.parse(item.updatedAt)
+      return Number.isFinite(ts) && ts < min ? ts : min
+    }, Number.POSITIVE_INFINITY)
+    const wait = Math.max(0, EXTRACTION_SLOW_MS - (Date.now() - (Number.isFinite(oldest) ? oldest : Date.now())))
+    const timer = window.setTimeout(() => setNowMs(Date.now()), wait + 50)
+    return () => window.clearTimeout(timer)
+  }, [extractionItems])
+
+  useEffect(() => {
+    const fromThread = extractionReadyIdsFromTexts(
+      textsFromUnknownMessages((runtime.thread as { getState?: () => { messages?: unknown } }).getState?.().messages),
+    )
+    const fromJournal = extractionReadyIdsFromTexts(
+      (journal.data ?? []).map((message) => journalText(message, locale)),
+    )
+    for (const item of extractionItems) {
+      if (fromThread.has(item.id) || fromJournal.has(item.id) || readAutoturnFired(sessionId, item.id)) {
+        firedIds.current.add(item.id)
+      }
+    }
+
+    const candidate = nextAutoTurnItem(pendingSeen.current, extractionItems, firedIds.current)
+    pendingSeen.current = nextPendingSeen(pendingSeen.current, extractionItems, firedIds.current)
+    if (!shouldAutoTurn(threadRunning, candidate) || !candidate) return
+    if (candidate.status !== 'parsed' && candidate.status !== 'rejected') return
+
+    firedIds.current.add(candidate.id)
+    writeAutoturnFired(sessionId, candidate.id)
+    fillingRef.current = true
+    setFillingFileName(candidate.fileName)
+    setFilling(true)
+    void runtime.thread.append({
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: formatExtractionReady({
+            itemId: candidate.id,
+            status: candidate.status,
+            organizationId,
+          }),
+        },
+      ],
+    })
+  }, [extractionItems, journal.data, locale, organizationId, runtime, sessionId, threadRunning])
+
+  useEffect(() => {
+    if (!filling) return
+    const timer = window.setTimeout(() => {
+      fillingRef.current = false
+      setFilling(false)
+    }, EXTRACTION_SLOW_MS)
+    return () => window.clearTimeout(timer)
+  }, [filling])
+
+  const banner = extractionBanner(extractionItems, nowMs, filling, fillingFileName)
 
   const actions = useMemo<IntakeActions>(
     () => ({
@@ -254,14 +474,20 @@ export function IntakeChat({
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <IntakeActionsProvider value={actions}>
-        <IntakeToolUIs />
-        <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
-          <div className="space-y-2">
-            {failure ? <p className="text-sm text-destructive">{describeError(failure)}</p> : null}
-            <Thread />
+        <ExtractionUiContext.Provider value={{ banner }}>
+          <IntakeToolUIs />
+          <div className="grid items-start gap-4 lg:grid-cols-[1fr_340px]">
+            <div className="space-y-2">
+              {failure ? <p className="text-sm text-destructive">{describeError(failure)}</p> : null}
+              {journal.isError ? <p className="text-sm text-destructive">{describeError(journal.error)}</p> : null}
+              <Thread />
+            </div>
+            <div className="max-h-[min(72vh,720px)] space-y-4 overflow-y-auto">
+              <ProgressPanel sections={sections} missing={missing} percent={percent} title={title} />
+              {aside}
+            </div>
           </div>
-          <ProgressPanel sections={sections} missing={missing} percent={percent} title={title} />
-        </div>
+        </ExtractionUiContext.Provider>
       </IntakeActionsProvider>
     </AssistantRuntimeProvider>
   )

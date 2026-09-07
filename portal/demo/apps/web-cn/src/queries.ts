@@ -20,7 +20,7 @@ const isSettled = (item: { status: ItemStatus }) => SETTLED_ITEM_STATUSES.includ
 
 /** Разбор идёт: есть хотя бы один документ, по которому ядро ещё ждёт ответа. */
 export const extractionPending = (items: { status: ItemStatus }[] | undefined): boolean =>
-  Boolean(items?.some((item) => !isSettled(item)))
+  Boolean(Array.isArray(items) && items.some((item) => !isSettled(item)))
 
 const pollWhile = (pending: boolean) => (pending ? EXTRACTION_POLL_MS : false)
 

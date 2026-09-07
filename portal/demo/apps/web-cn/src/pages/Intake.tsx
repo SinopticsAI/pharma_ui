@@ -54,16 +54,17 @@ export function IntakeCompanyPage() {
 
   const company = organization.data
   const completeness = company?.completeness
-  const companyDocuments = (items.data ?? []).filter((item) => item.level === 'company')
+  const listed = Array.isArray(items.data) ? items.data : []
+  const companyDocuments = listed.filter((item) => item.level === 'company')
 
   return (
     <Shell nav={null}>
       <PageHeader
-        title="Регистрация компании"
+        title={t('intake.company.title')}
         lead={
           company
-            ? `${text(l10n(company.name, organizationId)).value}. Диалог с агентом примерно на 15 минут: он заполнит профиль по вашим документам.`
-            : 'Диалог с агентом примерно на 15 минут. Он заполнит профиль по вашим документам.'
+            ? `${text(l10n(company.name, organizationId)).value}. ${t('intake.company.leadNamed')}`
+            : t('intake.company.lead')
         }
       />
       {error ? <Callout tone="deadline">{describeError(error)}</Callout> : null}
@@ -76,24 +77,26 @@ export function IntakeCompanyPage() {
             agentId="companyIntake"
             sessionId={sessionId}
             organizationId={organizationId}
-            title="Профиль компании"
+            title={t('intake.company.profileTitle')}
             sections={completeness?.sections ?? []}
             percent={completeness?.percent ?? 0}
+            aside={
+              <>
+                <RequisitesPanel
+                  scope="company"
+                  draft={company?.draft}
+                  profile={company?.profile}
+                  approved={company?.status === 'profile_approved'}
+                />
+                {items.isError ? <Callout tone="deadline">{describeError(items.error)}</Callout> : null}
+                <DocumentsPanel
+                  organizationId={organizationId}
+                  items={companyDocuments}
+                  title="intake.documents.companyTitle"
+                />
+              </>
+            }
           />
-          <div className="mt-4">
-            <RequisitesPanel
-              scope="company"
-              draft={company?.draft}
-              profile={company?.profile}
-              approved={company?.status === 'profile_approved'}
-            />
-            {items.isError ? <Callout tone="deadline">{describeError(items.error)}</Callout> : null}
-            <DocumentsPanel
-              organizationId={organizationId}
-              items={companyDocuments}
-              title="intake.documents.companyTitle"
-            />
-          </div>
         </>
       )}
     </Shell>
@@ -118,11 +121,11 @@ export function IntakeProductPage() {
   return (
     <Shell nav={null}>
       <PageHeader
-        title="Новый продукт"
+        title={t('intake.product.title')}
         lead={
           card
-            ? `${text(l10n(card.name, productId)).value}. Документы компании уже подтянуты — повторно загружать их не нужно.`
-            : 'Агент соберёт данные, предложит классификацию и построит карту процесса.'
+            ? `${text(l10n(card.name, productId)).value}. ${t('intake.product.leadNamed')}`
+            : t('intake.product.lead')
         }
       />
       {error ? <Callout tone="deadline">{describeError(error)}</Callout> : null}
@@ -136,26 +139,28 @@ export function IntakeProductPage() {
             sessionId={sessionId}
             organizationId={organizationId}
             productId={productId}
-            title="Комплектность продукта"
+            title={t('intake.product.completenessTitle')}
             sections={[]}
             missing={card?.missing ?? []}
             percent={card?.completeness ?? 0}
+            aside={
+              <>
+                <RequisitesPanel scope="product" draft={card?.draft} />
+                <DocumentsPanel
+                  organizationId={organizationId}
+                  items={ownDocuments}
+                  title="intake.documents.productTitle"
+                  canPromote
+                />
+                <DocumentsPanel
+                  organizationId={organizationId}
+                  items={inheritedDocuments}
+                  title="intake.documents.inheritedTitle"
+                  lead="intake.documents.inheritedLead"
+                />
+              </>
+            }
           />
-          <div className="mt-4">
-            <RequisitesPanel scope="product" draft={card?.draft} />
-            <DocumentsPanel
-              organizationId={organizationId}
-              items={ownDocuments}
-              title="intake.documents.productTitle"
-              canPromote
-            />
-            <DocumentsPanel
-              organizationId={organizationId}
-              items={inheritedDocuments}
-              title="intake.documents.inheritedTitle"
-              lead="intake.documents.inheritedLead"
-            />
-          </div>
         </>
       )}
     </Shell>

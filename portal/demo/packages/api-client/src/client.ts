@@ -5,6 +5,7 @@ import {
   downloadTicketSchema,
   identitySchema,
   intakeMessageListSchema,
+  intakeMessageSchema,
   intakeSessionSchema,
   organizationItemListSchema,
   organizationItemSchema,
@@ -192,7 +193,9 @@ export class ApiClient {
   }
 
   listOrganizationItems(organizationId: string): Promise<OrganizationItem[]> {
-    return this.request('GET', `/organizations/${organizationId}/items`, { schema: organizationItemListSchema })
+    return this.request('GET', `/organizations/${organizationId}/items`, { schema: organizationItemListSchema }).then(
+      (data) => (Array.isArray(data) ? data : []),
+    )
   }
 
   requestOrgUploadUrl(organizationId: string, body: UploadRequest): Promise<UploadTicket> {
@@ -271,9 +274,24 @@ export class ApiClient {
     return this.request('GET', `/intake/sessions/${sessionId}`, { schema: intakeSessionSchema })
   }
 
-  /** Журнал только на чтение: пишет его агент тулом `append-chat-message`. */
   listIntakeMessages(sessionId: string): Promise<IntakeMessage[]> {
-    return this.request('GET', `/intake/sessions/${sessionId}/messages`, { schema: intakeMessageListSchema })
+    return this.request('GET', `/intake/sessions/${sessionId}/messages`, { schema: intakeMessageListSchema }).then(
+      (data) => (Array.isArray(data) ? data : []),
+    )
+  }
+
+  /**
+   * Нить в браузере пустая после перезагрузки: агент журнал почти не пишет.
+   * Кабинет сам кладёт ход, чтобы при следующем открытии диалог был на месте.
+   */
+  appendIntakeMessage(
+    sessionId: string,
+    body: { role: 'user' | 'agent' | 'system'; text: string; itemId?: string; payload?: Record<string, unknown> },
+  ): Promise<IntakeMessage> {
+    return this.request('POST', `/intake/sessions/${sessionId}/messages`, {
+      body,
+      schema: intakeMessageSchema,
+    })
   }
 
   // ------------------------------------------------------------------- кейсы --
