@@ -9,6 +9,7 @@ import {
   Estimate,
   KeyValue,
   Metric,
+  Money,
   PageHeader,
   StagePills,
   StatusBadge,
@@ -16,13 +17,14 @@ import {
   TimelineItem,
 } from '../kit'
 import { NodeMapView } from '../NodeMap'
-import { useCase, useStatuses } from '../queries'
+import { useCase, useLedger, useStatuses } from '../queries'
 
 export function DashboardPage() {
   const caseId = useCaseId()
-  const { t, text, dateTime } = useI18n()
+  const { t, text, money, dateTime } = useI18n()
   const caseQuery = useCase(caseId)
   const statuses = useStatuses(caseId)
+  const ledger = useLedger(caseId)
 
   const detail = caseQuery.data
   if (!detail) return <Empty>{t('common.loading')}</Empty>
@@ -103,6 +105,32 @@ export function DashboardPage() {
                 },
               ]}
             />
+          </Card>
+
+          <Card title={t('case.miniLedger')}>
+            {(ledger.data ?? []).length === 0 ? (
+              <Empty>{t('ledger.empty')}</Empty>
+            ) : (
+              <div className="space-y-3">
+                {(ledger.data ?? [])
+                  .slice(-3)
+                  .reverse()
+                  .map((line) => (
+                    <div key={line.id} className="space-y-1">
+                      <div className="flex items-center justify-between gap-2 text-sm">
+                        <span>{text(line.supplier).value}</span>
+                        <Money value={money(line.amount, line.currency)} />
+                      </div>
+                      <StatusBadge tone={line.type === 'commission' ? 'accent' : 'quiet'}>
+                        {line.type === 'commission' ? t('ledger.commission') : t('ledger.passThrough')}
+                      </StatusBadge>
+                    </div>
+                  ))}
+              </div>
+            )}
+            <Link to="/case/$caseId/ledger" params={{ caseId }}>
+              {t('case.openLedger')} →
+            </Link>
           </Card>
 
           <Card title={t('map.title')}>

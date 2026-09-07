@@ -144,6 +144,39 @@ export function Estimate({ children }: { children: ReactNode }) {
   return <p className="mt-6 text-xs text-muted-foreground">{children}</p>
 }
 
+export function Money({ value }: { value: string }) {
+  return <span className="tabular-nums">{value}</span>
+}
+
+export function ChatBubble({
+  side,
+  author,
+  time,
+  children,
+}: {
+  side: 'cn' | 'ru' | 'agent'
+  author: string
+  time: string
+  children: ReactNode
+}) {
+  const mine = side === 'cn'
+  return (
+    <div className={cn('flex flex-col gap-1', mine ? 'items-end' : 'items-start')}>
+      <span className="text-xs text-muted-foreground">
+        {author} · {time}
+      </span>
+      <div
+        className={cn(
+          'max-w-[80%] rounded-lg px-3 py-2 text-sm',
+          mine ? 'bg-primary text-primary-foreground' : 'bg-muted',
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export function Timeline({ children }: { children: ReactNode }) {
   return <div className="space-y-4">{children}</div>
 }

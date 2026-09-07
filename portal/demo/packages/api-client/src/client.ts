@@ -2,11 +2,13 @@ import {
   caseDetailSchema,
   caseItemListSchema,
   caseItemSchema,
+  chatMessageListSchema,
   downloadTicketSchema,
   identitySchema,
   intakeMessageListSchema,
   intakeMessageSchema,
   intakeSessionSchema,
+  ledgerLineListSchema,
   organizationItemListSchema,
   organizationItemSchema,
   organizationListSchema,
@@ -24,6 +26,7 @@ import {
 import type {
   CaseDetail,
   CaseItem,
+  ChatMessage,
   ClassificationVariant,
   Contour,
   DownloadTicket,
@@ -31,6 +34,7 @@ import type {
   IntakeMessage,
   IntakeScope,
   IntakeSession,
+  LedgerLine,
   Locale,
   Organization,
   OrganizationItem,
@@ -161,6 +165,20 @@ export class ApiClient {
     return data as T
   }
 
+  /**
+   * Список, которого в ядре ещё может не быть: 404 не прячет экран заглушкой,
+   * а даёт пустую таблицу. Остальные ошибки остаются ошибками.
+   */
+  private async listOrEmpty<T>(path: string, schema: ZodType<T[]>): Promise<T[]> {
+    try {
+      const data = await this.request('GET', path, { schema })
+      return Array.isArray(data) ? data : []
+    } catch (error) {
+      if (error instanceof ApiError && error.isNotFound) return []
+      throw error
+    }
+  }
+
   // ---------------------------------------------------------------- личность --
 
   getMe(): Promise<Identity> {
@@ -206,8 +224,8 @@ export class ApiClient {
   }
 
   /**
-   * `sessionId` называет диалог, в котором пришёл документ: по нему ядро строит
-   * идентификатор кейса Plane, и результат разбора возвращается в ту же нить.
+   * `sessionId` называет диалог, в котором пришёл документ. Разбор после
+   * confirm — отдельный POST /extract на агенте, не этот метод.
    */
   confirmOrgUpload(organizationId: string, itemId: string, sessionId?: string): Promise<OrganizationItem> {
     return this.request('POST', `/organizations/${organizationId}/items/${itemId}/confirm-upload`, {
@@ -333,6 +351,14 @@ export class ApiClient {
   /** Пишет только оператор: у роли `client` маршрут отдаёт 403. */
   addStatus(caseId: string, input: AddStatusInput): Promise<StatusEntry> {
     return this.request('POST', `/cases/${caseId}/statuses`, { body: input, schema: statusEntrySchema })
+  }
+
+  listLedger(caseId: string): Promise<LedgerLine[]> {
+    return this.listOrEmpty(`/cases/${caseId}/ledger`, ledgerLineListSchema)
+  }
+
+  listChat(caseId: string): Promise<ChatMessage[]> {
+    return this.listOrEmpty(`/cases/${caseId}/chat`, chatMessageListSchema)
   }
 
   searchRegistry(query: string, source: 'elk' | 'grls' = 'elk'): Promise<RegistrySearch> {

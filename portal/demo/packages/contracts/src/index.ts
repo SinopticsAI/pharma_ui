@@ -2,6 +2,7 @@ import type {
   Account,
   CaseDetail,
   CaseItem,
+  ChatMessage,
   ClassificationVariant,
   Completeness,
   DownloadTicket,
@@ -11,6 +12,7 @@ import type {
   Identity,
   IntakeMessage,
   IntakeSession,
+  LedgerLine,
   NodeMapItem,
   Organization,
   OrganizationItem,
@@ -367,6 +369,37 @@ export const statusEntrySchema: z.ZodType<StatusEntry> = z
   .passthrough() as z.ZodType<StatusEntry>
 
 export const statusEntryListSchema: z.ZodType<StatusEntry[]> = z.array(statusEntrySchema)
+
+export const ledgerLineSchema: z.ZodType<LedgerLine> = z
+  .object({
+    id: z.string(),
+    caseId: z.string(),
+    date: z.string(),
+    supplier: l10nPartialSchema,
+    purpose: l10nPartialSchema,
+    amount: z.number(),
+    currency: z.enum(['RUB', 'CNY']),
+    type: z.enum(['pass-through', 'commission']),
+    status: z.enum(['received', 'accepted', 'funded', 'paid', 'closed']),
+    original: l10nPartialSchema,
+    paymentDeadline: l10nPartialSchema.optional(),
+  })
+  .passthrough() as z.ZodType<LedgerLine>
+
+export const ledgerLineListSchema: z.ZodType<LedgerLine[]> = z.array(ledgerLineSchema)
+
+export const chatMessageSchema: z.ZodType<ChatMessage> = z
+  .object({
+    id: z.string(),
+    caseId: z.string(),
+    side: z.enum(['cn', 'ru']),
+    author: z.string(),
+    text: l10nPartialSchema.and(z.object({ ru: z.string() })),
+    at: z.string(),
+  })
+  .passthrough() as z.ZodType<ChatMessage>
+
+export const chatMessageListSchema: z.ZodType<ChatMessage[]> = z.array(chatMessageSchema)
 
 export const registrySearchSchema: z.ZodType<RegistrySearch> = z
   .object({

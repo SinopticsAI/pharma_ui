@@ -21,6 +21,7 @@ import {
   useProduct,
 } from '../queries'
 import { createIntakeAttachmentAdapter, pickIntakeFile } from './attachments'
+import { startIntakeExtract } from './extract'
 import { IntakeToolUIs } from './cards'
 import { type IntakeActions, IntakeActionsProvider, useIntakeActions } from './context'
 import {
@@ -30,6 +31,7 @@ import {
   extractionBanner,
   extractionReadyIdsFromTexts,
   formatExtractionReady,
+  itemsNeedingExtract,
   nextAutoTurnItem,
   nextPendingSeen,
   readAutoturnFired,
@@ -327,6 +329,7 @@ function IntakeChatRuntime({
   }, [orgItems.data, product.data?.documents, productId])
   const pendingSeen = useRef(new Set<string>())
   const firedIds = useRef(new Set<string>())
+  const extractStarted = useRef(new Set<string>())
   const fillingRef = useRef(false)
   const [filling, setFilling] = useState(false)
   const [fillingFileName, setFillingFileName] = useState('')
@@ -418,6 +421,22 @@ function IntakeChatRuntime({
     sync()
     return thread.subscribe?.(sync)
   }, [runtime])
+
+  useEffect(() => {
+    const accountId = identity.accountId
+    if (!accountId || !organizationId) return
+    for (const item of itemsNeedingExtract(extractionItems, extractStarted.current)) {
+      extractStarted.current.add(item.id)
+      void startIntakeExtract({
+        organizationId,
+        itemId: item.id,
+        accountId,
+        getToken: getAccessToken,
+      }).catch(() => {
+        extractStarted.current.delete(item.id)
+      })
+    }
+  }, [extractionItems, getAccessToken, identity.accountId, organizationId])
 
   useEffect(() => {
     const flying = extractionItems.filter((item) => item.status === 'uploaded' || item.status === 'confirmed')

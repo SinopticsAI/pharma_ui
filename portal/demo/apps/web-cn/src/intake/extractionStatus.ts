@@ -1,9 +1,9 @@
 import type { ItemStatus } from '@demo/domain'
 
 /**
- * Кабинет, не агент, следит за разбором: один HTTP-ход чата не может ждать Plane.
- * Когда документ становится parsed/rejected, нить сама пишет маркер — агент
- * отвечает карточкой, человеку не нужно писать «готово?».
+ * Кабинет, не агент, следит за разбором: один HTTP-ход чата не может ждать OCR.
+ * Когда документ uploaded, кабинет зовёт POST /extract. Когда статус становится
+ * parsed/rejected, нить сама пишет маркер — агент отвечает карточкой.
  */
 
 export const EXTRACTION_READY_PREFIX = '[extraction-ready]'
@@ -86,6 +86,14 @@ export function scopeExtractionItems(
 
 export function inFlightItems(items: ExtractionItem[]): ExtractionItem[] {
   return items.filter((item) => isInFlightStatus(item.status))
+}
+
+/** Ещё не разобранные файлы, по которым кабинет ещё не звал POST /extract. */
+export function itemsNeedingExtract(
+  items: ExtractionItem[],
+  alreadyStarted: ReadonlySet<string>,
+): ExtractionItem[] {
+  return inFlightItems(items).filter((item) => !alreadyStarted.has(item.id))
 }
 
 export function pendingItemIds(items: ExtractionItem[]): Set<string> {

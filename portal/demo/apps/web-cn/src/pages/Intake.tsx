@@ -3,6 +3,7 @@ import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
+import { CabinetNav } from '../cabinet-nav'
 import { DocumentsPanel } from '../intake/DocumentsPanel'
 import { IntakeChat } from '../intake/IntakeChat'
 import { RequisitesPanel } from '../intake/RequisitesPanel'
@@ -78,7 +79,7 @@ export function IntakeCompanyPage() {
   const companyDocuments = listed.filter((item) => item.level === 'company')
 
   return (
-    <Shell nav={null}>
+    <Shell nav={<CabinetNav />}>
       <PageHeader
         title={t('intake.company.title')}
         lead={
@@ -139,7 +140,7 @@ export function IntakeProductPage() {
   const inheritedDocuments = documents.filter((item) => item.level === 'company')
 
   return (
-    <Shell nav={null}>
+    <Shell nav={<CabinetNav />}>
       <PageHeader
         title={t('intake.product.title')}
         lead={

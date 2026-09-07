@@ -6,6 +6,7 @@ import {
   extractionReadyIdsFromTexts,
   formatExtractionReady,
   isExtractionReadyText,
+  itemsNeedingExtract,
   nextAutoTurnItem,
   nextPendingSeen,
   parseExtractionReady,
@@ -129,6 +130,16 @@ describe('scope and banner', () => {
       fileName: 'licence.jpg',
     })
     expect(extractionBanner([item({ id: 'it-1', status: 'parsed' })], start, false)).toBeNull()
+  })
+
+  it('extract только для uploaded/confirmed и только один раз на item', () => {
+    const rows = [
+      item({ id: 'it-1', status: 'uploaded' }),
+      item({ id: 'it-2', status: 'confirmed' }),
+      item({ id: 'it-3', status: 'parsed' }),
+    ]
+    expect(itemsNeedingExtract(rows, new Set()).map((row) => row.id)).toEqual(['it-1', 'it-2'])
+    expect(itemsNeedingExtract(rows, new Set(['it-1'])).map((row) => row.id)).toEqual(['it-2'])
   })
 })
 

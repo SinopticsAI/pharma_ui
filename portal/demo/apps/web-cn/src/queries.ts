@@ -9,9 +9,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
  */
 
 /**
- * Разбор документа асинхронный: браузер подтверждает загрузку, дальше Plane
- * читает скан и присылает вебхук в ядро. Экрану об этом никто не сообщает,
- * поэтому пока есть неразобранный документ, чтения повторяются сами.
+ * Разбор документа асинхронный: браузер подтверждает загрузку, кабинет зовёт
+ * POST /extract, Mastra пишет черновик через вебхук. Экрану об этом никто не
+ * сообщает, поэтому пока есть неразобранный документ, чтения повторяются сами.
  */
 const EXTRACTION_POLL_MS = 10_000
 const SETTLED_ITEM_STATUSES: ItemStatus[] = ['parsed', 'rejected']
@@ -35,7 +35,7 @@ export const useOrganization = (organizationId: string, awaitingExtraction = fal
     queryKey: ['organization', organizationId],
     queryFn: () => api.getOrganization(organizationId),
     enabled: Boolean(organizationId),
-    // Реквизиты и комплектность меняет вебхук Plane, а не действие человека.
+    // Реквизиты и комплектность меняет вебхук разбора, а не действие человека.
     refetchInterval: pollWhile(awaitingExtraction),
   })
 }
@@ -104,6 +104,24 @@ export const useStatuses = (caseId: string) => {
   return useQuery({
     queryKey: ['statuses', caseId],
     queryFn: () => api.listStatuses(caseId),
+    enabled: Boolean(caseId),
+  })
+}
+
+export const useLedger = (caseId: string) => {
+  const api = useApi()
+  return useQuery({
+    queryKey: ['ledger', caseId],
+    queryFn: () => api.listLedger(caseId),
+    enabled: Boolean(caseId),
+  })
+}
+
+export const useChat = (caseId: string) => {
+  const api = useApi()
+  return useQuery({
+    queryKey: ['chat', caseId],
+    queryFn: () => api.listChat(caseId),
     enabled: Boolean(caseId),
   })
 }
