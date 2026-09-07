@@ -58,9 +58,10 @@ import {
 } from './history'
 import { type AgentId, createIntakeTransport } from './transport'
 
-const ExtractionUiContext = createContext<{ line: ProcessLine | null; hideEmpty: boolean }>({
+const ExtractionUiContext = createContext<{ line: ProcessLine | null; hideEmpty: boolean; chatFailed: boolean }>({
   line: null,
   hideEmpty: false,
+  chatFailed: false,
 })
 
 /**
@@ -172,7 +173,7 @@ function UserMessage() {
 function Thread() {
   const { t } = useI18n()
   const { setItemType, composerItemType } = useIntakeActions()
-  const { line, hideEmpty } = useContext(ExtractionUiContext)
+  const { line, hideEmpty, chatFailed } = useContext(ExtractionUiContext)
 
   return (
     <ThreadPrimitive.Root className="flex h-[min(72vh,720px)] flex-col rounded-lg border bg-card">
@@ -201,9 +202,9 @@ function Thread() {
           <div className="text-sm text-muted-foreground" data-process={line.kind}>
             {processLineText(line, t)}
           </div>
-        ) : (
+        ) : chatFailed ? null : (
           <ThreadPrimitive.If running>
-            <div className="text-sm text-muted-foreground">{t('intake.chat.reading')}</div>
+            <div className="text-sm text-muted-foreground">{t('intake.chat.replying')}</div>
           </ThreadPrimitive.If>
         )}
       </ThreadPrimitive.Viewport>
@@ -333,7 +334,10 @@ function IntakeChatRuntime({
   const { locale, t } = useI18n()
   const { getAccessToken } = useAuth()
   const [uploadError, setUploadError] = useState<unknown>(null)
+  const [chatError, setChatError] = useState<unknown>(null)
   const [journalError, setJournalError] = useState<unknown>(null)
+  const cancelRunRef = useRef<(() => void) | undefined>(undefined)
+  const clearingRunRef = useRef(false)
   const persisted = useRef(journalPersistedIds(journalRows))
   const seed = useMemo(() => journalToUiMessages(journalRows, locale), [journalRows, locale])
   const seedRepository = useMemo(() => (seed.length > 0 ? uiMessagesToRepository(seed) : undefined), [seed])
@@ -401,6 +405,7 @@ function IntakeChatRuntime({
       const writes = unpersistedAppends(messages, persisted.current, roles, (toolName) =>
         t(journalToolFallbackKey(toolName)),
       )
+      if (writes.length > 0 && roles === JOURNAL_USER_ROLES) setChatError(null)
       for (const body of writes) {
         persisted.current.add(body.payload.clientMessageId)
         void api.appendIntakeMessage(sessionId, body).catch((error: unknown) => {
@@ -422,7 +427,23 @@ function IntakeChatRuntime({
     onFinish: ({ messages }) => {
       persistJournalRef.current(messages, JOURNAL_ASSISTANT_ROLES)
     },
+    onError: (error) => {
+      setChatError(() => error)
+      setThreadRunning(false)
+      if (clearingRunRef.current) return
+      clearingRunRef.current = true
+      try {
+        cancelRunRef.current?.()
+      } finally {
+        clearingRunRef.current = false
+      }
+    },
   })
+  cancelRunRef.current = () => {
+    const thread = runtime.thread as { cancel?: () => void; cancelRun?: () => void }
+    thread.cancel?.()
+    thread.cancelRun?.()
+  }
 
   useEffect(() => {
     const thread = runtime.thread as {
@@ -576,12 +597,12 @@ function IntakeChatRuntime({
 
   // Загрузка падает вне нити: сообщение агенту не уходит, вложение остаётся в
   // композере. Показываем причину рядом с чатом, чтобы можно было повторить.
-  const failure = uploadError ?? approveCompany.error ?? approveProduct.error ?? journalError
+  const failure = uploadError ?? chatError ?? approveCompany.error ?? approveProduct.error ?? journalError
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <IntakeActionsProvider value={actions}>
-        <ExtractionUiContext.Provider value={{ line, hideEmpty }}>
+        <ExtractionUiContext.Provider value={{ line, hideEmpty, chatFailed: Boolean(chatError) }}>
           <IntakeToolUIs />
           <div className="grid items-start gap-4 lg:grid-cols-[1fr_340px]">
             <div className="space-y-2">

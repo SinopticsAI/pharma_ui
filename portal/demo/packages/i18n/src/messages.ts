@@ -196,6 +196,7 @@ export const ru = {
 
   'intake.chat.empty': 'Приложите документ компании скрепкой — агент разберёт его и заполнит карточку. Анкету писать не нужно.',
   'intake.chat.reading': 'Агент читает документ',
+  'intake.chat.replying': 'Агент отвечает',
   'intake.chat.placeholder': 'Напишите агенту',
   'intake.chat.attach': 'Приложить документ',
   'intake.chat.send': 'Отправить',
@@ -543,6 +544,7 @@ export const en: Record<MessageKey, string> = {
 
   'intake.chat.empty': 'Attach a company document with the paperclip — the agent will read it and fill the card. You do not need a questionnaire.',
   'intake.chat.reading': 'The agent is reading the document',
+  'intake.chat.replying': 'The agent is answering',
   'intake.chat.placeholder': 'Write to the agent',
   'intake.chat.attach': 'Attach a document',
   'intake.chat.send': 'Send',
@@ -886,6 +888,7 @@ export const zh: Record<MessageKey, string> = {
 
   'intake.chat.empty': '用回形针上传公司文件——智能体会读取并填写卡片。无需填写问卷。',
   'intake.chat.reading': '智能体正在阅读文件',
+  'intake.chat.replying': '智能体正在回复',
   'intake.chat.placeholder': '给智能体留言',
   'intake.chat.attach': '上传文件',
   'intake.chat.send': '发送',
