@@ -9,7 +9,9 @@ import {
   isDraftEmpty,
   isExtractionPending,
   isExtractionReadyText,
+  isSuperseded,
   itemsNeedingExtract,
+  newestByUpdatedAt,
   nextAutoTurnItem,
   nextGiveUpItem,
   nextPendingSeen,
@@ -36,6 +38,7 @@ function item(partial: {
     updatedAt: '2026-09-07T03:36:00Z',
     level: 'company' as const,
     productId: '',
+    itemType: 'business-license',
     ...partial,
   }
 }
@@ -109,6 +112,31 @@ describe('auto-turn once per item', () => {
     expect(nextPendingSeen(afterUpload, [parsed], new Set()).has('it-1')).toBe(true)
     expect(nextPendingSeen(afterUpload, [parsed], new Set(['it-1'])).has('it-1')).toBe(false)
   })
+
+  it('не стреляет по старому rejected, если уже есть более новый файл того же типа', () => {
+    const oldDocx = item({
+      id: 'it-docx',
+      status: 'rejected',
+      fileName: 'business licence.docx',
+      updatedAt: '2026-09-07T03:00:00Z',
+    })
+    const newJpg = item({
+      id: 'it-jpg',
+      status: 'uploaded',
+      fileName: 'bussines_licence.jpg',
+      updatedAt: '2026-09-07T03:40:00Z',
+    })
+    expect(isSuperseded(oldDocx, [oldDocx, newJpg])).toBe(true)
+    expect(newestByUpdatedAt([oldDocx, newJpg])?.id).toBe('it-jpg')
+    expect(nextAutoTurnItem(new Set(['it-docx']), [oldDocx, newJpg], new Set())).toBeNull()
+    expect(
+      nextAutoTurnItem(
+        new Set(['it-jpg']),
+        [oldDocx, item({ ...newJpg, status: 'parsed' })],
+        new Set(),
+      )?.id,
+    ).toBe('it-jpg')
+  })
 })
 
 describe('scope and banner', () => {
@@ -164,6 +192,38 @@ describe('scope and banner', () => {
       fileName: 'licence.jpg',
     })
     expect(extractionBanner([item({ id: 'it-1', status: 'parsed' })], start, false)).toBeNull()
+    const oldDocx = item({
+      id: 'it-docx',
+      status: 'rejected',
+      fileName: 'business licence.docx',
+      updatedAt: '2026-09-07T03:00:00Z',
+    })
+    const newJpg = item({
+      id: 'it-jpg',
+      status: 'uploaded',
+      fileName: 'bussines_licence.jpg',
+      updatedAt: '2026-09-07T03:40:00Z',
+    })
+    expect(
+      processLine({
+        items: [oldDocx, newJpg],
+        nowMs: Date.parse('2026-09-07T03:40:12Z'),
+        filling: false,
+        liveExtractIds: new Set(['it-jpg']),
+        extractFailed: { itemId: 'it-docx', fileName: 'business licence.docx' },
+        draftEmpty: true,
+      }),
+    ).toEqual({ kind: 'reading', fileName: 'bussines_licence.jpg', elapsedSec: 12 })
+    expect(
+      processLine({
+        items: [oldDocx, newJpg],
+        nowMs: Date.parse('2026-09-07T03:40:12Z'),
+        filling: false,
+        liveExtractIds: new Set(),
+        extractFailed: { itemId: 'it-docx', fileName: 'business licence.docx' },
+        draftEmpty: true,
+      }),
+    ).toEqual({ kind: 'empty-card', fileName: 'bussines_licence.jpg' })
   })
 
   it('poll только uploaded/confirmed и только до потолка', () => {
@@ -186,6 +246,25 @@ describe('scope and banner', () => {
     ]
     expect(itemsNeedingExtract(rows, new Set()).map((row) => row.id)).toEqual(['it-1', 'it-2'])
     expect(itemsNeedingExtract(rows, new Set(['it-1'])).map((row) => row.id)).toEqual(['it-2'])
+    expect(
+      itemsNeedingExtract(
+        [
+          item({
+            id: 'it-docx',
+            status: 'uploaded',
+            fileName: 'business licence.docx',
+            updatedAt: '2026-09-07T03:00:00Z',
+          }),
+          item({
+            id: 'it-jpg',
+            status: 'uploaded',
+            fileName: 'bussines_licence.jpg',
+            updatedAt: '2026-09-07T03:40:00Z',
+          }),
+        ],
+        new Set(),
+      ).map((row) => row.id),
+    ).toEqual(['it-jpg'])
   })
 
   it('при галочке Plane кабинет не стартует Mastra /extract', () => {

@@ -48,10 +48,17 @@ const PRODUCT_ROWS: FieldRow[] = [
 ]
 
 /** Одобренный профиль хранит голые значения: происхождения там уже нет. */
-function provenance(draft: DraftFields | undefined, key: string): { source: string; confidence: number | null } {
+function provenance(
+  draft: DraftFields | undefined,
+  key: string,
+): { source: string; confidence: number | null; unverified: boolean } {
   const entry = draft?.[key]
-  if (!entry || typeof entry === 'string') return { source: '', confidence: null }
-  return { source: entry.source ?? '', confidence: entry.confidence ?? null }
+  if (!entry || typeof entry === 'string') return { source: '', confidence: null, unverified: false }
+  return {
+    source: entry.source ?? '',
+    confidence: entry.confidence ?? null,
+    unverified: entry.verified === false,
+  }
 }
 
 export function RequisitesPanel({
@@ -94,7 +101,7 @@ export function RequisitesPanel({
         >
           {rows.map((row) => {
             const value = draftValue(source, row.key)
-            const { source: from, confidence } = provenance(draft, row.key)
+            const { source: from, confidence, unverified } = provenance(draft, row.key)
             return (
               <tr key={row.key}>
                 <td>
@@ -103,7 +110,16 @@ export function RequisitesPanel({
                     <div className="text-xs text-muted-foreground">{t('intake.requisites.required')}</div>
                   ) : null}
                 </td>
-                <td>{value ? value : <StatusBadge tone="quiet">{t('intake.requisites.awaiting')}</StatusBadge>}</td>
+                <td>
+                  {value ? value : <StatusBadge tone="quiet">{t('intake.requisites.awaiting')}</StatusBadge>}
+                  {/* Значение показываем как есть, но без пометки его нельзя принять за факт. */}
+                  {value && unverified ? (
+                    <div className="mt-1 space-y-1">
+                      <StatusBadge tone="warm">{t('intake.requisites.unverified')}</StatusBadge>
+                      <div className="text-xs text-muted-foreground">{t('intake.requisites.unverifiedHint')}</div>
+                    </div>
+                  ) : null}
+                </td>
                 {approved ? null : (
                   <>
                     <td className="text-xs text-muted-foreground">{from || '—'}</td>

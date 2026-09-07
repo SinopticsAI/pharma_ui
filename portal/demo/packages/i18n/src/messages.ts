@@ -157,6 +157,8 @@ export const ru = {
   'intake.requisites.confidence': 'Уверенность',
   'intake.requisites.awaiting': 'ждём документ',
   'intake.requisites.required': 'обязательно',
+  'intake.requisites.unverified': 'не проверено',
+  'intake.requisites.unverifiedHint': 'Номер не сходится с контрольным разрядом — сверьте его со свидетельством. Пока номер не подтверждён, профиль одобрить нельзя.',
   'intake.requisites.empty': 'Агент пока не разобрал ни одного документа.',
 
   'intake.documents.companyTitle': 'Документы компании',
@@ -505,6 +507,8 @@ export const en: Record<MessageKey, string> = {
   'intake.requisites.confidence': 'Confidence',
   'intake.requisites.awaiting': 'awaiting a document',
   'intake.requisites.required': 'required',
+  'intake.requisites.unverified': 'not verified',
+  'intake.requisites.unverifiedHint': 'The number contradicts its own check digit — check it against the licence. The profile cannot be approved until the number is confirmed.',
   'intake.requisites.empty': 'The agent has not read any document yet.',
 
   'intake.documents.companyTitle': 'Company documents',
@@ -849,6 +853,8 @@ export const zh: Record<MessageKey, string> = {
   'intake.requisites.confidence': '置信度',
   'intake.requisites.awaiting': '等待文件',
   'intake.requisites.required': '必填',
+  'intake.requisites.unverified': '未核验',
+  'intake.requisites.unverifiedHint': '该号码与校验位不符，请与营业执照核对。号码未确认前无法批准企业档案。',
   'intake.requisites.empty': '智能体尚未解析任何文件。',
 
   'intake.documents.companyTitle': '公司文件',

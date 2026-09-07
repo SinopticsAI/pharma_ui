@@ -30,7 +30,9 @@ import {
   type ExtractionItem,
   extractionReadyIdsFromTexts,
   formatExtractionReady,
+  isSettledStatus,
   itemsNeedingExtract,
+  newestByUpdatedAt,
   nextAutoTurnItem,
   nextGiveUpItem,
   nextPendingSeen,
@@ -477,6 +479,7 @@ function IntakeChatRuntime({
     if (!shouldKickMastraExtract(usePlane)) return
     for (const item of itemsNeedingExtract(extractionItems, extractStarted.current)) {
       extractStarted.current.add(item.id)
+      setExtractFailed((current) => (current && current.itemId !== item.id ? null : current))
       setLiveExtractIds((ids) => (ids.includes(item.id) ? ids : [...ids, item.id]))
       void startIntakeExtract({
         organizationId,
@@ -507,6 +510,17 @@ function IntakeChatRuntime({
     const timer = window.setInterval(() => setNowMs(Date.now()), 1000)
     return () => window.clearInterval(timer)
   }, [extractionItems, filling])
+
+  useEffect(() => {
+    setExtractFailed((current) => {
+      if (!current) return null
+      const newest = newestByUpdatedAt(extractionItems)
+      if (newest && newest.id !== current.itemId) return null
+      const failed = extractionItems.find((row) => row.id === current.itemId)
+      if (failed && isSettledStatus(failed.status)) return null
+      return current
+    })
+  }, [extractionItems])
 
   useEffect(() => {
     const fromThread = extractionReadyIdsFromTexts(

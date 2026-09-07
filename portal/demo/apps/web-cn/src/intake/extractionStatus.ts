@@ -29,6 +29,7 @@ export type ExtractionItem = {
   updatedAt: string
   level: 'company' | 'product'
   productId: string
+  itemType?: string
 }
 
 export type ProcessKind = 'accepted' | 'reading' | 'gateway' | 'hung' | 'empty-card' | 'filling'
@@ -95,7 +96,7 @@ export function inFlightItems(items: ExtractionItem[]): ExtractionItem[] {
 
 /** Ещё не разобранные файлы, по которым кабинет ещё не звал POST /extract. */
 export function itemsNeedingExtract(items: ExtractionItem[], alreadyStarted: ReadonlySet<string>): ExtractionItem[] {
-  return inFlightItems(items).filter((item) => !alreadyStarted.has(item.id))
+  return inFlightItems(items).filter((item) => !alreadyStarted.has(item.id) && !isSuperseded(item, items))
 }
 
 /** При включённом Plane кабинет не зовёт Mastra /extract — разбор идёт из Edge. */
@@ -107,22 +108,60 @@ export function pendingItemIds(items: ExtractionItem[]): Set<string> {
   return new Set(inFlightItems(items).map((item) => item.id))
 }
 
-export function itemAgeMs(item: { updatedAt: string }, nowMs: number): number {
+export function updatedAtMs(item: { updatedAt: string }): number {
   const ts = Date.parse(item.updatedAt)
-  return Number.isFinite(ts) ? nowMs - ts : 0
+  return Number.isFinite(ts) ? ts : 0
+}
+
+export function itemAgeMs(item: { updatedAt: string }, nowMs: number): number {
+  return Math.max(0, nowMs - updatedAtMs(item))
+}
+
+export function newestByUpdatedAt<T extends { id: string; updatedAt: string }>(items: T[]): T | undefined {
+  return [...items].sort((left, right) => {
+    const delta = updatedAtMs(right) - updatedAtMs(left)
+    return delta !== 0 ? delta : right.id.localeCompare(left.id)
+  })[0]
+}
+
+function sameDocumentSlot(left: ExtractionItem, right: ExtractionItem): boolean {
+  const leftType = left.itemType || ''
+  const rightType = right.itemType || ''
+  if (leftType && rightType) return leftType === rightType
+  return !leftType && !rightType
+}
+
+/** A newer file of the same kind replaces an older one for banners and auto-turn. */
+export function isSuperseded(item: ExtractionItem, items: ExtractionItem[]): boolean {
+  return items.some((other) => {
+    if (other.id === item.id || !sameDocumentSlot(other, item)) return false
+    return updatedAtMs(other) > updatedAtMs(item)
+  })
+}
+
+export function currentExtractionItem(items: ExtractionItem[]): ExtractionItem | undefined {
+  return newestByUpdatedAt(items.filter((item) => !isSuperseded(item, items))) ?? newestByUpdatedAt(items)
 }
 
 /** Poll только uploaded/confirmed и только до потолка. Сироты pending_upload не крутят экран. */
 export function isExtractionPending(
-  items: { status: ItemStatus; updatedAt?: string }[] | undefined,
+  items: { id?: string; status: ItemStatus; updatedAt?: string; itemType?: string }[] | undefined,
   nowMs = Date.now(),
 ): boolean {
   if (!Array.isArray(items)) return false
-  return items.some((item) => {
-    if (!isInFlightStatus(item.status)) return false
-    const updatedAt = item.updatedAt
-    if (!updatedAt) return true
-    return itemAgeMs({ updatedAt }, nowMs) < EXTRACTION_GIVE_UP_MS
+  const rows: ExtractionItem[] = items.map((item, index) => ({
+    id: item.id || `row-${index}`,
+    fileName: '',
+    status: item.status,
+    updatedAt: item.updatedAt || '',
+    level: 'company',
+    productId: '',
+    itemType: item.itemType,
+  }))
+  return rows.some((item) => {
+    if (!isInFlightStatus(item.status) || isSuperseded(item, rows)) return false
+    if (!item.updatedAt) return true
+    return itemAgeMs(item, nowMs) < EXTRACTION_GIVE_UP_MS
   })
 }
 
@@ -146,11 +185,12 @@ export function nextAutoTurnItem(
   items: ExtractionItem[],
   alreadyFired: ReadonlySet<string>,
 ): ExtractionItem | null {
-  const fromTransition = items.find(
-    (item) => isSettledStatus(item.status) && pendingSeen.has(item.id) && !alreadyFired.has(item.id),
+  const eligible = items.filter(
+    (item) => isSettledStatus(item.status) && !alreadyFired.has(item.id) && !isSuperseded(item, items),
   )
+  const fromTransition = newestByUpdatedAt(eligible.filter((item) => pendingSeen.has(item.id)))
   if (fromTransition) return fromTransition
-  return items.find((item) => isSettledStatus(item.status) && !alreadyFired.has(item.id)) ?? null
+  return newestByUpdatedAt(eligible) ?? null
 }
 
 export function nextGiveUpItem(
@@ -159,9 +199,14 @@ export function nextGiveUpItem(
   alreadyFired: ReadonlySet<string>,
 ): ExtractionItem | null {
   return (
-    items.find(
-      (item) =>
-        isInFlightStatus(item.status) && itemAgeMs(item, nowMs) >= EXTRACTION_GIVE_UP_MS && !alreadyFired.has(item.id),
+    newestByUpdatedAt(
+      items.filter(
+        (item) =>
+          isInFlightStatus(item.status) &&
+          itemAgeMs(item, nowMs) >= EXTRACTION_GIVE_UP_MS &&
+          !alreadyFired.has(item.id) &&
+          !isSuperseded(item, items),
+      ),
     ) ?? null
   )
 }
@@ -196,8 +241,9 @@ export function processLine(input: {
   if (input.filling) {
     return { kind: 'filling', fileName: input.fillingFileName ?? '' }
   }
-  const flying = inFlightItems(input.items)
-  const live = flying.find((item) => input.liveExtractIds.has(item.id))
+  const current = currentExtractionItem(input.items)
+  const flying = inFlightItems(input.items).filter((item) => !isSuperseded(item, input.items))
+  const live = newestByUpdatedAt(flying.filter((item) => input.liveExtractIds.has(item.id)))
   if (live) {
     return {
       kind: 'reading',
@@ -205,26 +251,26 @@ export function processLine(input: {
       elapsedSec: Math.max(0, Math.round(itemAgeMs(live, input.nowMs) / 1000)),
     }
   }
-  if (input.extractFailed) {
-    return { kind: 'gateway', fileName: input.extractFailed.fileName }
+  const failed = input.extractFailed
+  if (failed && current?.id === failed.itemId && flying.some((item) => item.id === failed.itemId)) {
+    return { kind: 'gateway', fileName: failed.fileName }
   }
-  const oldest = flying[0]
-  if (oldest) {
-    const age = itemAgeMs(oldest, input.nowMs)
+  const newestFlying = newestByUpdatedAt(flying)
+  if (newestFlying) {
+    const age = itemAgeMs(newestFlying, input.nowMs)
     if (age >= EXTRACTION_HANG_MS && input.draftEmpty) {
-      return { kind: 'hung', fileName: oldest.fileName, elapsedSec: Math.round(age / 1000) }
+      return { kind: 'hung', fileName: newestFlying.fileName, elapsedSec: Math.round(age / 1000) }
     }
     if (input.draftEmpty) {
-      return { kind: 'empty-card', fileName: oldest.fileName }
+      return { kind: 'empty-card', fileName: newestFlying.fileName }
     }
     if (age < EXTRACTION_SLOW_MS) {
-      return { kind: 'accepted', fileName: oldest.fileName }
+      return { kind: 'accepted', fileName: newestFlying.fileName }
     }
-    return { kind: 'hung', fileName: oldest.fileName, elapsedSec: Math.round(age / 1000) }
+    return { kind: 'hung', fileName: newestFlying.fileName, elapsedSec: Math.round(age / 1000) }
   }
-  const documented = input.items[0]
-  if (documented && input.draftEmpty) {
-    return { kind: 'empty-card', fileName: documented.fileName }
+  if (current && input.draftEmpty) {
+    return { kind: 'empty-card', fileName: current.fileName }
   }
   return null
 }

@@ -324,6 +324,12 @@ export interface DraftField {
   value: string
   source?: string
   confidence?: number | null
+  /**
+   * Ядро ставит false, когда значение противоречит себе: например,
+   * регистрационный номер не сходится с контрольным разрядом. Заполнено —
+   * ещё не значит верно, и одобрить такой профиль ядро не даёт.
+   */
+  verified?: boolean
 }
 
 export type DraftFields = Record<string, DraftField | string | undefined>
