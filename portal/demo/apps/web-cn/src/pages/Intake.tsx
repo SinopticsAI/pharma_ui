@@ -9,6 +9,7 @@ import { IntakeChat } from '../intake/IntakeChat'
 import { RequisitesPanel } from '../intake/RequisitesPanel'
 import { Callout, Empty, PageHeader, PlaneToggle } from '../kit'
 import { usePlaneEnabled } from '../planeToggle'
+import { isDraftEmpty } from '../intake/extractionStatus'
 import { extractionPending, useOrganization, useOrganizationItems, useProduct } from '../queries'
 import { Shell } from '../Shell'
 
@@ -110,6 +111,7 @@ export function IntakeCompanyPage() {
           title={t('intake.company.profileTitle')}
           sections={completeness?.sections ?? []}
           percent={completeness?.percent ?? 0}
+          draftEmpty={isDraftEmpty(company?.draft)}
           aside={
             <>
               <RequisitesPanel
@@ -180,6 +182,7 @@ export function IntakeProductPage() {
           sections={[]}
           missing={card?.missing ?? []}
           percent={card?.completeness ?? 0}
+          draftEmpty={isDraftEmpty(card?.draft)}
           aside={
             <>
               <RequisitesPanel scope="product" draft={card?.draft} />

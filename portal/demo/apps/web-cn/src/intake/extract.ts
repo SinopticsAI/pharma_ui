@@ -8,6 +8,16 @@ import { agentApiBase } from './transport'
  * ходит — у него нет аккаунта в JWT, а X-API-Key браузеру нельзя.
  */
 
+export class ExtractHttpError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'ExtractHttpError'
+  }
+}
+
 export async function startIntakeExtract(options: {
   organizationId: string
   itemId: string
@@ -30,5 +40,5 @@ export async function startIntakeExtract(options: {
   })
   if (response.ok) return
   const raw = await response.text()
-  throw new Error(raw.slice(0, 240) || `extract ${response.status}`)
+  throw new ExtractHttpError(response.status, raw.slice(0, 240) || `extract ${response.status}`)
 }

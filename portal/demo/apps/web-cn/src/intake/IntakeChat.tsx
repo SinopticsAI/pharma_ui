@@ -24,17 +24,18 @@ import {
 import { createIntakeAttachmentAdapter, pickIntakeFile } from './attachments'
 import { IntakeToolUIs } from './cards'
 import { type IntakeActions, IntakeActionsProvider, useIntakeActions } from './context'
-import { startIntakeExtract } from './extract'
+import { ExtractHttpError, startIntakeExtract } from './extract'
 import {
   EXTRACTION_SLOW_MS,
-  type ExtractionBanner,
   type ExtractionItem,
-  extractionBanner,
+  type ProcessLine,
   extractionReadyIdsFromTexts,
   formatExtractionReady,
   itemsNeedingExtract,
   nextAutoTurnItem,
+  nextGiveUpItem,
   nextPendingSeen,
+  processLine,
   readAutoturnFired,
   scopeExtractionItems,
   shouldAutoTurn,
@@ -57,7 +58,10 @@ import {
 } from './history'
 import { type AgentId, createIntakeTransport } from './transport'
 
-const ExtractionUiContext = createContext<{ banner: ExtractionBanner | null }>({ banner: null })
+const ExtractionUiContext = createContext<{ line: ProcessLine | null; hideEmpty: boolean }>({
+  line: null,
+  hideEmpty: false,
+})
 
 /**
  * Экран интейка: слева нить диалога и загрузки, справа комплектность по разделам.
@@ -124,10 +128,19 @@ function ProgressPanel({
   )
 }
 
-function bannerText(banner: ExtractionBanner, t: (key: MessageKey) => string): string {
-  if (banner.kind === 'slow') return t('intake.chat.extractingSlow').replace('{name}', banner.fileName)
-  if (banner.kind === 'filling') return t('intake.chat.fillingCard')
-  return t('intake.chat.extracting').replace('{name}', banner.fileName)
+function processLineText(line: ProcessLine, t: (key: MessageKey) => string): string {
+  const name = line.fileName
+  const seconds = String(line.elapsedSec ?? 0)
+  if (line.kind === 'filling') return t('intake.chat.fillingCard')
+  if (line.kind === 'accepted') return t('intake.chat.process.accepted').replace('{name}', name)
+  if (line.kind === 'reading') {
+    return t('intake.chat.process.reading').replace('{name}', name).replace('{seconds}', seconds)
+  }
+  if (line.kind === 'gateway') return t('intake.chat.process.gateway').replace('{name}', name)
+  if (line.kind === 'hung') {
+    return t('intake.chat.process.hung').replace('{name}', name).replace('{seconds}', seconds)
+  }
+  return t('intake.chat.process.emptyCard').replace('{name}', name)
 }
 
 function UserText({ text }: { text: string }) {
@@ -159,14 +172,16 @@ function UserMessage() {
 function Thread() {
   const { t } = useI18n()
   const { setItemType, composerItemType } = useIntakeActions()
-  const { banner } = useContext(ExtractionUiContext)
+  const { line, hideEmpty } = useContext(ExtractionUiContext)
 
   return (
     <ThreadPrimitive.Root className="flex h-[min(72vh,720px)] flex-col rounded-lg border bg-card">
       <ThreadPrimitive.Viewport className="flex-1 space-y-3 overflow-y-auto p-4">
-        <ThreadPrimitive.Empty>
-          <p className="text-sm text-muted-foreground">{t('intake.chat.empty')}</p>
-        </ThreadPrimitive.Empty>
+        {hideEmpty ? null : (
+          <ThreadPrimitive.Empty>
+            <p className="text-sm text-muted-foreground">{t('intake.chat.empty')}</p>
+          </ThreadPrimitive.Empty>
+        )}
 
         <ThreadPrimitive.Messages
           components={{
@@ -182,8 +197,10 @@ function Thread() {
           }}
         />
 
-        {banner ? (
-          <div className="text-sm text-muted-foreground">{bannerText(banner, t)}</div>
+        {line ? (
+          <div className="text-sm text-muted-foreground" data-process={line.kind}>
+            {processLineText(line, t)}
+          </div>
         ) : (
           <ThreadPrimitive.If running>
             <div className="text-sm text-muted-foreground">{t('intake.chat.reading')}</div>
@@ -240,6 +257,7 @@ export function IntakeChat({
   missing = [],
   percent,
   aside,
+  draftEmpty = true,
 }: {
   agentId: AgentId
   sessionId: string
@@ -251,6 +269,7 @@ export function IntakeChat({
   percent: number
   /** Реквизиты и документы: иначе они уезжают под чат и их не видно. */
   aside?: ReactNode
+  draftEmpty?: boolean
 }) {
   const { t } = useI18n()
   const journal = useIntakeMessages(sessionId)
@@ -274,6 +293,7 @@ export function IntakeChat({
       journalRows={journal.data ?? []}
       journalFailed={journal.isError}
       journalLoadError={journal.error}
+      draftEmpty={draftEmpty}
     />
   )
 }
@@ -291,6 +311,7 @@ function IntakeChatRuntime({
   journalRows,
   journalFailed,
   journalLoadError,
+  draftEmpty,
 }: {
   agentId: AgentId
   sessionId: string
@@ -304,6 +325,7 @@ function IntakeChatRuntime({
   journalRows: IntakeMessage[]
   journalFailed: boolean
   journalLoadError: unknown
+  draftEmpty: boolean
 }) {
   const api = useApi()
   const queryClient = useQueryClient()
@@ -337,6 +359,8 @@ function IntakeChatRuntime({
   const [fillingFileName, setFillingFileName] = useState('')
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [threadRunning, setThreadRunning] = useState(false)
+  const [liveExtractIds, setLiveExtractIds] = useState<string[]>([])
+  const [extractFailed, setExtractFailed] = useState<{ itemId: string; fileName: string } | null>(null)
   const [usePlane] = usePlaneEnabled()
   const usePlaneRef = useRef(usePlane)
   usePlaneRef.current = usePlane
@@ -366,19 +390,14 @@ function IntakeChatRuntime({
         itemType: () => itemType.current,
         planeEnabled: () => usePlaneRef.current,
         onError: (error) => setUploadError(() => error),
-        uploadedText: ({ name, organizationId: orgId, itemType: type, itemId }) =>
-          t('intake.chat.uploaded')
-            .replace('{name}', name)
-            .replace('{organizationId}', orgId)
-            .replace('{itemType}', type)
-            .replace('{itemId}', itemId),
+        uploadedText: ({ name }) => t('intake.chat.uploaded').replace('{name}', name),
       }),
     [api, queryClient, organizationId, productId, sessionId, t],
   )
 
   const persistJournal = useCallback(
     (messages: ReturnType<typeof normalizeUiMessages>, roles: ReadonlySet<JournalUiRole>) => {
-      // User — как только пузырь в нити (Subscribe, до /chat). Assistant — только onFinish.
+      // User — сразу после Send. Assistant — onFinish и когда нить остановилась (504 не зовёт onFinish).
       const writes = unpersistedAppends(messages, persisted.current, roles, (toolName) =>
         t(journalToolFallbackKey(toolName)),
       )
@@ -416,6 +435,9 @@ function IntakeChatRuntime({
       const running = Boolean(state?.isRunning)
       setThreadRunning(running)
       persistJournalRef.current(normalizeUiMessages(state?.messages), JOURNAL_USER_ROLES)
+      if (!running) {
+        persistJournalRef.current(normalizeUiMessages(state?.messages), JOURNAL_ASSISTANT_ROLES)
+      }
       if (running) {
         seenRunning = true
         return
@@ -434,28 +456,36 @@ function IntakeChatRuntime({
     if (!shouldKickMastraExtract(usePlane)) return
     for (const item of itemsNeedingExtract(extractionItems, extractStarted.current)) {
       extractStarted.current.add(item.id)
+      setLiveExtractIds((ids) => (ids.includes(item.id) ? ids : [...ids, item.id]))
       void startIntakeExtract({
         organizationId,
         itemId: item.id,
         accountId,
         getToken: getAccessToken,
-      }).catch(() => {
-        extractStarted.current.delete(item.id)
       })
+        .then(() => {
+          setExtractFailed((current) => (current?.itemId === item.id ? null : current))
+          void queryClient.invalidateQueries({ queryKey: ['organization-items', organizationId] })
+          void queryClient.invalidateQueries({ queryKey: ['organization', organizationId] })
+          if (productId) void queryClient.invalidateQueries({ queryKey: ['product', productId] })
+        })
+        .catch((error: unknown) => {
+          // Не вынимаем id: повторный poll иначе снова бьёт /extract, пока item uploaded.
+          setExtractFailed({ itemId: item.id, fileName: item.fileName })
+          if (!(error instanceof ExtractHttpError)) setUploadError(() => error)
+        })
+        .finally(() => {
+          setLiveExtractIds((ids) => ids.filter((id) => id !== item.id))
+        })
     }
-  }, [extractionItems, getAccessToken, identity.accountId, organizationId, usePlane])
+  }, [extractionItems, getAccessToken, identity.accountId, organizationId, productId, queryClient, usePlane])
 
   useEffect(() => {
     const flying = extractionItems.filter((item) => item.status === 'uploaded' || item.status === 'confirmed')
-    if (flying.length === 0) return
-    const oldest = flying.reduce((min, item) => {
-      const ts = Date.parse(item.updatedAt)
-      return Number.isFinite(ts) && ts < min ? ts : min
-    }, Number.POSITIVE_INFINITY)
-    const wait = Math.max(0, EXTRACTION_SLOW_MS - (Date.now() - (Number.isFinite(oldest) ? oldest : Date.now())))
-    const timer = window.setTimeout(() => setNowMs(Date.now()), wait + 50)
-    return () => window.clearTimeout(timer)
-  }, [extractionItems])
+    if (flying.length === 0 && !filling) return
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [extractionItems, filling])
 
   useEffect(() => {
     const fromThread = extractionReadyIdsFromTexts(
@@ -468,10 +498,13 @@ function IntakeChatRuntime({
       }
     }
 
-    const candidate = nextAutoTurnItem(pendingSeen.current, extractionItems, firedIds.current)
+    const settled = nextAutoTurnItem(pendingSeen.current, extractionItems, firedIds.current)
+    const giveUp = nextGiveUpItem(extractionItems, nowMs, firedIds.current)
     pendingSeen.current = nextPendingSeen(pendingSeen.current, extractionItems, firedIds.current)
+    const candidate = settled ?? giveUp
     if (!shouldAutoTurn(threadRunning, candidate) || !candidate) return
-    if (candidate.status !== 'parsed' && candidate.status !== 'rejected') return
+    const status = settled ? settled.status : 'rejected'
+    if (status !== 'parsed' && status !== 'rejected') return
 
     firedIds.current.add(candidate.id)
     writeAutoturnFired(sessionId, candidate.id)
@@ -485,13 +518,13 @@ function IntakeChatRuntime({
           type: 'text',
           text: formatExtractionReady({
             itemId: candidate.id,
-            status: candidate.status,
+            status,
             organizationId,
           }),
         },
       ],
     })
-  }, [extractionItems, journalRows, locale, organizationId, runtime, sessionId, threadRunning])
+  }, [extractionItems, journalRows, locale, nowMs, organizationId, runtime, sessionId, threadRunning])
 
   useEffect(() => {
     if (!filling) return
@@ -502,7 +535,16 @@ function IntakeChatRuntime({
     return () => window.clearTimeout(timer)
   }, [filling])
 
-  const banner = extractionBanner(extractionItems, nowMs, filling, fillingFileName)
+  const line = processLine({
+    items: extractionItems,
+    nowMs,
+    filling,
+    fillingFileName,
+    liveExtractIds: new Set(liveExtractIds),
+    extractFailed,
+    draftEmpty,
+  })
+  const hideEmpty = journalRows.length > 0 || extractionItems.length > 0 || Boolean(line)
 
   const actions = useMemo<IntakeActions>(
     () => ({
@@ -539,7 +581,7 @@ function IntakeChatRuntime({
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <IntakeActionsProvider value={actions}>
-        <ExtractionUiContext.Provider value={{ banner }}>
+        <ExtractionUiContext.Provider value={{ line, hideEmpty }}>
           <IntakeToolUIs />
           <div className="grid items-start gap-4 lg:grid-cols-[1fr_340px]">
             <div className="space-y-2">

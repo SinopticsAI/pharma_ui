@@ -1,16 +1,21 @@
 import type { ItemStatus } from '@demo/domain'
 import { describe, expect, it } from 'vitest'
 import {
-  EXTRACTION_SLOW_MS,
+  EXTRACTION_GIVE_UP_MS,
+  EXTRACTION_HANG_MS,
   extractionBanner,
   extractionReadyIdsFromTexts,
   formatExtractionReady,
+  isDraftEmpty,
+  isExtractionPending,
   isExtractionReadyText,
   itemsNeedingExtract,
   nextAutoTurnItem,
+  nextGiveUpItem,
   nextPendingSeen,
   parseExtractionReady,
   pendingItemIds,
+  processLine,
   scopeExtractionItems,
   shouldAutoTurn,
   shouldKickMastraExtract,
@@ -78,9 +83,10 @@ describe('auto-turn once per item', () => {
     expect(nextAutoTurnItem(seen, [parsed], new Set(['it-1']))).toBeNull()
   })
 
-  it('не стреляет по уже разобранным при открытии экрана', () => {
+  it('на открытии стреляет по уже parsed, если маркера ещё не было', () => {
     const parsed = item({ id: 'it-old', status: 'parsed' })
-    expect(nextAutoTurnItem(new Set(), [parsed], new Set())).toBeNull()
+    expect(nextAutoTurnItem(new Set(), [parsed], new Set())).toEqual(parsed)
+    expect(nextAutoTurnItem(new Set(), [parsed], new Set(['it-old']))).toBeNull()
   })
 
   it('не стреляет, пока документ ещё в полёте', () => {
@@ -118,24 +124,58 @@ describe('scope and banner', () => {
     expect(scopeExtractionItems([company, product], 'pr-1').map((row) => row.id)).toEqual(['it-p'])
   })
 
-  it('баннер: чтение, затем дольше обычного, затем заполнение карточки', () => {
+  it('строка процесса отличает живой extract от зависания', () => {
     const start = Date.parse('2026-09-07T03:36:00Z')
     const flying = [
       item({ id: 'it-1', status: 'uploaded', fileName: 'licence.jpg', updatedAt: '2026-09-07T03:36:00Z' }),
     ]
-    expect(extractionBanner(flying, start + 1_000, false)).toEqual({
-      kind: 'reading',
-      fileName: 'licence.jpg',
-    })
-    expect(extractionBanner(flying, start + EXTRACTION_SLOW_MS, false)).toEqual({
-      kind: 'slow',
-      fileName: 'licence.jpg',
-    })
+    expect(
+      processLine({
+        items: flying,
+        nowMs: start + 12_000,
+        filling: false,
+        liveExtractIds: new Set(['it-1']),
+        extractFailed: null,
+        draftEmpty: true,
+      }),
+    ).toEqual({ kind: 'reading', fileName: 'licence.jpg', elapsedSec: 12 })
+    expect(
+      processLine({
+        items: flying,
+        nowMs: start + EXTRACTION_HANG_MS,
+        filling: false,
+        liveExtractIds: new Set(),
+        extractFailed: null,
+        draftEmpty: true,
+      }),
+    ).toEqual({ kind: 'hung', fileName: 'licence.jpg', elapsedSec: EXTRACTION_HANG_MS / 1000 })
+    expect(
+      processLine({
+        items: flying,
+        nowMs: start + 1_000,
+        filling: false,
+        liveExtractIds: new Set(),
+        extractFailed: { itemId: 'it-1', fileName: 'licence.jpg' },
+        draftEmpty: true,
+      }),
+    ).toEqual({ kind: 'gateway', fileName: 'licence.jpg' })
     expect(extractionBanner(flying, start, true, 'licence.jpg')).toEqual({
       kind: 'filling',
       fileName: 'licence.jpg',
     })
     expect(extractionBanner([item({ id: 'it-1', status: 'parsed' })], start, false)).toBeNull()
+  })
+
+  it('poll только uploaded/confirmed и только до потолка', () => {
+    const start = Date.parse('2026-09-07T03:36:00Z')
+    const uploaded = item({ id: 'it-1', status: 'uploaded', updatedAt: '2026-09-07T03:36:00Z' })
+    expect(isExtractionPending([uploaded], start + 1_000)).toBe(true)
+    expect(isExtractionPending([uploaded], start + EXTRACTION_GIVE_UP_MS)).toBe(false)
+    expect(isExtractionPending([item({ id: 'it-2', status: 'pending_upload' })], start)).toBe(false)
+    expect(isExtractionPending([item({ id: 'it-3', status: 'parsed' })], start)).toBe(false)
+    expect(isDraftEmpty({})).toBe(true)
+    expect(isDraftEmpty({ registrationNumber: { value: '9133' } })).toBe(false)
+    expect(nextGiveUpItem([uploaded], start + EXTRACTION_GIVE_UP_MS, new Set())?.id).toBe('it-1')
   })
 
   it('extract только для uploaded/confirmed и только один раз на item', () => {

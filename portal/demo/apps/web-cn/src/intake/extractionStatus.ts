@@ -8,6 +8,10 @@ import type { ItemStatus } from '@demo/domain'
 
 export const EXTRACTION_READY_PREFIX = '[extraction-ready]'
 export const EXTRACTION_SLOW_MS = 90_000
+/** Тишина при uploaded + пустой draft: это не «ещё в ядре», а завис. */
+export const EXTRACTION_HANG_MS = 180_000
+/** Дальше не поллим и шлём rejected-маркер, даже если item всё ещё uploaded. */
+export const EXTRACTION_GIVE_UP_MS = 480_000
 
 const IN_FLIGHT: ReadonlySet<ItemStatus> = new Set(['uploaded', 'confirmed'])
 const SETTLED: ReadonlySet<ItemStatus> = new Set(['parsed', 'rejected'])
@@ -27,10 +31,16 @@ export type ExtractionItem = {
   productId: string
 }
 
-export type ExtractionBanner = {
-  kind: 'reading' | 'slow' | 'filling'
+export type ProcessKind = 'accepted' | 'reading' | 'gateway' | 'hung' | 'empty-card' | 'filling'
+
+export type ProcessLine = {
+  kind: ProcessKind
   fileName: string
+  elapsedSec?: number
 }
+
+/** @deprecated use ProcessLine — leftover name for the old grey banner */
+export type ExtractionBanner = ProcessLine
 
 export function isInFlightStatus(status: ItemStatus): boolean {
   return IN_FLIGHT.has(status)
@@ -97,17 +107,63 @@ export function pendingItemIds(items: ExtractionItem[]): Set<string> {
   return new Set(inFlightItems(items).map((item) => item.id))
 }
 
+export function itemAgeMs(item: { updatedAt: string }, nowMs: number): number {
+  const ts = Date.parse(item.updatedAt)
+  return Number.isFinite(ts) ? nowMs - ts : 0
+}
+
+/** Poll только uploaded/confirmed и только до потолка. Сироты pending_upload не крутят экран. */
+export function isExtractionPending(
+  items: { status: ItemStatus; updatedAt?: string }[] | undefined,
+  nowMs = Date.now(),
+): boolean {
+  if (!Array.isArray(items)) return false
+  return items.some((item) => {
+    if (!isInFlightStatus(item.status)) return false
+    if (!item.updatedAt) return true
+    return itemAgeMs(item, nowMs) < EXTRACTION_GIVE_UP_MS
+  })
+}
+
+export function isDraftEmpty(draft: Record<string, unknown> | undefined): boolean {
+  if (!draft) return true
+  return !Object.values(draft).some((entry) => {
+    if (!entry) return false
+    if (typeof entry === 'string') return entry.trim().length > 0
+    if (typeof entry === 'object' && 'value' in entry) {
+      return String((entry as { value?: unknown }).value ?? '').trim().length > 0
+    }
+    return true
+  })
+}
+
 /**
- * Автоход только на переход pending → settled в этой сессии.
- * Уже разобранные документы при открытии экрана не стреляют снова.
+ * Автоход: переход in-flight → settled, или уже parsed/rejected без маркера в журнале.
  */
 export function nextAutoTurnItem(
   pendingSeen: ReadonlySet<string>,
   items: ExtractionItem[],
   alreadyFired: ReadonlySet<string>,
 ): ExtractionItem | null {
+  const fromTransition = items.find(
+    (item) => isSettledStatus(item.status) && pendingSeen.has(item.id) && !alreadyFired.has(item.id),
+  )
+  if (fromTransition) return fromTransition
+  return items.find((item) => isSettledStatus(item.status) && !alreadyFired.has(item.id)) ?? null
+}
+
+export function nextGiveUpItem(
+  items: ExtractionItem[],
+  nowMs: number,
+  alreadyFired: ReadonlySet<string>,
+): ExtractionItem | null {
   return (
-    items.find((item) => isSettledStatus(item.status) && pendingSeen.has(item.id) && !alreadyFired.has(item.id)) ?? null
+    items.find(
+      (item) =>
+        isInFlightStatus(item.status) &&
+        itemAgeMs(item, nowMs) >= EXTRACTION_GIVE_UP_MS &&
+        !alreadyFired.has(item.id),
+    ) ?? null
   )
 }
 
@@ -129,27 +185,66 @@ export function nextPendingSeen(
   return next
 }
 
+export function processLine(input: {
+  items: ExtractionItem[]
+  nowMs: number
+  filling: boolean
+  fillingFileName?: string
+  liveExtractIds: ReadonlySet<string>
+  extractFailed: { itemId: string; fileName: string } | null
+  draftEmpty: boolean
+}): ProcessLine | null {
+  if (input.filling) {
+    return { kind: 'filling', fileName: input.fillingFileName ?? '' }
+  }
+  const flying = inFlightItems(input.items)
+  const live = flying.find((item) => input.liveExtractIds.has(item.id))
+  if (live) {
+    return {
+      kind: 'reading',
+      fileName: live.fileName,
+      elapsedSec: Math.max(0, Math.round(itemAgeMs(live, input.nowMs) / 1000)),
+    }
+  }
+  if (input.extractFailed) {
+    return { kind: 'gateway', fileName: input.extractFailed.fileName }
+  }
+  const oldest = flying[0]
+  if (oldest) {
+    const age = itemAgeMs(oldest, input.nowMs)
+    if (age >= EXTRACTION_HANG_MS && input.draftEmpty) {
+      return { kind: 'hung', fileName: oldest.fileName, elapsedSec: Math.round(age / 1000) }
+    }
+    if (input.draftEmpty) {
+      return { kind: 'empty-card', fileName: oldest.fileName }
+    }
+    if (age < EXTRACTION_SLOW_MS) {
+      return { kind: 'accepted', fileName: oldest.fileName }
+    }
+    return { kind: 'hung', fileName: oldest.fileName, elapsedSec: Math.round(age / 1000) }
+  }
+  const documented = input.items[0]
+  if (documented && input.draftEmpty) {
+    return { kind: 'empty-card', fileName: documented.fileName }
+  }
+  return null
+}
+
 export function extractionBanner(
   items: ExtractionItem[],
   nowMs: number,
   filling: boolean,
   fillingFileName = '',
 ): ExtractionBanner | null {
-  if (filling) {
-    return { kind: 'filling', fileName: fillingFileName }
-  }
-  const flying = inFlightItems(items)
-  if (flying.length === 0) return null
-  const oldest = flying.reduce((min, item) => {
-    const ts = Date.parse(item.updatedAt)
-    return Number.isFinite(ts) && ts < min ? ts : min
-  }, Number.POSITIVE_INFINITY)
-  const started = Number.isFinite(oldest) ? oldest : nowMs
-  const fileName = flying[0]?.fileName ?? ''
-  if (nowMs - started >= EXTRACTION_SLOW_MS) {
-    return { kind: 'slow', fileName }
-  }
-  return { kind: 'reading', fileName }
+  return processLine({
+    items,
+    nowMs,
+    filling,
+    fillingFileName,
+    liveExtractIds: new Set(),
+    extractFailed: null,
+    draftEmpty: false,
+  })
 }
 
 export function autoturnStorageKey(sessionId: string, itemId: string): string {

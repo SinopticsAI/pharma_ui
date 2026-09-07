@@ -1,8 +1,9 @@
 import type { ApproveProductInput, UploadRequest } from '@demo/api-client'
 import { useApi } from '@demo/api-client'
-import type { IntakeScope, ItemStatus, Locale } from '@demo/domain'
+import type { IntakeScope, Locale } from '@demo/domain'
 import { readPlaneEnabled } from '@demo/domain'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { isExtractionPending } from './intake/extractionStatus''
 
 /**
  * Все чтения идут в ядро кабинета. Мока нет: пустой портфель на пустой базе —
@@ -15,13 +16,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
  * пока есть неразобранный документ, чтения повторяются сами.
  */
 const EXTRACTION_POLL_MS = 10_000
-const SETTLED_ITEM_STATUSES: ItemStatus[] = ['parsed', 'rejected']
 
-const isSettled = (item: { status: ItemStatus }) => SETTLED_ITEM_STATUSES.includes(item.status)
-
-/** Разбор идёт: есть хотя бы один документ, по которому ядро ещё ждёт ответа. */
-export const extractionPending = (items: { status: ItemStatus }[] | undefined): boolean =>
-  Boolean(Array.isArray(items) && items.some((item) => !isSettled(item)))
+/** Разбор идёт: только uploaded/confirmed, и только до потолка. */
+export const extractionPending = isExtractionPending
 
 const pollWhile = (pending: boolean) => (pending ? EXTRACTION_POLL_MS : false)
 
