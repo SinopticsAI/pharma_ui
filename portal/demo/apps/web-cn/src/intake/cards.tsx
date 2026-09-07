@@ -2,7 +2,7 @@ import { makeAssistantToolUI } from '@assistant-ui/react'
 import { askDocumentFormSchema } from '@demo/contracts'
 import type { NodeMapItem, NodeOwner, NodeStatus, RiskLevel } from '@demo/domain'
 import { l10n } from '@demo/domain'
-import { useI18n, type MessageKey } from '@demo/i18n'
+import { type MessageKey, useI18n } from '@demo/i18n'
 import { Button } from '@demo/ui/components/button'
 import { Input } from '@demo/ui/components/input'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -129,7 +129,9 @@ function ShowDraft({ args }: { args: ShowDraftArgs }) {
         </tbody>
       </table>
       {missing.length > 0 ? (
-        <p className="text-sm text-muted-foreground">{t('intake.card.missing').replace('{list}', missing.join(', '))}</p>
+        <p className="text-sm text-muted-foreground">
+          {t('intake.card.missing').replace('{list}', missing.join(', '))}
+        </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
         <Button

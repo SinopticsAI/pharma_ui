@@ -38,7 +38,7 @@ function adapterWith(api: ReturnType<typeof fakeApi>, onError?: (error: unknown)
     productId: 'prod-1',
     sessionId: 'ses-1',
     itemType: () => 'poa-upp',
-    usePlane: () => false,
+    planeEnabled: () => false,
     onError,
   })
 }
@@ -101,7 +101,7 @@ describe('createIntakeAttachmentAdapter', () => {
       organizationId: 'org-1',
       sessionId: 'ses-1',
       itemType: () => 'business-license',
-      usePlane: () => true,
+      planeEnabled: () => true,
     })
     const pending = await adapter.add({ file: file() })
     await adapter.send(pending)

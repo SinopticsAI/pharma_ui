@@ -23,12 +23,7 @@ export function PlaneToggle({
 }) {
   return (
     <label className="flex max-w-xs cursor-pointer items-start gap-2 text-left text-sm">
-      <input
-        type="checkbox"
-        className="mt-1"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-      />
+      <input type="checkbox" className="mt-1" checked={checked} onChange={(event) => onChange(event.target.checked)} />
       <span>
         <span className="font-medium">{label}</span>
         <span className="mt-0.5 block text-xs font-normal text-muted-foreground">{hint}</span>

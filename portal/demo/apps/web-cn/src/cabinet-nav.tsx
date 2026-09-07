@@ -11,7 +11,12 @@ export function CabinetNav() {
 
   return (
     <>
-      <Link to="/" className={navItem} activeProps={{ className: `${navItem} ${navItemActive}` }} activeOptions={{ exact: true }}>
+      <Link
+        to="/"
+        className={navItem}
+        activeProps={{ className: `${navItem} ${navItemActive}` }}
+        activeOptions={{ exact: true }}
+      >
         {t('nav.home')}
       </Link>
       {(cases.data ?? []).map((item) => (

@@ -21,9 +21,7 @@ describe('intakeToThread', () => {
       'zh',
       { cn: '中国侧', agent: '代理' },
     )
-    expect(items).toEqual([
-      { id: '2', side: 'cn', author: '中国侧', body: '你好', at: '2026-09-01T10:00:00Z' },
-    ])
+    expect(items).toEqual([{ id: '2', side: 'cn', author: '中国侧', body: '你好', at: '2026-09-01T10:00:00Z' }])
   })
 })
 

@@ -13,7 +13,11 @@ export function ChatPage() {
   const card = caseQuery.data?.case
   const intake = useIntakeMessages(card?.intakeSessionId ?? '')
 
-  if (chat.isLoading || caseQuery.isLoading || (Boolean(card?.intakeSessionId) && intake.isLoading && !(chat.data ?? []).length)) {
+  if (
+    chat.isLoading ||
+    caseQuery.isLoading ||
+    (Boolean(card?.intakeSessionId) && intake.isLoading && !(chat.data ?? []).length)
+  ) {
     return <Empty>{t('common.loading')}</Empty>
   }
 
@@ -25,7 +29,11 @@ export function ChatPage() {
 
   const intakeHref =
     card?.intakeSessionId && card.productId
-      ? { to: '/intake/product/$productId' as const, params: { productId: card.productId }, search: { session: card.intakeSessionId } }
+      ? {
+          to: '/intake/product/$productId' as const,
+          params: { productId: card.productId },
+          search: { session: card.intakeSessionId },
+        }
       : card?.intakeSessionId && card.organizationId
         ? {
             to: '/intake/company/$organizationId' as const,

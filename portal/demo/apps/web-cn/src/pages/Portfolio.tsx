@@ -127,7 +127,9 @@ export function PortfolioPage() {
             meta={`${t('portfolio.completeness')} ${product.completeness}%`}
           >
             <div className="flex flex-wrap gap-2">
-              <StatusBadge tone={product.caseId ? 'accent' : 'quiet'}>{t(`productStatus.${product.status}`)}</StatusBadge>
+              <StatusBadge tone={product.caseId ? 'accent' : 'quiet'}>
+                {t(`productStatus.${product.status}`)}
+              </StatusBadge>
             </div>
             {product.caseId ? (
               <Link to="/case/$caseId" params={{ caseId: product.caseId }}>

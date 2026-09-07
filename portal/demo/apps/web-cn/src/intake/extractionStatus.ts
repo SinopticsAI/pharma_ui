@@ -47,9 +47,7 @@ export function formatExtractionReady(notice: ExtractionReadyNotice): string {
 export function parseExtractionReady(text: string): ExtractionReadyNotice | null {
   const match = text
     .trim()
-    .match(
-      /^\[extraction-ready\]\s+itemId=(\S+)\s+status=(parsed|rejected)\s+organizationId=(\S+)$/,
-    )
+    .match(/^\[extraction-ready\]\s+itemId=(\S+)\s+status=(parsed|rejected)\s+organizationId=(\S+)$/)
   if (!match) return null
   return {
     itemId: match[1],
@@ -76,10 +74,7 @@ export function extractionReadyIdsFromTexts(texts: string[]): Set<string> {
   return ids
 }
 
-export function scopeExtractionItems(
-  items: ExtractionItem[],
-  productId?: string,
-): ExtractionItem[] {
+export function scopeExtractionItems(items: ExtractionItem[], productId?: string): ExtractionItem[] {
   if (productId) return items.filter((item) => item.productId === productId)
   return items.filter((item) => item.level === 'company')
 }
@@ -89,10 +84,7 @@ export function inFlightItems(items: ExtractionItem[]): ExtractionItem[] {
 }
 
 /** Ещё не разобранные файлы, по которым кабинет ещё не звал POST /extract. */
-export function itemsNeedingExtract(
-  items: ExtractionItem[],
-  alreadyStarted: ReadonlySet<string>,
-): ExtractionItem[] {
+export function itemsNeedingExtract(items: ExtractionItem[], alreadyStarted: ReadonlySet<string>): ExtractionItem[] {
   return inFlightItems(items).filter((item) => !alreadyStarted.has(item.id))
 }
 
@@ -115,10 +107,7 @@ export function nextAutoTurnItem(
   alreadyFired: ReadonlySet<string>,
 ): ExtractionItem | null {
   return (
-    items.find(
-      (item) =>
-        isSettledStatus(item.status) && pendingSeen.has(item.id) && !alreadyFired.has(item.id),
-    ) ?? null
+    items.find((item) => isSettledStatus(item.status) && pendingSeen.has(item.id) && !alreadyFired.has(item.id)) ?? null
   )
 }
 

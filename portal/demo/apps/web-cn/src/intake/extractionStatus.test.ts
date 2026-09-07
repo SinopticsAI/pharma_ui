@@ -42,9 +42,7 @@ describe('extraction-ready marker', () => {
       status: 'parsed',
       organizationId: 'org-z5eynpwj',
     })
-    expect(text).toBe(
-      '[extraction-ready] itemId=it-qdiv55v9 status=parsed organizationId=org-z5eynpwj',
-    )
+    expect(text).toBe('[extraction-ready] itemId=it-qdiv55v9 status=parsed organizationId=org-z5eynpwj')
     expect(parseExtractionReady(text)).toEqual({
       itemId: 'it-qdiv55v9',
       status: 'parsed',
@@ -58,11 +56,16 @@ describe('extraction-ready marker', () => {
   it('не принимает обычное сообщение за маркер', () => {
     expect(parseExtractionReady('готово?')).toBeNull()
     expect(parseExtractionReady('[extraction-ready] itemId=it-1')).toBeNull()
-    expect(extractionReadyIdsFromTexts(['привет', formatExtractionReady({
-      itemId: 'it-1',
-      status: 'rejected',
-      organizationId: 'org-1',
-    })])).toEqual(new Set(['it-1']))
+    expect(
+      extractionReadyIdsFromTexts([
+        'привет',
+        formatExtractionReady({
+          itemId: 'it-1',
+          status: 'rejected',
+          organizationId: 'org-1',
+        }),
+      ]),
+    ).toEqual(new Set(['it-1']))
   })
 })
 
@@ -117,7 +120,9 @@ describe('scope and banner', () => {
 
   it('баннер: чтение, затем дольше обычного, затем заполнение карточки', () => {
     const start = Date.parse('2026-09-07T03:36:00Z')
-    const flying = [item({ id: 'it-1', status: 'uploaded', fileName: 'licence.jpg', updatedAt: '2026-09-07T03:36:00Z' })]
+    const flying = [
+      item({ id: 'it-1', status: 'uploaded', fileName: 'licence.jpg', updatedAt: '2026-09-07T03:36:00Z' }),
+    ]
     expect(extractionBanner(flying, start + 1_000, false)).toEqual({
       kind: 'reading',
       fileName: 'licence.jpg',
@@ -156,9 +161,6 @@ describe('textsFromUnknownMessages', () => {
         { parts: [{ type: 'text', text: '[extraction-ready] itemId=it-1 status=parsed organizationId=org-1' }] },
         { content: [{ type: 'text', text: 'готово?' }] },
       ]),
-    ).toEqual([
-      '[extraction-ready] itemId=it-1 status=parsed organizationId=org-1',
-      'готово?',
-    ])
+    ).toEqual(['[extraction-ready] itemId=it-1 status=parsed organizationId=org-1', 'готово?'])
   })
 })

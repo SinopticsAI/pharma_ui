@@ -13,7 +13,11 @@ export interface CaseThreadItem {
 }
 
 /** Журнал интейка — единственная переписка, пока ядро не отдаёт чат кейса. */
-export function intakeToThread(messages: IntakeMessage[], locale: Locale, labels: { cn: string; agent: string }): CaseThreadItem[] {
+export function intakeToThread(
+  messages: IntakeMessage[],
+  locale: Locale,
+  labels: { cn: string; agent: string },
+): CaseThreadItem[] {
   return messages.flatMap((message) => {
     if (message.role === 'system') return []
     const body = journalText(message, locale)

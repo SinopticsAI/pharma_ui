@@ -13,6 +13,7 @@ import { type MessageKey, useI18n } from '@demo/i18n'
 import { useQueryClient } from '@tanstack/react-query'
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Empty } from '../kit'
+import { usePlaneEnabled } from '../planeToggle'
 import {
   useApproveCompanyProfile,
   useApproveProductData,
@@ -21,10 +22,9 @@ import {
   useProduct,
 } from '../queries'
 import { createIntakeAttachmentAdapter, pickIntakeFile } from './attachments'
-import { usePlaneEnabled } from '../planeToggle'
-import { startIntakeExtract } from './extract'
 import { IntakeToolUIs } from './cards'
 import { type IntakeActions, IntakeActionsProvider, useIntakeActions } from './context'
+import { startIntakeExtract } from './extract'
 import {
   EXTRACTION_SLOW_MS,
   type ExtractionBanner,
@@ -34,11 +34,11 @@ import {
   formatExtractionReady,
   itemsNeedingExtract,
   nextAutoTurnItem,
-  shouldKickMastraExtract,
   nextPendingSeen,
   readAutoturnFired,
   scopeExtractionItems,
   shouldAutoTurn,
+  shouldKickMastraExtract,
   textsFromUnknownMessages,
   userMessagePresentation,
   writeAutoturnFired,
@@ -364,7 +364,7 @@ function IntakeChatRuntime({
         productId,
         sessionId,
         itemType: () => itemType.current,
-        usePlane: () => usePlaneRef.current,
+        planeEnabled: () => usePlaneRef.current,
         onError: (error) => setUploadError(() => error),
         uploadedText: ({ name, organizationId: orgId, itemType: type, itemId }) =>
           t('intake.chat.uploaded')

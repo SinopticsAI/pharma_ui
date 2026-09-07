@@ -103,32 +103,30 @@ export function IntakeCompanyPage() {
       {!sessionId ? (
         <Empty>{t('common.loading')}</Empty>
       ) : (
-        <>
-          <IntakeChat
-            agentId="companyIntake"
-            sessionId={sessionId}
-            organizationId={organizationId}
-            title={t('intake.company.profileTitle')}
-            sections={completeness?.sections ?? []}
-            percent={completeness?.percent ?? 0}
-            aside={
-              <>
-                <RequisitesPanel
-                  scope="company"
-                  draft={company?.draft}
-                  profile={company?.profile}
-                  approved={company?.status === 'profile_approved'}
-                />
-                {items.isError ? <Callout tone="deadline">{describeError(items.error)}</Callout> : null}
-                <DocumentsPanel
-                  organizationId={organizationId}
-                  items={companyDocuments}
-                  title="intake.documents.companyTitle"
-                />
-              </>
-            }
-          />
-        </>
+        <IntakeChat
+          agentId="companyIntake"
+          sessionId={sessionId}
+          organizationId={organizationId}
+          title={t('intake.company.profileTitle')}
+          sections={completeness?.sections ?? []}
+          percent={completeness?.percent ?? 0}
+          aside={
+            <>
+              <RequisitesPanel
+                scope="company"
+                draft={company?.draft}
+                profile={company?.profile}
+                approved={company?.status === 'profile_approved'}
+              />
+              {items.isError ? <Callout tone="deadline">{describeError(items.error)}</Callout> : null}
+              <DocumentsPanel
+                organizationId={organizationId}
+                items={companyDocuments}
+                title="intake.documents.companyTitle"
+              />
+            </>
+          }
+        />
       )}
     </Shell>
   )
@@ -173,35 +171,33 @@ export function IntakeProductPage() {
       {!sessionId || !organizationId ? (
         <Empty>{t('common.loading')}</Empty>
       ) : (
-        <>
-          <IntakeChat
-            agentId="productIntake"
-            sessionId={sessionId}
-            organizationId={organizationId}
-            productId={productId}
-            title={t('intake.product.completenessTitle')}
-            sections={[]}
-            missing={card?.missing ?? []}
-            percent={card?.completeness ?? 0}
-            aside={
-              <>
-                <RequisitesPanel scope="product" draft={card?.draft} />
-                <DocumentsPanel
-                  organizationId={organizationId}
-                  items={ownDocuments}
-                  title="intake.documents.productTitle"
-                  canPromote
-                />
-                <DocumentsPanel
-                  organizationId={organizationId}
-                  items={inheritedDocuments}
-                  title="intake.documents.inheritedTitle"
-                  lead="intake.documents.inheritedLead"
-                />
-              </>
-            }
-          />
-        </>
+        <IntakeChat
+          agentId="productIntake"
+          sessionId={sessionId}
+          organizationId={organizationId}
+          productId={productId}
+          title={t('intake.product.completenessTitle')}
+          sections={[]}
+          missing={card?.missing ?? []}
+          percent={card?.completeness ?? 0}
+          aside={
+            <>
+              <RequisitesPanel scope="product" draft={card?.draft} />
+              <DocumentsPanel
+                organizationId={organizationId}
+                items={ownDocuments}
+                title="intake.documents.productTitle"
+                canPromote
+              />
+              <DocumentsPanel
+                organizationId={organizationId}
+                items={inheritedDocuments}
+                title="intake.documents.inheritedTitle"
+                lead="intake.documents.inheritedLead"
+              />
+            </>
+          }
+        />
       )}
     </Shell>
   )
