@@ -160,9 +160,7 @@ export function nextGiveUpItem(
   return (
     items.find(
       (item) =>
-        isInFlightStatus(item.status) &&
-        itemAgeMs(item, nowMs) >= EXTRACTION_GIVE_UP_MS &&
-        !alreadyFired.has(item.id),
+        isInFlightStatus(item.status) && itemAgeMs(item, nowMs) >= EXTRACTION_GIVE_UP_MS && !alreadyFired.has(item.id),
     ) ?? null
   )
 }

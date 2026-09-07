@@ -3,7 +3,7 @@ import { useApi } from '@demo/api-client'
 import type { IntakeScope, Locale } from '@demo/domain'
 import { readPlaneEnabled } from '@demo/domain'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { isExtractionPending } from './intake/extractionStatus''
+import { isExtractionPending } from './intake/extractionStatus'
 
 /**
  * Все чтения идут в ядро кабинета. Мока нет: пустой портфель на пустой базе —
