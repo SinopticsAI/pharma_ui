@@ -11,6 +11,7 @@ import type { Locale } from '@demo/domain'
  *
  * Тело запроса — параметры выполнения агента Mastra, поэтому идентификатор
  * диалога уходит как `memory.thread`, а не как произвольное поле `sessionId`.
+ * Читать эту нить кабинет не умеет и не должен: окно берёт `chat_messages`.
  */
 
 export type AgentId = 'companyIntake' | 'productIntake'
@@ -28,6 +29,8 @@ export function createIntakeTransport(options: {
   sessionId: string
   accountId: string
   locale: Locale
+  organizationId?: string
+  productId?: string
   getToken: () => Promise<string | null>
 }) {
   return new AssistantChatTransport({
@@ -48,7 +51,11 @@ export function createIntakeTransport(options: {
     },
     body: {
       memory: { thread: options.sessionId, resource: options.accountId },
-      data: { locale: options.locale },
+      data: {
+        locale: options.locale,
+        ...(options.organizationId ? { organizationId: options.organizationId } : {}),
+        ...(options.productId ? { productId: options.productId } : {}),
+      },
     },
   })
 }

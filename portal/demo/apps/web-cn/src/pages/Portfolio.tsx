@@ -137,7 +137,7 @@ export function PortfolioPage() {
               </StatusBadge>
             </div>
             {company.status !== 'profile_approved' ? (
-              <Link to="/intake/company/$organizationId" params={{ organizationId: company.id }} search={{}}>
+              <Link to="/intake/company/$organizationId" params={{ organizationId: company.id }}>
                 Продолжить с агентом →
               </Link>
             ) : null}
@@ -164,7 +164,7 @@ export function PortfolioPage() {
                 Открыть кейс →
               </Link>
             ) : (
-              <Link to="/intake/product/$productId" params={{ productId: product.id }} search={{}}>
+              <Link to="/intake/product/$productId" params={{ productId: product.id }}>
                 Продолжить с агентом →
               </Link>
             )}

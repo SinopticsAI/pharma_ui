@@ -25,7 +25,7 @@ import type {
 } from '@demo/domain'
 import { z } from 'zod'
 
-/** Поиск сессии интейка в адресе: ядро не ищет диалог по компании. */
+/** Сессия интейка в адресе. Если её нет, кабинет берёт последнюю по компании. */
 export const sessionSearchSchema = z.object({
   session: z.string().optional(),
 })

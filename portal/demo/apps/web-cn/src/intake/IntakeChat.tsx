@@ -8,10 +8,10 @@ import {
 import { useChatRuntime } from '@assistant-ui/react-ai-sdk'
 import { describeError, useApi, useIdentity } from '@demo/api-client'
 import { useAuth } from '@demo/auth'
-import type { ProgressSection } from '@demo/domain'
+import type { IntakeMessage, ProgressSection } from '@demo/domain'
 import { type MessageKey, useI18n } from '@demo/i18n'
 import { useQueryClient } from '@tanstack/react-query'
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Empty } from '../kit'
 import {
   useApproveCompanyProfile,
@@ -39,13 +39,27 @@ import {
   userMessagePresentation,
   writeAutoturnFired,
 } from './extractionStatus'
-import { journalText, journalToUiMessages, toJournalRole, uiMessageText } from './history'
+import {
+  JOURNAL_ASSISTANT_ROLES,
+  JOURNAL_USER_ROLES,
+  type JournalUiRole,
+  journalPersistedIds,
+  journalText,
+  journalToolFallbackKey,
+  journalToUiMessages,
+  normalizeUiMessages,
+  uiMessagesToRepository,
+  unpersistedAppends,
+} from './history'
 import { type AgentId, createIntakeTransport } from './transport'
 
 const ExtractionUiContext = createContext<{ banner: ExtractionBanner | null }>({ banner: null })
 
 /**
  * Экран интейка: слева нить диалога и загрузки, справа комплектность по разделам.
+ *
+ * Окно рисует журнал Edge (`GET .../messages`), не память Mastra. User пишется
+ * в журнал сразу после Send, assistant — только после успешного `/chat`.
  *
  * Документ прикладывается скрепкой в самом композере: файл становится вложением
  * сообщения, а не отдельной загрузкой рядом с чатом.
@@ -243,6 +257,7 @@ export function IntakeChat({
 
   return (
     <IntakeChatRuntime
+      key={sessionId}
       agentId={agentId}
       sessionId={sessionId}
       organizationId={organizationId}
@@ -252,6 +267,9 @@ export function IntakeChat({
       missing={missing}
       percent={percent}
       aside={aside}
+      journalRows={journal.data ?? []}
+      journalFailed={journal.isError}
+      journalLoadError={journal.error}
     />
   )
 }
@@ -266,6 +284,9 @@ function IntakeChatRuntime({
   missing = [],
   percent,
   aside,
+  journalRows,
+  journalFailed,
+  journalLoadError,
 }: {
   agentId: AgentId
   sessionId: string
@@ -276,6 +297,9 @@ function IntakeChatRuntime({
   missing?: string[]
   percent: number
   aside?: ReactNode
+  journalRows: IntakeMessage[]
+  journalFailed: boolean
+  journalLoadError: unknown
 }) {
   const api = useApi()
   const queryClient = useQueryClient()
@@ -283,8 +307,10 @@ function IntakeChatRuntime({
   const { locale, t } = useI18n()
   const { getAccessToken } = useAuth()
   const [uploadError, setUploadError] = useState<unknown>(null)
-  const journal = useIntakeMessages(sessionId)
-  const persisted = useRef(new Set((journal.data ?? []).map((message) => message.id)))
+  const [journalError, setJournalError] = useState<unknown>(null)
+  const persisted = useRef(journalPersistedIds(journalRows))
+  const seed = useMemo(() => journalToUiMessages(journalRows, locale), [journalRows, locale])
+  const seedRepository = useMemo(() => (seed.length > 0 ? uiMessagesToRepository(seed) : undefined), [seed])
 
   // Тип документа называет карточка `ask-document` перед выбором файла, а нужен
   // он адаптеру в момент отправки — поэтому не состояние, а ссылка.
@@ -314,9 +340,11 @@ function IntakeChatRuntime({
         sessionId,
         accountId: identity.accountId,
         locale,
+        organizationId,
+        productId,
         getToken: getAccessToken,
       }),
-    [agentId, sessionId, identity.accountId, locale, getAccessToken],
+    [agentId, sessionId, identity.accountId, locale, organizationId, productId, getAccessToken],
   )
 
   const attachments = useMemo(
@@ -339,33 +367,46 @@ function IntakeChatRuntime({
     [api, queryClient, organizationId, productId, sessionId, t],
   )
 
+  const persistJournal = useCallback(
+    (messages: ReturnType<typeof normalizeUiMessages>, roles: ReadonlySet<JournalUiRole>) => {
+      // User — как только пузырь в нити (Subscribe, до /chat). Assistant — только onFinish.
+      const writes = unpersistedAppends(messages, persisted.current, roles, (toolName) =>
+        t(journalToolFallbackKey(toolName)),
+      )
+      for (const body of writes) {
+        persisted.current.add(body.payload.clientMessageId)
+        void api.appendIntakeMessage(sessionId, body).catch((error: unknown) => {
+          persisted.current.delete(body.payload.clientMessageId)
+          setJournalError(() => error)
+        })
+      }
+    },
+    [api, sessionId, t],
+  )
+  const persistJournalRef = useRef(persistJournal)
+  persistJournalRef.current = persistJournal
+
   const runtime = useChatRuntime({
     transport,
     adapters: { attachments },
-    messages: journalToUiMessages(journal.data ?? [], locale),
+    messages: seed,
+    ...(seedRepository ? { messageRepository: seedRepository } : {}),
     onFinish: ({ messages }) => {
-      for (const message of messages) {
-        if (persisted.current.has(message.id)) continue
-        const role = toJournalRole(message.role)
-        const text = uiMessageText(message)
-        if (!role || !text) continue
-        persisted.current.add(message.id)
-        void api.appendIntakeMessage(sessionId, { role, text }).catch(() => {
-          persisted.current.delete(message.id)
-        })
-      }
+      persistJournalRef.current(messages, JOURNAL_ASSISTANT_ROLES)
     },
   })
 
   useEffect(() => {
     const thread = runtime.thread as {
-      getState?: () => { isRunning?: boolean }
+      getState?: () => { isRunning?: boolean; messages?: unknown }
       subscribe?: (listener: () => void) => () => void
     }
     let seenRunning = false
     const sync = () => {
-      const running = Boolean(thread.getState?.().isRunning)
+      const state = thread.getState?.()
+      const running = Boolean(state?.isRunning)
       setThreadRunning(running)
+      persistJournalRef.current(normalizeUiMessages(state?.messages), JOURNAL_USER_ROLES)
       if (running) {
         seenRunning = true
         return
@@ -394,9 +435,7 @@ function IntakeChatRuntime({
     const fromThread = extractionReadyIdsFromTexts(
       textsFromUnknownMessages((runtime.thread as { getState?: () => { messages?: unknown } }).getState?.().messages),
     )
-    const fromJournal = extractionReadyIdsFromTexts(
-      (journal.data ?? []).map((message) => journalText(message, locale)),
-    )
+    const fromJournal = extractionReadyIdsFromTexts(journalRows.map((message) => journalText(message, locale)))
     for (const item of extractionItems) {
       if (fromThread.has(item.id) || fromJournal.has(item.id) || readAutoturnFired(sessionId, item.id)) {
         firedIds.current.add(item.id)
@@ -426,7 +465,7 @@ function IntakeChatRuntime({
         },
       ],
     })
-  }, [extractionItems, journal.data, locale, organizationId, runtime, sessionId, threadRunning])
+  }, [extractionItems, journalRows, locale, organizationId, runtime, sessionId, threadRunning])
 
   useEffect(() => {
     if (!filling) return
@@ -469,7 +508,7 @@ function IntakeChatRuntime({
 
   // Загрузка падает вне нити: сообщение агенту не уходит, вложение остаётся в
   // композере. Показываем причину рядом с чатом, чтобы можно было повторить.
-  const failure = uploadError ?? approveCompany.error ?? approveProduct.error
+  const failure = uploadError ?? approveCompany.error ?? approveProduct.error ?? journalError
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
@@ -479,7 +518,7 @@ function IntakeChatRuntime({
           <div className="grid items-start gap-4 lg:grid-cols-[1fr_340px]">
             <div className="space-y-2">
               {failure ? <p className="text-sm text-destructive">{describeError(failure)}</p> : null}
-              {journal.isError ? <p className="text-sm text-destructive">{describeError(journal.error)}</p> : null}
+              {journalFailed ? <p className="text-sm text-destructive">{describeError(journalLoadError)}</p> : null}
               <Thread />
             </div>
             <div className="max-h-[min(72vh,720px)] space-y-4 overflow-y-auto">

@@ -270,6 +270,15 @@ export class ApiClient {
     return this.request('POST', '/intake/sessions', { body: input, schema: intakeSessionSchema })
   }
 
+  /** Последняя сессия аккаунта по компании или продукту. Пусто — 404, не создание. */
+  findIntakeSession(input: {
+    scope: IntakeScope
+    organizationId?: string
+    productId?: string
+  }): Promise<IntakeSession> {
+    return this.request('GET', '/intake/sessions', { query: input, schema: intakeSessionSchema })
+  }
+
   getIntakeSession(sessionId: string): Promise<IntakeSession> {
     return this.request('GET', `/intake/sessions/${sessionId}`, { schema: intakeSessionSchema })
   }

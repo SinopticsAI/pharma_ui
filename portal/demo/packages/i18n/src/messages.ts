@@ -186,6 +186,9 @@ export const ru = {
   'intake.chat.extractingSlow': 'Разбор «{name}» идёт дольше обычного, документ ещё в ядре.',
   'intake.chat.fillingCard': 'Разбор готов, заполняю карточку.',
   'intake.chat.extractionReady': 'Разбор документа готов',
+  'intake.chat.journal.draftCard': 'карточка черновика',
+  'intake.chat.journal.documentCard': 'карточка документа',
+  'intake.chat.journal.toolCard': 'карточка',
 
   'intake.section.identity': 'Реквизиты и реестр',
   'intake.section.documents': 'Документы компании',
@@ -495,6 +498,9 @@ export const en: Record<MessageKey, string> = {
   'intake.chat.extractingSlow': 'Reading “{name}” is taking longer than usual; the document is still in the core.',
   'intake.chat.fillingCard': 'Extraction is ready, filling in the card.',
   'intake.chat.extractionReady': 'Document extraction is ready',
+  'intake.chat.journal.draftCard': 'draft card',
+  'intake.chat.journal.documentCard': 'document card',
+  'intake.chat.journal.toolCard': 'card',
 
   'intake.section.identity': 'Requisites and registry',
   'intake.section.documents': 'Company documents',
@@ -800,6 +806,9 @@ export const zh: Record<MessageKey, string> = {
   'intake.chat.extractingSlow': '「{name}」的解析比平时更久，文件仍在内核中。',
   'intake.chat.fillingCard': '解析已完成，正在填写卡片。',
   'intake.chat.extractionReady': '文件解析已完成',
+  'intake.chat.journal.draftCard': '草稿卡片',
+  'intake.chat.journal.documentCard': '文件卡片',
+  'intake.chat.journal.toolCard': '卡片',
 
   'intake.section.identity': '登记与名录',
   'intake.section.documents': '公司文件',

@@ -1,45 +1,65 @@
-import { describeError } from '@demo/api-client'
+import { ApiError, describeError, useApi } from '@demo/api-client'
 import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DocumentsPanel } from '../intake/DocumentsPanel'
 import { IntakeChat } from '../intake/IntakeChat'
 import { RequisitesPanel } from '../intake/RequisitesPanel'
 import { Callout, Empty, PageHeader } from '../kit'
-import { extractionPending, useOpenIntakeSession, useOrganization, useOrganizationItems, useProduct } from '../queries'
+import { extractionPending, useOrganization, useOrganizationItems, useProduct } from '../queries'
 import { Shell } from '../Shell'
 
 /**
  * Диалог интейка.
  *
- * Идентификатор сессии живёт в адресе: у ядра нет маршрута «найди диалог по
- * компании», а новая сессия на каждый визит теряла бы нить. Поэтому при
- * отсутствии `session` он создаётся один раз и подставляется в URL.
+ * Сессия в адресе — ключ журнала. Если её нет (карточка с портфеля), сначала
+ * ищем последнюю по компании или продукту, и только при 404 создаём новую.
  */
 function useSessionId(
   current: string | undefined,
   input: { scope: 'organization' | 'product'; organizationId?: string; productId?: string },
 ): { sessionId: string; error: unknown } {
+  const api = useApi()
   const navigate = useNavigate()
   const { locale } = useI18n()
-  const openSession = useOpenIntakeSession()
   const ready = Boolean(input.organizationId || input.productId)
   const requested = useRef(false)
+  const [resolved, setResolved] = useState('')
+  const [error, setError] = useState<unknown>(null)
 
   useEffect(() => {
-    if (current || !ready || requested.current) return
+    if (current) {
+      setResolved(current)
+      return
+    }
+    if (!ready || requested.current) return
     requested.current = true
-    openSession
-      .mutateAsync({ ...input, locale })
-      .then((session) => navigate({ to: '.', search: { session: session.id }, replace: true }))
-      .catch(() => {
-        requested.current = false
-      })
+    void (async () => {
+      try {
+        const latest = await api.findIntakeSession(input)
+        setResolved(latest.id)
+        await navigate({ to: '.', search: { session: latest.id }, replace: true })
+      } catch (findError) {
+        if (!(findError instanceof ApiError) || !findError.isNotFound) {
+          requested.current = false
+          setError(findError)
+          return
+        }
+        try {
+          const created = await api.createIntakeSession({ ...input, locale })
+          setResolved(created.id)
+          await navigate({ to: '.', search: { session: created.id }, replace: true })
+        } catch (createError) {
+          requested.current = false
+          setError(createError)
+        }
+      }
+    })()
     // Сессия открывается один раз на сущность: перезапуск по смене локали не нужен.
   }, [current, ready])
 
-  return { sessionId: current ?? openSession.data?.id ?? '', error: openSession.error }
+  return { sessionId: current ?? resolved, error }
 }
 
 export function IntakeCompanyPage() {
