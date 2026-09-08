@@ -58,14 +58,48 @@ export function Card({ title, meta, children }: { title?: string; meta?: ReactNo
   )
 }
 
-export function Callout({ tone = 'info', children }: { tone?: 'info' | 'deadline' | 'quiet'; children: ReactNode }) {
+export function Callout({
+  tone = 'info',
+  children,
+}: {
+  tone?: 'info' | 'deadline' | 'quiet' | 'ok'
+  children: ReactNode
+}) {
   return (
     <Alert
       variant={tone === 'deadline' ? 'destructive' : 'default'}
-      className={cn('mb-4', tone === 'quiet' && 'text-muted-foreground')}
+      className={cn(
+        'mb-4',
+        tone === 'quiet' && 'text-muted-foreground',
+        tone === 'ok' && 'border-success/40 bg-success/10 text-success-foreground',
+      )}
     >
       <AlertDescription>{children}</AlertDescription>
     </Alert>
+  )
+}
+
+export function fill(template: string, vars: Record<string, string | number>): string {
+  return Object.entries(vars).reduce((acc, [key, value]) => acc.replaceAll(`{${key}}`, String(value)), template)
+}
+
+export function DemoMark({ children }: { children?: ReactNode }) {
+  return (
+    <p className="text-xs text-muted-foreground" data-demo="illustrative">
+      {children}
+    </p>
+  )
+}
+
+export function NextAction({ label, children, action }: { label: string; children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="mb-4 flex flex-col gap-3 rounded-lg border border-primary/30 bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <p className="text-xs font-medium tracking-wide text-primary uppercase">{label}</p>
+        <p className="text-sm">{children}</p>
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
   )
 }
 
@@ -81,11 +115,24 @@ export function StatusBadge({
   tone = 'neutral',
   children,
 }: {
-  tone?: 'neutral' | 'accent' | 'warm' | 'quiet'
+  tone?: 'neutral' | 'accent' | 'warm' | 'quiet' | 'ok' | 'risk'
   children: ReactNode
 }) {
-  const variant = tone === 'accent' ? 'default' : tone === 'warm' ? 'secondary' : 'outline'
-  return <Badge variant={variant}>{children}</Badge>
+  if (tone === 'ok') {
+    return <Badge className="border-transparent bg-success/15 text-success-foreground">{children}</Badge>
+  }
+  if (tone === 'risk') {
+    return <Badge variant="destructive">{children}</Badge>
+  }
+  if (tone === 'warm') {
+    return <Badge className="border-transparent bg-warning/20 text-warning-foreground">{children}</Badge>
+  }
+  const variant = tone === 'accent' ? 'default' : 'outline'
+  return (
+    <Badge variant={variant} className={tone === 'quiet' ? 'text-muted-foreground' : undefined}>
+      {children}
+    </Badge>
+  )
 }
 
 export function Table({ head, children }: { head: ReactNode[]; children: ReactNode }) {

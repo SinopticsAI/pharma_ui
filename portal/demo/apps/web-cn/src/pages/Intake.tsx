@@ -4,6 +4,7 @@ import { useI18n } from '@demo/i18n'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 import { CabinetNav } from '../cabinet-nav'
+import { isDemoId } from '../demo/ids'
 import { DocumentsPanel } from '../intake/DocumentsPanel'
 import { isDraftEmpty } from '../intake/extractionStatus'
 import { IntakeChat } from '../intake/IntakeChat'
@@ -12,6 +13,7 @@ import { Callout, Empty, PageHeader, PlaneToggle } from '../kit'
 import { usePlaneEnabled } from '../planeToggle'
 import { extractionPending, useOrganization, useOrganizationItems, useProduct } from '../queries'
 import { Shell } from '../Shell'
+import { DemoCompanyIntake, DemoProductIntake } from './DemoIntake'
 
 /**
  * Диалог интейка.
@@ -67,6 +69,11 @@ function useSessionId(
 
 export function IntakeCompanyPage() {
   const { organizationId } = useParams({ from: '/intake/company/$organizationId' })
+  if (isDemoId(organizationId)) return <DemoCompanyIntake organizationId={organizationId} />
+  return <LiveCompanyIntake organizationId={organizationId} />
+}
+
+function LiveCompanyIntake({ organizationId }: { organizationId: string }) {
   const { session } = useSearch({ from: '/intake/company/$organizationId' })
   const { t, text } = useI18n()
   const [usePlane, setUsePlane] = usePlaneEnabled()
@@ -136,6 +143,11 @@ export function IntakeCompanyPage() {
 
 export function IntakeProductPage() {
   const { productId } = useParams({ from: '/intake/product/$productId' })
+  if (isDemoId(productId)) return <DemoProductIntake productId={productId} />
+  return <LiveProductIntake productId={productId} />
+}
+
+function LiveProductIntake({ productId }: { productId: string }) {
   const { session } = useSearch({ from: '/intake/product/$productId' })
   const { t, text } = useI18n()
   const [usePlane, setUsePlane] = usePlaneEnabled()

@@ -17,6 +17,13 @@ export function LedgerPage() {
   return (
     <>
       <PageHeader title={t('ledger.title')} lead={t('ledger.lead')} />
+      {caseId.startsWith('demo-') ? (
+        <p className="mb-3 text-sm">
+          <a href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/payments`} className="underline">
+            {t('pay.title')} · A / B / C
+          </a>
+        </p>
+      ) : null}
 
       <div className="mb-4 grid gap-4 md:grid-cols-3">
         <Card>

@@ -3,7 +3,7 @@
  * NMPA, ЕПГУ, ГРЛС, ВНИИИМТ, УКЭП остаются как есть с кратким пояснением.
  */
 export const ru = {
-  'app.title': 'Кабинет производителя',
+  'app.title': 'MedMost',
   'app.contour': 'Контур КНР',
   'app.caseCode': 'Кейс',
   'demo.language': 'Язык',
@@ -52,7 +52,7 @@ export const ru = {
   'nav.inbox': 'Статусы',
   'nav.chat': 'Чат по кейсу',
   'nav.mandate': 'Мандат',
-  'nav.home': 'Портфель',
+  'nav.home': 'Главная',
 
   'portfolio.title': 'Портфель кейсов',
   'portfolio.lead': 'Кейс — это одно будущее регистрационное удостоверение: один продукт или семейство моделей одного изготовителя.',
@@ -357,10 +357,8 @@ export const ru = {
   'mandate.noCrypto': 'Вход в государственные кабинеты, УКЭП и машиночитаемая доверенность принадлежат российской компании. В этом кабинете их нет.',
 } as const
 
-export type MessageKey = keyof typeof ru
-
-export const en: Record<MessageKey, string> = {
-  'app.title': 'Manufacturer workspace',
+export const en: Record<keyof typeof ru, string> = {
+  'app.title': 'MedMost',
   'app.contour': 'China side',
   'app.caseCode': 'Case',
   'demo.language': 'Language',
@@ -409,7 +407,7 @@ export const en: Record<MessageKey, string> = {
   'nav.inbox': 'Statuses',
   'nav.chat': 'Case chat',
   'nav.mandate': 'Mandate',
-  'nav.home': 'Portfolio',
+  'nav.home': 'Home',
 
   'portfolio.title': 'Case portfolio',
   'portfolio.lead': 'A case is one future marketing authorization: one product or one family of models from one manufacturer.',
@@ -716,8 +714,8 @@ export const en: Record<MessageKey, string> = {
   'mandate.noCrypto': 'Access to government portals, the qualified electronic signature and the machine-readable power of attorney belong to the Russian company. They are absent from this workspace.',
 }
 
-export const zh: Record<MessageKey, string> = {
-  'app.title': '生产企业工作台',
+export const zh: Record<keyof typeof ru, string> = {
+  'app.title': 'MedMost',
   'app.contour': '中国侧',
   'app.caseCode': '案件',
   'demo.language': '语言',
@@ -764,7 +762,7 @@ export const zh: Record<MessageKey, string> = {
   'nav.inbox': '状态',
   'nav.chat': '案件沟通',
   'nav.mandate': '委托',
-  'nav.home': '案件组合',
+  'nav.home': '首页',
 
   'portfolio.title': '案件组合',
   'portfolio.lead': '一个案件对应一张未来的注册证：同一生产企业的一个产品或一个型号系列。',
@@ -1069,4 +1067,3 @@ export const zh: Record<MessageKey, string> = {
   'mandate.noCrypto': '政府门户的登录方式、合格电子签名与机器可读授权书属于俄方公司，本工作台不包含这些内容。',
 }
 
-export const catalogs = { ru, en, zh }

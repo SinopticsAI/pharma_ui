@@ -1,10 +1,10 @@
 import { createContext, createElement, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import type { L10n, Locale, Translatable } from '@demo/domain'
 import { resolveText } from '@demo/domain'
-import { catalogs, type MessageKey } from './messages'
+import { catalogs, type MessageKey } from './catalog'
 
-export type { MessageKey } from './messages'
-export { catalogs } from './messages'
+export type { MessageKey } from './catalog'
+export { catalogs } from './catalog'
 
 const LOCALE_TAG: Record<Locale, string> = {
   zh: 'zh-CN',

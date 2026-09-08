@@ -4,6 +4,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import '@demo/ui/globals.css'
+import { DemoProvider } from './demo/context'
 import { router } from './router'
 import { Session } from './Session'
 
@@ -24,11 +25,13 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
     <I18nProvider defaultLocale="zh">
-      <Session>
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </Session>
+      <DemoProvider>
+        <Session>
+          <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+          </QueryClientProvider>
+        </Session>
+      </DemoProvider>
     </I18nProvider>
   </StrictMode>,
 )

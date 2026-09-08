@@ -25,14 +25,43 @@ function MapNode({ data, selected }: NodeProps<Node<{ item: NodeMapItem }>>) {
 
 const nodeTypes = { mapNode: MapNode }
 
-export function NodeMapView({ items, className }: { items: NodeMapItem[]; className?: string }) {
-  const { nodes, edges } = useMemo(() => layoutNodeMap(items), [items])
+export function NodeMapView({
+  items,
+  className,
+  onOpen,
+}: {
+  items: NodeMapItem[]
+  className?: string
+  onOpen?: (code: string) => void
+}) {
+  const { nodes, edges } = useMemo(() => {
+    const laid = layoutNodeMap(items)
+    return {
+      nodes: laid.nodes.map((node) => ({ ...node, style: { cursor: onOpen ? 'pointer' : undefined } })),
+      edges: laid.edges.map((edge) => {
+        const target = items.find((item) => item.code === edge.target)
+        return {
+          ...edge,
+          style: target?.critical
+            ? { stroke: 'var(--warning)', strokeWidth: 2 }
+            : { stroke: 'var(--primary)', strokeWidth: 1.25 },
+        }
+      }),
+    }
+  }, [items, onOpen])
 
   if (items.length === 0) return null
 
   return (
     <div className={cn('h-[420px] w-full rounded-md border', className)}>
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView proOptions={{ hideAttribution: true }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        fitView
+        proOptions={{ hideAttribution: true }}
+        onNodeClick={onOpen ? (_event, node) => onOpen(node.id) : undefined}
+      >
         <Background />
         <Controls />
       </ReactFlow>

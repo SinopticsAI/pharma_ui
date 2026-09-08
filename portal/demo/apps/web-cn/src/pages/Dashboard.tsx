@@ -10,6 +10,7 @@ import {
   KeyValue,
   Metric,
   Money,
+  NextAction,
   PageHeader,
   StagePills,
   StatusBadge,
@@ -39,6 +40,8 @@ export function DashboardPage() {
         title={`${current.code} · ${text(l10n(current.product)).value}`}
         lead={text(l10n(current.manufacturer)).value}
       />
+
+      <NextAction label={t('shell.nextAction')}>{text(l10n(current.waitingFor)).value}</NextAction>
 
       <Card>
         <StagePills

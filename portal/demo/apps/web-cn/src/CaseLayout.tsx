@@ -25,34 +25,29 @@ export function CaseLayout() {
   const caseId = useCaseId()
   const { t, text } = useI18n()
   const caseQuery = useCase(caseId)
-
-  const nav = (
-    <>
-      <Link to="/" className={navItem}>
-        ← {t('common.back')}
-      </Link>
-      {SECTIONS.map((section) => (
-        <Link
-          key={section.path}
-          to={section.path}
-          params={{ caseId }}
-          className={navItem}
-          activeProps={{ className: `${navItem} ${navItemActive}` }}
-          activeOptions={{ exact: section.exact }}
-        >
-          {t(section.key)}
-        </Link>
-      ))}
-    </>
-  )
-
   const card = caseQuery.data?.case
-  const brandMeta = card ? `${t('app.caseCode')} ${card.code} · ${text(l10n(card.product)).value}` : undefined
+  const brandMeta = card ? `${text(l10n(card.manufacturer)).value}` : undefined
 
   return (
-    <Shell nav={nav} brandMeta={brandMeta}>
+    <Shell brandMeta={brandMeta} wide>
       {caseQuery.isLoading ? <Empty>{t('common.loading')}</Empty> : null}
       {caseQuery.isError ? <Callout tone="deadline">{describeError(caseQuery.error)}</Callout> : null}
+      {card ? (
+        <div className="mb-4 flex flex-wrap gap-2 border-b pb-3">
+          {SECTIONS.map((section) => (
+            <Link
+              key={section.path}
+              to={section.path}
+              params={{ caseId }}
+              className={`${navItem} rounded-md border-l-0 px-3 py-1.5`}
+              activeProps={{ className: `${navItem} ${navItemActive} rounded-md border-l-0 px-3 py-1.5` }}
+              activeOptions={{ exact: section.exact }}
+            >
+              {t(section.key)}
+            </Link>
+          ))}
+        </div>
+      ) : null}
       {caseQuery.data ? <Outlet /> : null}
     </Shell>
   )

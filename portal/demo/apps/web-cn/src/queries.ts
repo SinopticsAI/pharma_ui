@@ -3,11 +3,25 @@ import { useApi } from '@demo/api-client'
 import type { IntakeScope, Locale } from '@demo/domain'
 import { readPlaneEnabled } from '@demo/domain'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  demoCaseDetail,
+  demoCaseItems,
+  demoChat,
+  demoDocuments,
+  demoLedger,
+  demoStatuses,
+  getDemoOrganization,
+  getDemoProduct,
+  listDemoOrganizations,
+  listDemoProducts,
+} from './demo/catalog'
+import { useDemo } from './demo/context'
+import { isDemoId } from './demo/ids'
 import { isExtractionPending } from './intake/extractionStatus'
 
 /**
- * Все чтения идут в ядро кабинета. Мока нет: пустой портфель на пустой базе —
- * это ответ ядра, а не поломка экрана.
+ * Чтения идут в ядро. Идентификаторы `demo-*` не зовут API: это walkthrough
+ * MH-200, явно помеченный как иллюстрация.
  */
 
 /**
@@ -22,106 +36,157 @@ export const extractionPending = isExtractionPending
 
 const pollWhile = (pending: boolean) => (pending ? EXTRACTION_POLL_MS : false)
 
+function mergeById<T extends { id: string }>(demo: T[], live: T[] | undefined): T[] {
+  const rows = live ?? []
+  const ids = new Set(rows.map((row) => row.id))
+  return [...demo.filter((row) => !ids.has(row.id)), ...rows]
+}
+
 export const useOrganizations = () => {
   const api = useApi()
-  return useQuery({ queryKey: ['organizations'], queryFn: () => api.listOrganizations() })
+  const { state } = useDemo()
+  const live = useQuery({ queryKey: ['organizations'], queryFn: () => api.listOrganizations() })
+  return { ...live, isLoading: live.isLoading && !live.data, data: mergeById(listDemoOrganizations(state), live.data) }
 }
 
 export const useOrganization = (organizationId: string, awaitingExtraction = false) => {
   const api = useApi()
-  return useQuery({
+  const { state } = useDemo()
+  const demo = isDemoId(organizationId)
+  const live = useQuery({
     queryKey: ['organization', organizationId],
     queryFn: () => api.getOrganization(organizationId),
-    enabled: Boolean(organizationId),
-    // Реквизиты и комплектность меняет вебхук разбора, а не действие человека.
-    refetchInterval: pollWhile(awaitingExtraction),
+    enabled: Boolean(organizationId) && !demo,
+    refetchInterval: pollWhile(awaitingExtraction && !demo),
   })
+  if (demo) {
+    return { ...live, data: getDemoOrganization(organizationId, state), isLoading: false, isError: false, error: null }
+  }
+  return live
 }
 
 /** Документы интейка компании: и её собственные, и документы её продуктов. */
 export const useOrganizationItems = (organizationId: string) => {
   const api = useApi()
-  return useQuery({
+  const demo = isDemoId(organizationId)
+  const live = useQuery({
     queryKey: ['organization-items', organizationId],
     queryFn: () => api.listOrganizationItems(organizationId),
-    enabled: Boolean(organizationId),
-    refetchInterval: (query) => pollWhile(extractionPending(query.state.data)),
+    enabled: Boolean(organizationId) && !demo,
+    refetchInterval: (query) => pollWhile(!demo && extractionPending(query.state.data)),
   })
+  if (demo) {
+    const items = organizationId.includes('ruikang')
+      ? demoDocuments().filter((item) => item.itemType === 'business-license' || item.itemType === 'iso-13485')
+      : demoDocuments()
+    return { ...live, data: items, isLoading: false, isError: false, error: null }
+  }
+  return live
 }
 
 /** Продукты всех компаний аккаунта: главная показывает их одним списком. */
 export const useAllProducts = (organizationIds: string[]) => {
   const api = useApi()
-  return useQuery({
-    queryKey: ['products', ...organizationIds],
+  const { state } = useDemo()
+  const liveIds = organizationIds.filter((id) => !isDemoId(id))
+  const live = useQuery({
+    queryKey: ['products', ...liveIds],
     queryFn: async () => {
-      const lists = await Promise.all(organizationIds.map((id) => api.listProducts(id)))
+      const lists = await Promise.all(liveIds.map((id) => api.listProducts(id)))
       return lists.flat()
     },
-    enabled: organizationIds.length > 0,
+    enabled: liveIds.length > 0,
   })
+  return {
+    ...live,
+    isLoading: liveIds.length > 0 && live.isLoading,
+    data: mergeById(listDemoProducts(state), live.data),
+  }
 }
 
 export const useProduct = (productId: string) => {
   const api = useApi()
-  return useQuery({
+  const { state } = useDemo()
+  const demo = isDemoId(productId)
+  const live = useQuery({
     queryKey: ['product', productId],
     queryFn: () => api.getProduct(productId),
-    enabled: Boolean(productId),
-    // Черновик и комплектность продукта дописывает разбор документов.
-    refetchInterval: (query) => pollWhile(extractionPending(query.state.data?.documents)),
+    enabled: Boolean(productId) && !demo,
+    refetchInterval: (query) => pollWhile(!demo && extractionPending(query.state.data?.documents)),
   })
+  if (demo) {
+    return { ...live, data: getDemoProduct(productId, state), isLoading: false, isError: false, error: null }
+  }
+  return live
 }
 
 export const useCases = () => {
   const api = useApi()
-  return useQuery({ queryKey: ['cases'], queryFn: () => api.listCases() })
+  const live = useQuery({ queryKey: ['cases'], queryFn: () => api.listCases() })
+  return { ...live, isLoading: live.isLoading && !live.data, data: mergeById([demoCaseDetail().case], live.data) }
 }
 
 /** Карточка кейса вместе с картой M0–M12, мандатом и критическим узлом. */
 export const useCase = (caseId: string) => {
   const api = useApi()
-  return useQuery({
+  const demo = isDemoId(caseId)
+  const live = useQuery({
     queryKey: ['case', caseId],
     queryFn: () => api.getCase(caseId),
-    enabled: Boolean(caseId),
+    enabled: Boolean(caseId) && !demo,
   })
+  if (demo) {
+    return { ...live, data: demoCaseDetail(), isLoading: false, isError: false, error: null }
+  }
+  return live
 }
 
 export const useCaseItems = (caseId: string) => {
   const api = useApi()
-  return useQuery({
+  const demo = isDemoId(caseId)
+  const live = useQuery({
     queryKey: ['case-items', caseId],
     queryFn: () => api.listCaseItems(caseId),
-    enabled: Boolean(caseId),
+    enabled: Boolean(caseId) && !demo,
   })
+  if (demo) return { ...live, data: demoCaseItems(), isLoading: false, isError: false, error: null }
+  return live
 }
 
 export const useStatuses = (caseId: string) => {
   const api = useApi()
-  return useQuery({
+  const demo = isDemoId(caseId)
+  const live = useQuery({
     queryKey: ['statuses', caseId],
     queryFn: () => api.listStatuses(caseId),
-    enabled: Boolean(caseId),
+    enabled: Boolean(caseId) && !demo,
   })
+  if (demo) return { ...live, data: demoStatuses(), isLoading: false, isError: false, error: null }
+  return live
 }
 
 export const useLedger = (caseId: string) => {
   const api = useApi()
-  return useQuery({
+  const demo = isDemoId(caseId)
+  const live = useQuery({
     queryKey: ['ledger', caseId],
     queryFn: () => api.listLedger(caseId),
-    enabled: Boolean(caseId),
+    enabled: Boolean(caseId) && !demo,
   })
+  if (demo) return { ...live, data: demoLedger(), isLoading: false, isError: false, error: null }
+  return live
 }
 
 export const useChat = (caseId: string) => {
   const api = useApi()
-  return useQuery({
+  const demo = isDemoId(caseId)
+  const live = useQuery({
     queryKey: ['chat', caseId],
     queryFn: () => api.listChat(caseId),
-    enabled: Boolean(caseId),
+    enabled: Boolean(caseId) && !demo,
   })
+  if (demo) return { ...live, data: demoChat(), isLoading: false, isError: false, error: null }
+  return live
 }
 
 export const useIntakeMessages = (sessionId: string) => {
