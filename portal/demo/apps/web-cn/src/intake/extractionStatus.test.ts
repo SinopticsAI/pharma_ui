@@ -129,13 +129,9 @@ describe('auto-turn once per item', () => {
     expect(isSuperseded(oldDocx, [oldDocx, newJpg])).toBe(true)
     expect(newestByUpdatedAt([oldDocx, newJpg])?.id).toBe('it-jpg')
     expect(nextAutoTurnItem(new Set(['it-docx']), [oldDocx, newJpg], new Set())).toBeNull()
-    expect(
-      nextAutoTurnItem(
-        new Set(['it-jpg']),
-        [oldDocx, item({ ...newJpg, status: 'parsed' })],
-        new Set(),
-      )?.id,
-    ).toBe('it-jpg')
+    expect(nextAutoTurnItem(new Set(['it-jpg']), [oldDocx, item({ ...newJpg, status: 'parsed' })], new Set())?.id).toBe(
+      'it-jpg',
+    )
   })
 })
 
