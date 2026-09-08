@@ -68,7 +68,45 @@ export function RoadmapPage() {
           {nodes.length === 0 ? (
             <Empty>{t('map.empty')}</Empty>
           ) : (
-            <NodeMapView items={nodes} className="h-[560px]" onOpen={open} />
+            <>
+              <NodeMapView items={nodes} className="h-[560px]" onOpen={open} />
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+                {(['done', 'in_progress', 'planned', 'later', 'goal'] as const).map((status) => (
+                  <StatusBadge
+                    key={status}
+                    tone={
+                      status === 'done'
+                        ? 'ok'
+                        : status === 'in_progress'
+                          ? 'risk'
+                          : status === 'planned'
+                            ? 'warm'
+                            : status === 'goal'
+                              ? 'accent'
+                              : 'quiet'
+                    }
+                  >
+                    {t(`nodeStatus.${status}`)}
+                  </StatusBadge>
+                ))}
+                {(['you', 'us', 'contractor', 'gov'] as const).map((owner) => (
+                  <span
+                    key={owner}
+                    className={
+                      owner === 'you'
+                        ? 'rounded-md bg-primary/10 px-1.5 py-0.5 text-primary'
+                        : owner === 'us'
+                          ? 'rounded-md bg-secondary px-1.5 py-0.5 text-secondary-foreground'
+                          : owner === 'contractor'
+                            ? 'rounded-md bg-warning/20 px-1.5 py-0.5 text-warning-foreground'
+                            : 'rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground'
+                    }
+                  >
+                    {t(`nodeOwner.${owner}`)}
+                  </span>
+                ))}
+              </div>
+            </>
           )}
         </Card>
       ) : (
