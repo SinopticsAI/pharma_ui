@@ -1,7 +1,7 @@
 import type { NodeMapItem } from '@demo/domain'
 import { describe, expect, it } from 'vitest'
 import { demoNodes } from './demo/catalog'
-import { COLUMN_WIDTH, ROW_HEIGHT, layoutNodeMap } from './node-map'
+import { COLUMN_WIDTH, layoutNodeMap, ROW_HEIGHT } from './node-map'
 
 const node = (code: string, position: number, blockedBy: string[] = []): NodeMapItem => ({
   code,
@@ -29,11 +29,7 @@ describe('layoutNodeMap', () => {
   })
 
   it('ставит параллельные узлы в одну колонку (fan-out)', () => {
-    const { nodes, edges } = layoutNodeMap([
-      node('A', 0),
-      node('B', 1, ['A']),
-      node('C', 2, ['A']),
-    ])
+    const { nodes, edges } = layoutNodeMap([node('A', 0), node('B', 1, ['A']), node('C', 2, ['A'])])
     const laid = byId(nodes)
 
     expect(laid.B.position.x).toBe(COLUMN_WIDTH)
