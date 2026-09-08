@@ -58,6 +58,7 @@ import {
   uiMessagesToRepository,
   unpersistedAppends,
 } from './history'
+import { ProgressPanel } from './ProgressPanel'
 import { type AgentId, createIntakeTransport } from './transport'
 
 const ExtractionUiContext = createContext<{ line: ProcessLine | null; hideEmpty: boolean; chatFailed: boolean }>({
@@ -75,61 +76,6 @@ const ExtractionUiContext = createContext<{ line: ProcessLine | null; hideEmpty:
  * Документ прикладывается скрепкой в самом композере: файл становится вложением
  * сообщения, а не отдельной загрузкой рядом с чатом.
  */
-
-const SECTION_KEY: Record<ProgressSection['key'], MessageKey> = {
-  identity: 'intake.section.identity',
-  documents: 'intake.section.documents',
-  authority: 'intake.section.authority',
-  banking: 'intake.section.banking',
-  risk: 'intake.section.risk',
-}
-
-function ProgressPanel({
-  sections,
-  missing,
-  percent,
-  title,
-}: {
-  sections: ProgressSection[]
-  missing: string[]
-  percent: number
-  title: string
-}) {
-  const { t } = useI18n()
-
-  return (
-    <aside className="space-y-3 rounded-lg border bg-card p-4">
-      <div className="flex items-center justify-between text-sm">
-        <span>{title}</span>
-        <strong>{percent}%</strong>
-      </div>
-      <ul className="space-y-2 text-sm">
-        {sections.map((section) => {
-          const done = section.total > 0 && section.filled === section.total
-          return (
-            <li key={section.key} className="flex items-center justify-between gap-2">
-              <span>{t(SECTION_KEY[section.key])}</span>
-              <span className="text-muted-foreground">
-                {done
-                  ? t('intake.chat.progressDone')
-                  : `${section.filled} ${t('intake.chat.progressOf')} ${section.total}`}
-              </span>
-            </li>
-          )
-        })}
-        {sections.length === 0
-          ? missing.map((field) => (
-              <li key={field} className="flex items-center justify-between gap-2">
-                <span>{field}</span>
-                <span className="text-muted-foreground">{t('intake.chat.progressNeeded')}</span>
-              </li>
-            ))
-          : null}
-      </ul>
-      <p className="text-xs text-muted-foreground">{t('intake.chat.progressHint')}</p>
-    </aside>
-  )
-}
 
 function processLineText(line: ProcessLine, t: (key: MessageKey) => string): string {
   const name = line.fileName

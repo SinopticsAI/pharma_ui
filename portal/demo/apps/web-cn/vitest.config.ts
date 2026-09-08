@@ -12,6 +12,7 @@ export default defineConfig({
       { find: '@demo/ui/components', replacement: fromHere('../../packages/ui/src/components/ui') },
       { find: '@demo/contracts', replacement: fromHere('../../packages/contracts/src/index.ts') },
       { find: '@demo/domain', replacement: fromHere('../../packages/domain/src/index.ts') },
+      { find: '@demo/i18n', replacement: fromHere('../../packages/i18n/src/index.ts') },
     ],
   },
   test: {

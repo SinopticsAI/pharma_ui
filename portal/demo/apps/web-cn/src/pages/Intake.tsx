@@ -108,7 +108,7 @@ export function IntakeCompanyPage() {
           agentId="companyIntake"
           sessionId={sessionId}
           organizationId={organizationId}
-          title={t('intake.company.profileTitle')}
+          title={t('intake.chat.progressTitle')}
           sections={completeness?.sections ?? []}
           percent={completeness?.percent ?? 0}
           draftEmpty={isDraftEmpty(company?.draft)}
