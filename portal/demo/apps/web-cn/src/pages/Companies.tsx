@@ -1,6 +1,7 @@
-import { OFFLINE_DEMO } from '@demo/api-client'
+import { describeError, OFFLINE_DEMO } from '@demo/api-client'
 import { draftValue } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
+import { RegisterCompanyCard } from '../CreateActions'
 import { companyCards, riskChecks } from '../demo/catalog'
 import { useDemo } from '../demo/context'
 import { DEMO_ORG_MINGHU, isDemoId } from '../demo/ids'
@@ -18,6 +19,7 @@ import {
   Table,
 } from '../kit'
 import { liveCompanyCard, usePortfolioCards } from '../live-cards'
+import { usePortfolioCreate } from '../portfolio-create'
 import { useOrganization } from '../queries'
 import { Shell } from '../Shell'
 import { CompanyCard } from './EntityCards'
@@ -26,12 +28,17 @@ export function CompaniesPage() {
   const { t } = useI18n()
   const { state } = useDemo()
   const portfolio = usePortfolioCards(state)
+  const { busy, failure, startCompany } = usePortfolioCreate()
   const companies = portfolio.companies
 
   return (
     <Shell>
       <PageHeader eyebrow={t('eyebrow.home')} title={t('nav.companies')} lead={t('home.lead')} />
       {OFFLINE_DEMO ? <DemoMark>{t('shell.demoMark')}</DemoMark> : null}
+      {failure ? <Callout tone="deadline">{describeError(failure)}</Callout> : null}
+      <div className="mb-6 grid gap-3 md:grid-cols-2">
+        <RegisterCompanyCard titleKey="portfolio.registerCompany" busy={busy} onStart={startCompany} />
+      </div>
       {portfolio.organizations.isLoading && companies.length === 0 ? <Empty>{t('common.loading')}</Empty> : null}
       {!portfolio.organizations.isLoading && companies.length === 0 ? (
         <Empty>{t('portfolio.noCompanies')}</Empty>

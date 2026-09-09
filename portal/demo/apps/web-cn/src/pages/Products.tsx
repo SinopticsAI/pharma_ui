@@ -1,7 +1,8 @@
-import { OFFLINE_DEMO } from '@demo/api-client'
+import { describeError, OFFLINE_DEMO } from '@demo/api-client'
 import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
 import { useNavigate } from '@tanstack/react-router'
+import { AddProductCard } from '../CreateActions'
 import { classificationVariants } from '../demo/catalog'
 import { useDemo } from '../demo/context'
 import { DEMO_CASE_RU0417, DEMO_PRODUCT_RK30, isDemoId } from '../demo/ids'
@@ -18,6 +19,7 @@ import {
   StatusBadge,
 } from '../kit'
 import { usePortfolioCards } from '../live-cards'
+import { usePortfolioCreate } from '../portfolio-create'
 import { Shell } from '../Shell'
 import { ProductCard } from './EntityCards'
 
@@ -25,13 +27,26 @@ export function ProductsPage() {
   const { t } = useI18n()
   const { state } = useDemo()
   const portfolio = usePortfolioCards(state)
+  const { busy, failure, startProduct } = usePortfolioCreate()
 
   return (
     <Shell>
       <PageHeader eyebrow={t('eyebrow.product')} title={t('nav.products')} lead={t('home.lead')} />
       {OFFLINE_DEMO ? <DemoMark>{t('shell.demoMark')}</DemoMark> : null}
+      {failure ? <Callout tone="deadline">{describeError(failure)}</Callout> : null}
+      <div className="mb-6 grid gap-3 md:grid-cols-2">
+        <AddProductCard
+          titleKey="portfolio.addProduct"
+          organizations={portfolio.organizations.data ?? []}
+          busy={busy}
+          onStart={startProduct}
+        />
+      </div>
       {portfolio.productsQuery.isLoading && portfolio.products.length === 0 ? (
         <Empty>{t('common.loading')}</Empty>
+      ) : null}
+      {!portfolio.productsQuery.isLoading && portfolio.products.length === 0 ? (
+        <Empty>{t('portfolio.noProducts')}</Empty>
       ) : null}
       <div className="grid gap-4 lg:grid-cols-2">
         {portfolio.products.map((item) => (

@@ -5,6 +5,7 @@ import { useI18n } from '@demo/i18n'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { CabinetNav } from '../cabinet-nav'
 import { Callout, Card, Empty, Estimate, KeyValue, PageHeader, StatusBadge } from '../kit'
+import { eligibleOrganizations } from '../portfolio-create'
 import {
   useAllProducts,
   useCases,
@@ -56,7 +57,7 @@ export function PortfolioPage() {
     })
   }
 
-  const readyCompany = companies.find((item) => item.status === 'profile_approved')
+  const readyCompany = eligibleOrganizations(companies)[0]
 
   return (
     <Shell nav={<CabinetNav />}>

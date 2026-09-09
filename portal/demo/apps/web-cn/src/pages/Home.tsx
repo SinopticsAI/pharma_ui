@@ -1,49 +1,20 @@
 import { describeError, OFFLINE_DEMO } from '@demo/api-client'
-import type { Organization } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { useNavigate } from '@tanstack/react-router'
+import { AddProductCard, RegisterCompanyCard } from '../CreateActions'
 import { useDemo } from '../demo/context'
 import { Callout, Card, DemoMark, Empty, Metric, NextAction, PageHeader } from '../kit'
 import { usePortfolioCards } from '../live-cards'
-import { useCreateOrganization, useCreateProduct, useOpenIntakeSession } from '../queries'
+import { usePortfolioCreate } from '../portfolio-create'
 import { Shell } from '../Shell'
 import { CompanyCard, ProductCard } from './EntityCards'
 
 export function HomePage() {
   const { t, text } = useI18n()
-  const navigate = useNavigate()
   const { state, pending, reset } = useDemo()
   const portfolio = usePortfolioCards(state)
-  const createOrganization = useCreateOrganization()
-  const createProduct = useCreateProduct()
-  const openSession = useOpenIntakeSession()
+  const { busy, failure, startCompany, startProduct } = usePortfolioCreate()
   const companies = portfolio.companies
   const products = portfolio.products
-  const busy = createOrganization.isPending || createProduct.isPending || openSession.isPending
-  const failure = createOrganization.error ?? createProduct.error ?? openSession.error
-  const liveReady = (portfolio.organizations.data ?? []).find(
-    (item) => item.status === 'profile_approved' && !item.id.startsWith('demo-'),
-  )
-
-  const startCompany = async () => {
-    const organization = await createOrganization.mutateAsync({})
-    const session = await openSession.mutateAsync({ scope: 'organization', organizationId: organization.id })
-    void navigate({
-      to: '/intake/company/$organizationId',
-      params: { organizationId: organization.id },
-      search: { session: session.id },
-    })
-  }
-
-  const startProduct = async (organization: Organization) => {
-    const product = await createProduct.mutateAsync({ organizationId: organization.id })
-    const session = await openSession.mutateAsync({ scope: 'product', productId: product.id })
-    void navigate({
-      to: '/intake/product/$productId',
-      params: { productId: product.id },
-      search: { session: session.id },
-    })
-  }
 
   const next = products[0]
   const waiting = OFFLINE_DEMO ? pending : portfolio.pendingLive
@@ -107,26 +78,13 @@ export function HomePage() {
       </div>
 
       <div className="mb-6 grid gap-3 md:grid-cols-2">
-        <button
-          type="button"
-          className="flex flex-col gap-1 rounded-lg border bg-card px-4 py-4 text-left hover:border-primary disabled:opacity-50"
-          onClick={() => void startCompany()}
-          disabled={busy}
-        >
-          <strong>{t('home.registerCompany')}</strong>
-          <span className="text-sm text-muted-foreground">{t('portfolio.registerCompanyLead')}</span>
-        </button>
-        <button
-          type="button"
-          className="flex flex-col gap-1 rounded-lg border bg-card px-4 py-4 text-left hover:border-primary disabled:opacity-50"
-          disabled={busy || !liveReady}
-          onClick={() => liveReady && void startProduct(liveReady)}
-        >
-          <strong>{t('home.addProduct')}</strong>
-          <span className="text-sm text-muted-foreground">
-            {liveReady ? t('portfolio.addProductLead') : t('portfolio.addProductLocked')}
-          </span>
-        </button>
+        <RegisterCompanyCard titleKey="home.registerCompany" busy={busy} onStart={startCompany} />
+        <AddProductCard
+          titleKey="home.addProduct"
+          organizations={portfolio.organizations.data ?? []}
+          busy={busy}
+          onStart={startProduct}
+        />
       </div>
 
       <h2 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
