@@ -15,6 +15,7 @@ import { Loader2 } from 'lucide-react'
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Empty } from '../kit'
 import { usePlaneEnabled } from '../planeToggle'
+import { usePortfolioCreate } from '../portfolio-create'
 import {
   useApproveCompanyProfile,
   useApproveProductData,
@@ -23,7 +24,6 @@ import {
   useOrganizationItems,
   useProduct,
 } from '../queries'
-import { usePortfolioCreate } from '../portfolio-create'
 import { createIntakeAttachmentAdapter, pickIntakeFile } from './attachments'
 import { IntakeToolUIs } from './cards'
 import { type IntakeActions, IntakeActionsProvider, useIntakeActions } from './context'
@@ -657,7 +657,8 @@ function IntakeChatRuntime({
 
   // Загрузка падает вне нити: сообщение агенту не уходит, вложение остаётся в
   // композере. Показываем причину рядом с чатом, чтобы можно было повторить.
-  const failure = uploadError ?? chatError ?? approveCompany.error ?? approveProduct.error ?? journalError ?? createFailure
+  const failure =
+    uploadError ?? chatError ?? approveCompany.error ?? approveProduct.error ?? journalError ?? createFailure
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>

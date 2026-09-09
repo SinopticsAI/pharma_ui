@@ -81,9 +81,7 @@ export function isProfileApprovedText(text: string): boolean {
 }
 
 /** Пузырь пользователя не показываем: маркер — служебный ход кабинета. */
-export function userMessagePresentation(
-  text: string,
-): 'extraction-ready' | 'profile-approved' | 'user' {
+export function userMessagePresentation(text: string): 'extraction-ready' | 'profile-approved' | 'user' {
   if (isExtractionReadyText(text)) return 'extraction-ready'
   if (isProfileApprovedText(text)) return 'profile-approved'
   return 'user'

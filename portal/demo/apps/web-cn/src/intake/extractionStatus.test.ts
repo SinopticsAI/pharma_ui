@@ -6,6 +6,7 @@ import {
   extractionBanner,
   extractionReadyIdsFromTexts,
   formatExtractionReady,
+  formatProfileApproved,
   isDraftEmpty,
   isExtractionPending,
   isExtractionReadyText,
@@ -23,7 +24,6 @@ import {
   shouldKickMastraExtract,
   textsFromUnknownMessages,
   userMessagePresentation,
-  formatProfileApproved,
 } from './extractionStatus'
 
 function item(partial: {
