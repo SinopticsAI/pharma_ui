@@ -1,6 +1,6 @@
 import type { Organization, Product } from '@demo/domain'
 import { describe, expect, it } from 'vitest'
-import { liveCompanyCard, liveProductCard, liveSaleProgress } from './live-cards'
+import { attachLiveCase, liveCompanyCard, liveProductCard, liveSaleProgress, mergeCaseProducts } from './live-cards'
 
 const org = (id: string, status: Organization['status'] = 'collecting'): Organization => ({
   id,
@@ -50,5 +50,35 @@ describe('live cards', () => {
     expect(card.product.caseId).toBe('')
     expect(liveSaleProgress([product('a', 'o', 40), product('b', 'o', 80)])).toBe(60)
     expect(liveSaleProgress([])).toBe(0)
+  })
+
+  it('подставляет caseId из списка кейсов и добавляет пропавший продукт', () => {
+    const cases = [
+      {
+        id: 'case-mh-200',
+        code: 'RU-0417',
+        product: { zh: 'MH-200', en: 'MH-200', ru: 'MH-200' },
+        manufacturer: { zh: 'Minghu', en: 'Minghu', ru: 'Минху' },
+        kind: 'device' as const,
+        track: 'pp1684' as const,
+        riskClass: '2b' as const,
+        currentStage: 'samples' as const,
+        nextActor: 'hq' as const,
+        waitingFor: { zh: '—', en: '—', ru: '—' },
+        dueWorkingDays: 8,
+        startedOn: '2025-07-01',
+        cycleMonths: [12, 16] as [number, number],
+        mandateComplete: true,
+        modelsLocked: true,
+        productId: 'prd-mh-200',
+        organizationId: 'org-cn-demo',
+      },
+    ]
+    const linked = attachLiveCase(product('prd-mh-200', 'org-cn-demo', 78), cases)
+    expect(linked.caseId).toBe('case-mh-200')
+    const merged = mergeCaseProducts([product('prd-rk-30', 'org-cn-ruikang', 100)], cases)
+    expect(merged[0]?.id).toBe('prd-mh-200')
+    expect(merged[0]?.caseId).toBe('case-mh-200')
+    expect(liveProductCard(merged[0], org('org-cn-demo', 'profile_approved'), cases).caseStatus.ru).toContain('RU-0417')
   })
 })

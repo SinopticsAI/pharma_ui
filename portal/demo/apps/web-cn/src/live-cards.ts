@@ -52,16 +52,49 @@ export function liveCompanyCard(organization: Organization, products: Product[])
   }
 }
 
+/** Кнопка карты смотрит на product.caseId — подставляем кейс, если ядро отдало его только в /cases. */
+export function attachLiveCase(product: Product, cases: RegistrationCase[]): Product {
+  if (product.caseId) return product
+  const found = cases.find((item) => item.productId === product.id)
+  return found ? { ...product, caseId: found.id } : product
+}
+
+/** Карточка MH-200 пропадала, когда кейс был в /cases, а продукт — нет в listProducts. */
+export function mergeCaseProducts(products: Product[], cases: RegistrationCase[]): Product[] {
+  const ids = new Set(products.map((item) => item.id))
+  const extra = cases
+    .filter((item) => item.productId && !ids.has(item.productId))
+    .map((item) => ({
+      id: item.productId ?? item.id,
+      accountId: item.accountId ?? '',
+      organizationId: item.organizationId ?? '',
+      name: item.product,
+      kind: item.kind,
+      status: 'ru_confirmed' as const,
+      draft: {},
+      completeness: 0,
+      selectedVariantId: '',
+      specialistApprovedBy: '',
+      specialistApprovedAt: '',
+      clientApprovedBy: '',
+      clientApprovedAt: '',
+      caseId: item.id,
+      updatedAt: item.startedOn || '',
+    }))
+  return extra.length === 0 ? products : [...extra, ...products]
+}
+
 export function liveProductCard(
   product: Product,
   organization: Organization | undefined,
   cases: RegistrationCase[],
 ): ProductCardView {
-  const card = cases.find((item) => item.id === product.caseId || item.productId === product.id)
-  const progress = Number.isFinite(product.completeness) ? product.completeness : 0
+  const linked = attachLiveCase(product, cases)
+  const card = cases.find((item) => item.id === linked.caseId || item.productId === linked.id)
+  const progress = Number.isFinite(linked.completeness) ? linked.completeness : 0
   return {
-    product,
-    companyName: asL10n(organization?.name, organization?.id || product.organizationId),
+    product: linked,
+    companyName: asL10n(organization?.name, organization?.id || linked.organizationId),
     classLabel: card
       ? zh(
           `${card.riskClass} · ${card.track}`,
@@ -98,7 +131,9 @@ export function usePortfolioCards(state: DemoUiState) {
   const companies = organizations.data ?? []
   const productsQuery = useAllProducts(companies.map((item) => item.id))
   const cases = useCases()
-  const products = productsQuery.data ?? []
+  const products = mergeCaseProducts(productsQuery.data ?? [], cases.data ?? []).map((item) =>
+    attachLiveCase(item, cases.data ?? []),
+  )
 
   if (OFFLINE_DEMO) {
     return {

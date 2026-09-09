@@ -61,4 +61,9 @@ describe('pickCabinetFocus', () => {
     const focus = pickCabinetFocus([product('prd-rk-30')], [], false)
     expect(focus).toEqual({ caseId: '', productId: 'prd-rk-30' })
   })
+
+  it('если продукт с кейсом не пришёл в список — берёт id из кейса', () => {
+    const focus = pickCabinetFocus([product('prd-rk-30')], [card('case-mh-200', 'prd-mh-200')], false)
+    expect(focus).toEqual({ caseId: 'case-mh-200', productId: 'prd-mh-200' })
+  })
 })

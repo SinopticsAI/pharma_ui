@@ -13,13 +13,12 @@ export function pickCabinetFocus(
     return { caseId: DEMO_CASE_RU0417, productId: DEMO_PRODUCT_MH200 }
   }
   const list = products ?? []
+  const rows = cases ?? []
   const withCase = list.find((item) => Boolean(item.caseId))
-  const product = withCase ?? list[0]
-  const matched = (cases ?? []).find((item) => item.productId === product?.id)
-  return {
-    productId: product?.id ?? '',
-    caseId: product?.caseId || matched?.id || (cases ?? [])[0]?.id || '',
-  }
+  if (withCase) return { productId: withCase.id, caseId: withCase.caseId }
+  const open = rows.find((item) => item.productId) ?? rows[0]
+  if (open) return { productId: open.productId || list[0]?.id || '', caseId: open.id }
+  return { productId: list[0]?.id ?? '', caseId: '' }
 }
 
 export function useCabinetFocus() {
