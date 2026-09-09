@@ -11,7 +11,7 @@ export function MessagesPage() {
 
   return (
     <Shell>
-      <PageHeader title={t('msg.title')} lead={t('msg.lead')} />
+      <PageHeader eyebrow={t('eyebrow.messages')} title={t('msg.title')} lead={t('msg.lead')} />
       <DemoMark>{t('shell.demoMark')}</DemoMark>
       <Card>
         {items.length === 0 ? (

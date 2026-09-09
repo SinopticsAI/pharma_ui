@@ -132,6 +132,50 @@ describe('journal ↔ UIMessage', () => {
     expect(toolInput(restored, 'showDraft')).toEqual(args)
   })
 
+  it('разбирает строковый fields из журнала в массив', () => {
+    const restored = expectRestored(
+      [
+        row({
+          id: 'msg-jhgdc31u',
+          role: 'agent',
+          text: { ru: 'карточка черновика' },
+          payload: {
+            clientMessageId: 'a-qwen',
+            parts: [
+              {
+                type: 'tool',
+                toolName: 'show-draft',
+                args: {
+                  scope: 'product',
+                  entityId: 'prd-ypujohgf',
+                  fields:
+                    '[{"key": "name", "label": {"ru": "Наименование"}, "value": "Safe-Accu Blood Glucose Meter", "source": "ifu.pdf"}]',
+                  missing: '[]',
+                  canApprove: 'False',
+                },
+              },
+            ],
+          },
+        }),
+      ],
+      'ru',
+    )
+    expect(toolInput(restored, 'show-draft')).toEqual({
+      scope: 'product',
+      entityId: 'prd-ypujohgf',
+      fields: [
+        {
+          key: 'name',
+          label: { ru: 'Наименование' },
+          value: 'Safe-Accu Blood Glucose Meter',
+          source: 'ifu.pdf',
+        },
+      ],
+      missing: [],
+      canApprove: false,
+    })
+  })
+
   it('крутит tool-only ask-document / askDocument', () => {
     const args = { itemType: 'business-license', question: { ru: 'Лицензия?' } }
     const source = ui({

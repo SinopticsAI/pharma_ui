@@ -1,5 +1,6 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { IntakeMessage } from '@demo/domain'
+import { coerceToolArgs } from './tool-args'
 
 /**
  * Журнал ядра ↔ нить assistant-ui.
@@ -190,7 +191,7 @@ function toolFromUiPart(part: UIMessage['parts'][number]): JournalToolPart | nul
   return {
     type: 'tool',
     toolName,
-    args: rec.input ?? rec.args ?? {},
+    args: coerceToolArgs(rec.input ?? rec.args ?? {}),
     ...(toolCallId ? { toolCallId } : {}),
   }
 }
@@ -226,7 +227,7 @@ function toToolUiPart(tool: JournalToolPart, messageId: string, index: number): 
     type: `tool-${tool.toolName}`,
     toolCallId: tool.toolCallId || `${messageId}:${index}:${tool.toolName}`,
     state: 'output-available',
-    input: tool.args ?? {},
+    input: coerceToolArgs(tool.args ?? {}),
     output: undefined,
   } as UIMessage['parts'][number]
 }

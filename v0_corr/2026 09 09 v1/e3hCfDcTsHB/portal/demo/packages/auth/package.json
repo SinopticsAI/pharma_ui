@@ -1,0 +1,17 @@
+{
+  "name": "@demo/auth",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.tsx",
+  "types": "src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "dependencies": {
+    "oidc-client-ts": "^3.5.0"
+  },
+  "peerDependencies": {
+    "react": "^19.1.0"
+  }
+}

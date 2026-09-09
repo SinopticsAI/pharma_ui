@@ -1,5 +1,5 @@
 import type { ApproveProductInput, UploadRequest } from '@demo/api-client'
-import { useApi } from '@demo/api-client'
+import { OFFLINE_DEMO, useApi } from '@demo/api-client'
 import type { IntakeScope, Locale } from '@demo/domain'
 import { readPlaneEnabled } from '@demo/domain'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -42,11 +42,25 @@ function mergeById<T extends { id: string }>(demo: T[], live: T[] | undefined): 
   return [...demo.filter((row) => !ids.has(row.id)), ...rows]
 }
 
+/**
+ * Витрина без ядра: списочные хуки всё равно зовут API, и в offline он
+ * отвечает 404. Demo-строки уже подставлены через mergeById, поэтому ошибку
+ * и состояние загрузки здесь гасим — экран показывает готовые demo-данные.
+ */
+function quietOffline<T extends { isError: boolean; isLoading: boolean; error: unknown }>(query: T): T {
+  if (!OFFLINE_DEMO) return query
+  return { ...query, isError: false, isLoading: false, error: null }
+}
+
 export const useOrganizations = () => {
   const api = useApi()
   const { state } = useDemo()
   const live = useQuery({ queryKey: ['organizations'], queryFn: () => api.listOrganizations() })
-  return { ...live, isLoading: live.isLoading && !live.data, data: mergeById(listDemoOrganizations(state), live.data) }
+  return quietOffline({
+    ...live,
+    isLoading: live.isLoading && !live.data,
+    data: mergeById(listDemoOrganizations(state), live.data),
+  })
 }
 
 export const useOrganization = (organizationId: string, awaitingExtraction = false) => {
@@ -62,7 +76,7 @@ export const useOrganization = (organizationId: string, awaitingExtraction = fal
   if (demo) {
     return { ...live, data: getDemoOrganization(organizationId, state), isLoading: false, isError: false, error: null }
   }
-  return live
+  return quietOffline(live)
 }
 
 /** Документы интейка компании: и её собственные, и документы её продуктов. */
@@ -81,7 +95,7 @@ export const useOrganizationItems = (organizationId: string) => {
       : demoDocuments()
     return { ...live, data: items, isLoading: false, isError: false, error: null }
   }
-  return live
+  return quietOffline(live)
 }
 
 /** Продукты всех компаний аккаунта: главная показывает их одним списком. */
@@ -97,11 +111,11 @@ export const useAllProducts = (organizationIds: string[]) => {
     },
     enabled: liveIds.length > 0,
   })
-  return {
+  return quietOffline({
     ...live,
     isLoading: liveIds.length > 0 && live.isLoading,
     data: mergeById(listDemoProducts(state), live.data),
-  }
+  })
 }
 
 export const useProduct = (productId: string) => {
@@ -117,13 +131,17 @@ export const useProduct = (productId: string) => {
   if (demo) {
     return { ...live, data: getDemoProduct(productId, state), isLoading: false, isError: false, error: null }
   }
-  return live
+  return quietOffline(live)
 }
 
 export const useCases = () => {
   const api = useApi()
   const live = useQuery({ queryKey: ['cases'], queryFn: () => api.listCases() })
-  return { ...live, isLoading: live.isLoading && !live.data, data: mergeById([demoCaseDetail().case], live.data) }
+  return quietOffline({
+    ...live,
+    isLoading: live.isLoading && !live.data,
+    data: mergeById([demoCaseDetail().case], live.data),
+  })
 }
 
 /** Карточка кейса вместе с картой M0–M12, мандатом и критическим узлом. */
@@ -138,7 +156,7 @@ export const useCase = (caseId: string) => {
   if (demo) {
     return { ...live, data: demoCaseDetail(), isLoading: false, isError: false, error: null }
   }
-  return live
+  return quietOffline(live)
 }
 
 export const useCaseItems = (caseId: string) => {
@@ -150,7 +168,7 @@ export const useCaseItems = (caseId: string) => {
     enabled: Boolean(caseId) && !demo,
   })
   if (demo) return { ...live, data: demoCaseItems(), isLoading: false, isError: false, error: null }
-  return live
+  return quietOffline(live)
 }
 
 export const useStatuses = (caseId: string) => {
@@ -162,7 +180,7 @@ export const useStatuses = (caseId: string) => {
     enabled: Boolean(caseId) && !demo,
   })
   if (demo) return { ...live, data: demoStatuses(), isLoading: false, isError: false, error: null }
-  return live
+  return quietOffline(live)
 }
 
 export const useLedger = (caseId: string) => {
@@ -174,7 +192,7 @@ export const useLedger = (caseId: string) => {
     enabled: Boolean(caseId) && !demo,
   })
   if (demo) return { ...live, data: demoLedger(), isLoading: false, isError: false, error: null }
-  return live
+  return quietOffline(live)
 }
 
 export const useChat = (caseId: string) => {
@@ -186,7 +204,7 @@ export const useChat = (caseId: string) => {
     enabled: Boolean(caseId) && !demo,
   })
   if (demo) return { ...live, data: demoChat(), isLoading: false, isError: false, error: null }
-  return live
+  return quietOffline(live)
 }
 
 export const useIntakeMessages = (sessionId: string) => {

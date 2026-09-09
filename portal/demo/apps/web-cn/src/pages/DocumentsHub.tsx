@@ -12,7 +12,7 @@ export function DocumentsHubPage() {
 
   return (
     <Shell>
-      <PageHeader title={t('docs.title')} lead={t('docs.lead')} />
+      <PageHeader eyebrow={t('eyebrow.docs')} title={t('docs.title')} lead={t('docs.lead')} />
       <DemoMark>{t('shell.demoMark')}</DemoMark>
       <Card title={t('docs.companyLevel')}>
         <Table head={[t('intake.documents.type'), t('intake.documents.file'), t('intake.documents.status')]}>

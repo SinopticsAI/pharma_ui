@@ -10,6 +10,7 @@ import type { ComponentType } from 'react'
 import { useForm } from 'react-hook-form'
 import { NodeMapView } from '../NodeMap'
 import { useIntakeActions } from './context'
+import { coerceToolArgs } from './tool-args'
 
 /**
  * Карточки диалога.
@@ -35,7 +36,7 @@ function register<TArgs>(names: string[], Render: ComponentType<{ args: TArgs }>
   return names.map((toolName) =>
     makeAssistantToolUI<TArgs, unknown>({
       toolName,
-      render: ({ args }) => <Render args={args} />,
+      render: ({ args }) => <Render args={coerceToolArgs(args)} />,
     }),
   )
 }

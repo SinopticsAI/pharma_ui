@@ -37,6 +37,7 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader
+        eyebrow={t('eyebrow.official')}
         title={`${current.code} · ${text(l10n(current.product)).value}`}
         lead={text(l10n(current.manufacturer)).value}
       />
