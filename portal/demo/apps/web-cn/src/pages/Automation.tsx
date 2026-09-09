@@ -1,7 +1,19 @@
 import { useI18n } from '@demo/i18n'
 import { automationRows } from '../demo/catalog'
 import { useDemo } from '../demo/context'
-import { ActorBadge, Benefit, Button, Callout, Card, DemoMark, fill, NextAction, PageHeader, StatusBadge, Table } from '../kit'
+import {
+  ActorBadge,
+  Benefit,
+  Button,
+  Callout,
+  Card,
+  DemoMark,
+  fill,
+  NextAction,
+  PageHeader,
+  StatusBadge,
+  Table,
+} from '../kit'
 import { Shell } from '../Shell'
 
 export function AutomationPage() {
@@ -19,7 +31,11 @@ export function AutomationPage() {
 
   return (
     <Shell wide>
-      <PageHeader eyebrow={t('eyebrow.auto')} title={t('auto.title')} lead={fill(t('auto.lead'), { code: '#RU-0417' })} />
+      <PageHeader
+        eyebrow={t('eyebrow.auto')}
+        title={t('auto.title')}
+        lead={fill(t('auto.lead'), { code: '#RU-0417' })}
+      />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <ActorBadge actor="us">{t('nodeOwner.us')}</ActorBadge>
         <ActorBadge actor="agent">{t('classify.draft')}</ActorBadge>

@@ -3,7 +3,19 @@ import { useI18n } from '@demo/i18n'
 import { companyCards, riskChecks } from '../demo/catalog'
 import { useDemo } from '../demo/context'
 import { DEMO_ORG_MINGHU, isDemoId } from '../demo/ids'
-import { ActorBadge, Benefit, Callout, Card, DemoMark, Empty, KeyValue, NextAction, PageHeader, StatusBadge, Table } from '../kit'
+import {
+  ActorBadge,
+  Benefit,
+  Callout,
+  Card,
+  DemoMark,
+  Empty,
+  KeyValue,
+  NextAction,
+  PageHeader,
+  StatusBadge,
+  Table,
+} from '../kit'
 import { useOrganization } from '../queries'
 import { Shell } from '../Shell'
 import { CompanyCard } from './EntityCards'

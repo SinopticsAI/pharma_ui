@@ -4,7 +4,19 @@ import { Link } from '@tanstack/react-router'
 import { useCaseId } from '../CaseLayout'
 import { m3Documents } from '../demo/catalog'
 import { useDemo } from '../demo/context'
-import { ActorBadge, Benefit, Button, Callout, Card, DemoMark, KeyValue, PageHeader, RiskTag, StatusBadge, Table } from '../kit'
+import {
+  ActorBadge,
+  Benefit,
+  Button,
+  Callout,
+  Card,
+  DemoMark,
+  KeyValue,
+  PageHeader,
+  RiskTag,
+  StatusBadge,
+  Table,
+} from '../kit'
 import { useCase } from '../queries'
 
 const STEP_LABEL = { done: 'node.done', progress: 'node.weDoing', pending: 'node.fixWithAgent' } as const

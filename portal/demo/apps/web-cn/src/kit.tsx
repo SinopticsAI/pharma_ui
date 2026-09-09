@@ -45,9 +45,7 @@ export function PageHeader({
 }) {
   return (
     <div className="mb-5 space-y-2">
-      {eyebrow ? (
-        <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">{eyebrow}</p>
-      ) : null}
+      {eyebrow ? <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">{eyebrow}</p> : null}
       <div className="flex items-start justify-between gap-3">
         <h1 className="font-serif text-[1.75rem] leading-tight font-bold tracking-tight text-balance md:text-4xl">
           {title}

@@ -23,10 +23,7 @@ function fromString(value: string): unknown {
   const folded = trimmed.toLowerCase()
   if (folded === 'true') return true
   if (folded === 'false') return false
-  if (
-    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-    (trimmed.startsWith('[') && trimmed.endsWith(']'))
-  ) {
+  if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
     try {
       return walk(JSON.parse(trimmed))
     } catch {

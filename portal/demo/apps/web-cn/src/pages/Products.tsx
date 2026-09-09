@@ -67,7 +67,11 @@ export function ClassificationPage({ productId }: { productId: string }) {
             <article
               key={variant.id}
               className={`space-y-3 rounded-lg border bg-card p-4 ${
-                forbidden ? 'border-muted-foreground/25 bg-muted/40' : active ? 'border-primary ring-1 ring-primary/30' : ''
+                forbidden
+                  ? 'border-muted-foreground/25 bg-muted/40'
+                  : active
+                    ? 'border-primary ring-1 ring-primary/30'
+                    : ''
               }`}
             >
               <header className="space-y-1.5">
