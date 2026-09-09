@@ -30,7 +30,11 @@ function fakeApi(calls: string[], overrides: Partial<Record<'putFile', () => Pro
   }
 }
 
-function adapterWith(api: ReturnType<typeof fakeApi>, onError?: (error: unknown) => void) {
+function adapterWith(
+  api: ReturnType<typeof fakeApi>,
+  onError?: (error: unknown) => void,
+  onBusy?: (busy: boolean) => void,
+) {
   return createIntakeAttachmentAdapter({
     api: api as unknown as ApiClient,
     queryClient: new QueryClient(),
@@ -40,6 +44,7 @@ function adapterWith(api: ReturnType<typeof fakeApi>, onError?: (error: unknown)
     itemType: () => 'poa-upp',
     planeEnabled: () => false,
     onError,
+    onBusy,
   })
 }
 
@@ -91,6 +96,28 @@ describe('createIntakeAttachmentAdapter', () => {
     expect(calls).toEqual(['upload-url'])
     expect(api.confirmOrgUpload).not.toHaveBeenCalled()
     expect(onError).toHaveBeenCalledTimes(1)
+  })
+
+  it('сигналит onBusy до putFile и сбрасывает после успеха', async () => {
+    const calls: string[] = []
+    const api = fakeApi(calls)
+    const adapter = adapterWith(api, undefined, (busy) => calls.push(busy ? 'busy-true' : 'busy-false'))
+    const pending = await adapter.add({ file: file() })
+    await adapter.send(pending)
+    expect(calls).toEqual(['busy-true', 'upload-url', 'put', 'confirm', 'busy-false'])
+  })
+
+  it('сбрасывает onBusy, если хранилище отказало', async () => {
+    const calls: string[] = []
+    const api = fakeApi(calls, {
+      putFile: async () => {
+        throw new Error('storage refused 403')
+      },
+    })
+    const adapter = adapterWith(api, undefined, (busy) => calls.push(busy ? 'busy-true' : 'busy-false'))
+    const pending = await adapter.add({ file: file() })
+    await expect(adapter.send(pending)).rejects.toThrow('storage refused 403')
+    expect(calls).toEqual(['busy-true', 'upload-url', 'busy-false'])
   })
 
   it('передаёт usePlane на confirm, когда галочка включена', async () => {

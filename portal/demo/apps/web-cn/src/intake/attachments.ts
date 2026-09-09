@@ -40,6 +40,8 @@ export interface IntakeAttachmentOptions {
   itemType: () => string
   /** Загрузка падает вне нити: ошибку показывает экран, а вложение остаётся в композере. */
   onError?: (error: unknown) => void
+  /** Send крутит PUT/confirm: чип показывает спиннер, пока busy. */
+  onBusy?: (busy: boolean) => void
   /** Текст, который видят человек и агент: в нём обязаны остаться itemId и organizationId. */
   uploadedText?: (parts: { name: string; organizationId: string; itemType: string; itemId: string }) => string
   /** На момент confirm: галочка Plane читается здесь, не из замыкания add. */
@@ -77,6 +79,7 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
         productId: options.productId,
       }
 
+      options.onBusy?.(true)
       try {
         const ticket = await options.api.requestOrgUploadUrl(options.organizationId, request)
         await options.api.putFile(ticket, attachment.file)
@@ -114,6 +117,8 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
       } catch (error) {
         options.onError?.(error)
         throw error
+      } finally {
+        options.onBusy?.(false)
       }
     },
 

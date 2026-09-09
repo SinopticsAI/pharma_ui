@@ -79,7 +79,7 @@ function AskDocument({ args }: { args: AskDocumentArgs }) {
               placeholder={t('intake.card.answerPlaceholder')}
               aria-label={t('intake.card.answerAria')}
             />
-            <Button type="submit" variant="outline">
+            <Button type="submit" variant="outline" disabled={busy}>
               {t('intake.chat.send')}
             </Button>
           </form>

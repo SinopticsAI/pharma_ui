@@ -11,6 +11,7 @@ import { useAuth } from '@demo/auth'
 import type { IntakeMessage, ProgressSection } from '@demo/domain'
 import { type MessageKey, useI18n } from '@demo/i18n'
 import { useQueryClient } from '@tanstack/react-query'
+import { Loader2 } from 'lucide-react'
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Empty } from '../kit'
 import { usePlaneEnabled } from '../planeToggle'
@@ -61,11 +62,47 @@ import {
 import { ProgressPanel } from './ProgressPanel'
 import { type AgentId, createIntakeTransport } from './transport'
 
-const ExtractionUiContext = createContext<{ line: ProcessLine | null; hideEmpty: boolean; chatFailed: boolean }>({
+const WAITING_PROCESS = new Set<ProcessLine['kind']>(['accepted', 'reading', 'filling'])
+
+const ExtractionUiContext = createContext<{
+  line: ProcessLine | null
+  hideEmpty: boolean
+  chatFailed: boolean
+  uploadBusy: boolean
+  lastAssistantEmpty: boolean
+}>({
   line: null,
   hideEmpty: false,
   chatFailed: false,
+  uploadBusy: false,
+  lastAssistantEmpty: false,
 })
+
+function TypingDots({ label }: { label?: string }) {
+  return (
+    <span className="inline-flex items-center gap-0.5" role="status" aria-live="polite" aria-label={label}>
+      <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" aria-hidden />
+      <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" aria-hidden />
+      <span className="size-1.5 animate-bounce rounded-full bg-current" aria-hidden />
+    </span>
+  )
+}
+
+function lastAssistantIsEmpty(messages: unknown): boolean {
+  if (!Array.isArray(messages) || messages.length === 0) return false
+  const last = messages[messages.length - 1] as { role?: string; content?: unknown; parts?: unknown }
+  if (last?.role !== 'assistant') return false
+  const content = last.content ?? last.parts
+  if (content == null) return true
+  if (typeof content === 'string') return content.trim() === ''
+  if (!Array.isArray(content)) return false
+  return content.every((part) => {
+    if (!part || typeof part !== 'object') return true
+    const row = part as { type?: string; text?: string }
+    if (row.type === 'text' || row.type == null) return !row.text?.trim()
+    return false
+  })
+}
 
 /**
  * Экран интейка: слева нить диалога и загрузки, справа комплектность по разделам.
@@ -118,10 +155,31 @@ function UserMessage() {
   )
 }
 
+function AssistantMessage() {
+  const { t } = useI18n()
+  const { line } = useContext(ExtractionUiContext)
+  return (
+    <MessagePrimitive.Root
+      className="max-w-[90%] space-y-2 rounded-lg bg-muted px-3 py-2 text-sm"
+      data-role="assistant"
+    >
+      <MessagePrimitive.If hasContent>
+        <MessagePrimitive.Parts />
+      </MessagePrimitive.If>
+      {line ? null : (
+        <MessagePrimitive.If last hasContent={false}>
+          <TypingDots label={t('intake.chat.replying')} />
+        </MessagePrimitive.If>
+      )}
+    </MessagePrimitive.Root>
+  )
+}
+
 function Thread() {
   const { t } = useI18n()
   const { setItemType, composerItemType } = useIntakeActions()
-  const { line, hideEmpty, chatFailed } = useContext(ExtractionUiContext)
+  const { line, hideEmpty, chatFailed, uploadBusy, lastAssistantEmpty } = useContext(ExtractionUiContext)
+  const waiting = line ? WAITING_PROCESS.has(line.kind) : false
 
   return (
     <ThreadPrimitive.Root className="flex h-[min(72vh,720px)] flex-col rounded-lg border bg-card">
@@ -135,24 +193,23 @@ function Thread() {
         <ThreadPrimitive.Messages
           components={{
             UserMessage,
-            AssistantMessage: () => (
-              <MessagePrimitive.Root
-                className="max-w-[90%] space-y-2 rounded-lg bg-muted px-3 py-2 text-sm"
-                data-role="assistant"
-              >
-                <MessagePrimitive.Parts />
-              </MessagePrimitive.Root>
-            ),
+            AssistantMessage,
           }}
         />
 
         {line ? (
-          <div className="text-sm text-muted-foreground" data-process={line.kind}>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground" data-process={line.kind}>
+            {waiting ? <TypingDots /> : null}
             {processLineText(line, t)}
           </div>
-        ) : chatFailed ? null : (
+        ) : chatFailed || lastAssistantEmpty ? null : (
           <ThreadPrimitive.If running>
-            <div className="text-sm text-muted-foreground">{t('intake.chat.replying')}</div>
+            <div
+              className="max-w-[90%] rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground"
+              data-role="assistant"
+            >
+              <TypingDots label={t('intake.chat.replying')} />
+            </div>
           </ThreadPrimitive.If>
         )}
       </ThreadPrimitive.Viewport>
@@ -163,12 +220,16 @@ function Thread() {
             {() => (
               <AttachmentPrimitive.Root className="inline-flex items-center gap-2 rounded-md border bg-background px-2 py-1 text-xs">
                 <AttachmentPrimitive.Name />
-                <AttachmentPrimitive.Remove
-                  className="text-muted-foreground hover:text-foreground"
-                  aria-label={t('intake.chat.removeAttachment')}
-                >
-                  ×
-                </AttachmentPrimitive.Remove>
+                {uploadBusy ? (
+                  <Loader2 className="size-3.5 animate-spin" aria-label={t('intake.chat.uploading')} />
+                ) : (
+                  <AttachmentPrimitive.Remove
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label={t('intake.chat.removeAttachment')}
+                  >
+                    ×
+                  </AttachmentPrimitive.Remove>
+                )}
               </AttachmentPrimitive.Root>
             )}
           </ComposerPrimitive.Attachments>
@@ -182,12 +243,16 @@ function Thread() {
           />
           <ComposerPrimitive.AddAttachment
             multiple={false}
+            disabled={uploadBusy}
             onClick={() => setItemType(composerItemType)}
-            className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm hover:bg-accent"
+            className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
           >
             {t('intake.chat.attach')}
           </ComposerPrimitive.AddAttachment>
-          <ComposerPrimitive.Send className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground">
+          <ComposerPrimitive.Send
+            disabled={uploadBusy}
+            className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground disabled:pointer-events-none disabled:opacity-50"
+          >
             {t('intake.chat.send')}
           </ComposerPrimitive.Send>
         </div>
@@ -282,8 +347,10 @@ function IntakeChatRuntime({
   const { locale, t } = useI18n()
   const { getAccessToken } = useAuth()
   const [uploadError, setUploadError] = useState<unknown>(null)
+  const [uploadBusy, setUploadBusy] = useState(false)
   const [chatError, setChatError] = useState<unknown>(null)
   const [journalError, setJournalError] = useState<unknown>(null)
+  const [lastAssistantEmpty, setLastAssistantEmpty] = useState(false)
   const cancelRunRef = useRef<(() => void) | undefined>(undefined)
   const clearingRunRef = useRef(false)
   const persisted = useRef(journalPersistedIds(journalRows))
@@ -342,6 +409,7 @@ function IntakeChatRuntime({
         itemType: () => itemType.current,
         planeEnabled: () => usePlaneRef.current,
         onError: (error) => setUploadError(() => error),
+        onBusy: setUploadBusy,
         uploadedText: ({ name }) => t('intake.chat.uploaded').replace('{name}', name),
       }),
     [api, queryClient, organizationId, productId, sessionId, t],
@@ -403,6 +471,7 @@ function IntakeChatRuntime({
       const state = thread.getState?.()
       const running = Boolean(state?.isRunning)
       setThreadRunning(running)
+      setLastAssistantEmpty(lastAssistantIsEmpty(state?.messages))
       persistJournalRef.current(normalizeUiMessages(state?.messages), JOURNAL_USER_ROLES)
       if (!running) {
         persistJournalRef.current(normalizeUiMessages(state?.messages), JOURNAL_ASSISTANT_ROLES)
@@ -550,9 +619,9 @@ function IntakeChatRuntime({
         if (scope === 'company') approveCompany.mutate()
         else if (productId) approveProduct.mutate()
       },
-      busy: approveCompany.isPending || approveProduct.isPending,
+      busy: approveCompany.isPending || approveProduct.isPending || uploadBusy,
     }),
-    [runtime, approveCompany, approveProduct, productId, composerItemType],
+    [runtime, approveCompany, approveProduct, productId, composerItemType, uploadBusy],
   )
 
   // Загрузка падает вне нити: сообщение агенту не уходит, вложение остаётся в
@@ -562,7 +631,9 @@ function IntakeChatRuntime({
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <IntakeActionsProvider value={actions}>
-        <ExtractionUiContext.Provider value={{ line, hideEmpty, chatFailed: Boolean(chatError) }}>
+        <ExtractionUiContext.Provider
+          value={{ line, hideEmpty, chatFailed: Boolean(chatError), uploadBusy, lastAssistantEmpty }}
+        >
           <IntakeToolUIs />
           <div className="grid items-start gap-4 lg:grid-cols-[1fr_340px]">
             <div className="space-y-2">
