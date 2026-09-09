@@ -36,6 +36,7 @@ export function Shell({
   const { state, pending } = useDemo()
   const params = useParams({ strict: false })
   const caseId = typeof params.caseId === 'string' ? params.caseId : undefined
+  const productId = typeof params.productId === 'string' ? params.productId : undefined
   const organizations = useOrganizations()
   const products = useAllProducts((organizations.data ?? []).map((item) => item.id))
   const cases = useCases()
@@ -50,11 +51,18 @@ export function Shell({
 
   const account = text(l10n(identity.account.name, identity.accountId)).value
   const userName = identity.displayName || text(l10n(undefined, t('brand.userFallback'))).value
-  const currentCase = (cases.data ?? []).find((item) => item.id === caseId) ?? (cases.data ?? [])[0]
-  const currentOrg =
-    (organizations.data ?? []).find((item) => item.id === currentCase?.organizationId) ?? (organizations.data ?? [])[0]
+  const currentCase =
+    (cases.data ?? []).find((item) => item.id === caseId) ??
+    (cases.data ?? []).find((item) => item.productId === productId) ??
+    (cases.data ?? [])[0]
   const currentProduct =
-    (products.data ?? []).find((item) => item.id === currentCase?.productId) ?? (products.data ?? [])[0]
+    (products.data ?? []).find((item) => item.id === productId) ??
+    (products.data ?? []).find((item) => item.id === currentCase?.productId) ??
+    (products.data ?? [])[0]
+  const currentOrg =
+    (organizations.data ?? []).find((item) => item.id === currentProduct?.organizationId) ??
+    (organizations.data ?? []).find((item) => item.id === currentCase?.organizationId) ??
+    (organizations.data ?? [])[0]
   const companyLabel = brandMeta ?? (currentOrg ? text(l10n(currentOrg.name, currentOrg.id)).value : '')
   const productLabel = currentCase
     ? text(l10n(currentCase.product)).value

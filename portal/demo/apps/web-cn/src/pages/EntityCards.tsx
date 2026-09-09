@@ -85,13 +85,16 @@ export function ProductCard({ item }: { item: ProductCardView }) {
         </div>
       ) : null}
       <div className="flex flex-wrap gap-2">
+        <Link to="/products/$productId" params={{ productId: product.id }}>
+          <Button type="button">{t('home.openCabinet')}</Button>
+        </Link>
         {hasCase ? (
-          <Link to="/case/$caseId" params={{ caseId: product.caseId }}>
-            <Button type="button">{t('home.openMap')}</Button>
+          <Link to="/case/$caseId" params={{ caseId: product.caseId }} className="text-sm underline">
+            {t('home.openMap')} →
           </Link>
         ) : (
-          <Link to="/products/$productId/classify" params={{ productId: product.id }}>
-            <Button type="button">{t('home.openClassify')}</Button>
+          <Link to="/products/$productId/classify" params={{ productId: product.id }} className="text-sm underline">
+            {t('home.openClassify')} →
           </Link>
         )}
         <Link to="/intake/product/$productId" params={{ productId: product.id }} className="text-sm underline">

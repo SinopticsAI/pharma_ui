@@ -30,6 +30,7 @@ import { Route as CaseCaseIdMandateRouteImport } from './routes/case/$caseId/man
 import { Route as CaseCaseIdRoadmapRouteImport } from './routes/case/$caseId/roadmap'
 import { Route as IntakeCompanyOrganizationIdRouteImport } from './routes/intake/company/$organizationId'
 import { Route as IntakeProductProductIdRouteImport } from './routes/intake/product/$productId'
+import { Route as ProductsProductIdIndexRouteImport } from './routes/products/$productId/index'
 import { Route as ProductsProductIdClassifyRouteImport } from './routes/products/$productId/classify'
 import { Route as CaseCaseIdNodesNodeCodeRouteImport } from './routes/case/$caseId/nodes/$nodeCode'
 
@@ -139,6 +140,11 @@ const IntakeProductProductIdRoute = IntakeProductProductIdRouteImport.update({
   path: '/intake/product/$productId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProductsProductIdIndexRoute = ProductsProductIdIndexRouteImport.update({
+  id: '/products/$productId/',
+  path: '/products/$productId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductsProductIdClassifyRoute =
   ProductsProductIdClassifyRouteImport.update({
     id: '/products/$productId/classify',
@@ -174,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/intake/product/$productId': typeof IntakeProductProductIdRoute
   '/products/$productId/classify': typeof ProductsProductIdClassifyRoute
   '/case/$caseId/': typeof CaseCaseIdIndexRoute
+  '/products/$productId/': typeof ProductsProductIdIndexRoute
   '/case/$caseId/nodes/$nodeCode': typeof CaseCaseIdNodesNodeCodeRoute
 }
 export interface FileRoutesByTo {
@@ -198,6 +205,7 @@ export interface FileRoutesByTo {
   '/intake/product/$productId': typeof IntakeProductProductIdRoute
   '/products/$productId/classify': typeof ProductsProductIdClassifyRoute
   '/case/$caseId': typeof CaseCaseIdIndexRoute
+  '/products/$productId': typeof ProductsProductIdIndexRoute
   '/case/$caseId/nodes/$nodeCode': typeof CaseCaseIdNodesNodeCodeRoute
 }
 export interface FileRoutesById {
@@ -224,6 +232,7 @@ export interface FileRoutesById {
   '/intake/product/$productId': typeof IntakeProductProductIdRoute
   '/products/$productId/classify': typeof ProductsProductIdClassifyRoute
   '/case/$caseId/': typeof CaseCaseIdIndexRoute
+  '/products/$productId/': typeof ProductsProductIdIndexRoute
   '/case/$caseId/nodes/$nodeCode': typeof CaseCaseIdNodesNodeCodeRoute
 }
 export interface FileRouteTypes {
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
     | '/intake/product/$productId'
     | '/products/$productId/classify'
     | '/case/$caseId/'
+    | '/products/$productId/'
     | '/case/$caseId/nodes/$nodeCode'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/intake/product/$productId'
     | '/products/$productId/classify'
     | '/case/$caseId'
+    | '/products/$productId'
     | '/case/$caseId/nodes/$nodeCode'
   id:
     | '__root__'
@@ -300,6 +311,7 @@ export interface FileRouteTypes {
     | '/intake/product/$productId'
     | '/products/$productId/classify'
     | '/case/$caseId/'
+    | '/products/$productId/'
     | '/case/$caseId/nodes/$nodeCode'
   fileRoutesById: FileRoutesById
 }
@@ -319,6 +331,7 @@ export interface RootRouteChildren {
   IntakeCompanyOrganizationIdRoute: typeof IntakeCompanyOrganizationIdRoute
   IntakeProductProductIdRoute: typeof IntakeProductProductIdRoute
   ProductsProductIdClassifyRoute: typeof ProductsProductIdClassifyRoute
+  ProductsProductIdIndexRoute: typeof ProductsProductIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -470,6 +483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntakeProductProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/products/$productId/': {
+      id: '/products/$productId/'
+      path: '/products/$productId'
+      fullPath: '/products/$productId/'
+      preLoaderRoute: typeof ProductsProductIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/products/$productId/classify': {
       id: '/products/$productId/classify'
       path: '/products/$productId/classify'
@@ -529,6 +549,7 @@ const rootRouteChildren: RootRouteChildren = {
   IntakeCompanyOrganizationIdRoute: IntakeCompanyOrganizationIdRoute,
   IntakeProductProductIdRoute: IntakeProductProductIdRoute,
   ProductsProductIdClassifyRoute: ProductsProductIdClassifyRoute,
+  ProductsProductIdIndexRoute: ProductsProductIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
