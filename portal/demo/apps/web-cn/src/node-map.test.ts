@@ -1,7 +1,7 @@
 import type { NodeMapItem } from '@demo/domain'
 import { describe, expect, it } from 'vitest'
 import { demoNodes } from './demo/catalog'
-import { COLUMN_WIDTH, layoutNodeMap, ROW_HEIGHT } from './node-map'
+import { COLUMN_WIDTH, layoutNodeMap, nodeMapProgress, ROW_HEIGHT } from './node-map'
 
 const node = (code: string, position: number, blockedBy: string[] = []): NodeMapItem => ({
   code,
@@ -15,6 +15,13 @@ const node = (code: string, position: number, blockedBy: string[] = []): NodeMap
 
 const byId = (nodes: { id: string; position: { x: number; y: number } }[]) =>
   Object.fromEntries(nodes.map((entry) => [entry.id, entry]))
+
+describe('nodeMapProgress', () => {
+  it('считает закрытые узлы и долю от длины карты', () => {
+    expect(nodeMapProgress([])).toEqual({ done: 0, total: 0, percent: 0 })
+    expect(nodeMapProgress(demoNodes())).toEqual({ done: 5, total: 13, percent: 38 })
+  })
+})
 
 describe('layoutNodeMap', () => {
   it('раскладывает узлы по рангу DAG, внутри колонки — по position', () => {

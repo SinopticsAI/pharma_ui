@@ -109,7 +109,7 @@ export class ApiClient {
     init: { body?: unknown; query?: Query; schema?: ZodType<T> } = {},
   ): Promise<T> {
     // Offline-витрина: ядра нет, поэтому любой живой запрос отклоняем как 404.
-    // Списки подставят demo-строки через mergeById, а demo-* id сюда не доходят.
+    // Списки подставят demo-строки только при VITE_DEMO_OFFLINE, а demo-* id сюда не доходят.
     if (this.options.baseUrl === 'offline://demo') {
       throw new ApiError(404, 'offline_demo', 'offline demo: core is not reachable')
     }

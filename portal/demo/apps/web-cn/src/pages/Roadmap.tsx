@@ -3,9 +3,9 @@ import { useI18n } from '@demo/i18n'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useCaseId } from '../CaseLayout'
-import { filingProgressPercent, nodesDoneCount } from '../demo/catalog'
 import { Benefit, Button, Callout, Card, Empty, fill, NextAction, PageHeader, StatusBadge, Table } from '../kit'
 import { NodeMapView } from '../NodeMap'
+import { nodeMapProgress } from '../node-map'
 import { useCase } from '../queries'
 
 export function RoadmapPage() {
@@ -18,6 +18,7 @@ export function RoadmapPage() {
   if (caseQuery.isLoading) return <Empty>{t('common.loading')}</Empty>
 
   const nodes = caseQuery.data?.nodeMap ?? []
+  const progress = nodeMapProgress(nodes)
   const critical = caseQuery.data?.criticalNode ?? null
   const open = (code: string) => {
     void navigate({ to: '/case/$caseId/nodes/$nodeCode', params: { caseId, nodeCode: code } })
@@ -42,10 +43,8 @@ export function RoadmapPage() {
       />
 
       <div className="mb-3 flex flex-wrap gap-2">
-        <StatusBadge tone="ok">
-          {fill(t('map.readyOf'), { done: nodesDoneCount(), total: nodes.length || 13 })}
-        </StatusBadge>
-        <StatusBadge tone="accent">{fill(t('map.toFiling'), { percent: filingProgressPercent() })}</StatusBadge>
+        <StatusBadge tone="ok">{fill(t('map.readyOf'), { done: progress.done, total: progress.total })}</StatusBadge>
+        <StatusBadge tone="accent">{fill(t('map.toFiling'), { percent: progress.percent })}</StatusBadge>
       </div>
 
       {critical ? (

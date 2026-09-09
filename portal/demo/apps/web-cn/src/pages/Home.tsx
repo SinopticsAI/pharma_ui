@@ -1,11 +1,11 @@
-import { describeError } from '@demo/api-client'
+import { describeError, OFFLINE_DEMO } from '@demo/api-client'
 import type { Organization } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
 import { useNavigate } from '@tanstack/react-router'
-import { companyCards, productCards, saleProgressPercent } from '../demo/catalog'
 import { useDemo } from '../demo/context'
-import { Callout, Card, DemoMark, Metric, NextAction, PageHeader } from '../kit'
-import { useCreateOrganization, useCreateProduct, useOpenIntakeSession, useOrganizations } from '../queries'
+import { Callout, Card, DemoMark, Empty, Metric, NextAction, PageHeader } from '../kit'
+import { usePortfolioCards } from '../live-cards'
+import { useCreateOrganization, useCreateProduct, useOpenIntakeSession } from '../queries'
 import { Shell } from '../Shell'
 import { CompanyCard, ProductCard } from './EntityCards'
 
@@ -13,15 +13,15 @@ export function HomePage() {
   const { t, text } = useI18n()
   const navigate = useNavigate()
   const { state, pending, reset } = useDemo()
-  const organizations = useOrganizations()
+  const portfolio = usePortfolioCards(state)
   const createOrganization = useCreateOrganization()
   const createProduct = useCreateProduct()
   const openSession = useOpenIntakeSession()
-  const companies = companyCards(state)
-  const products = productCards(state)
+  const companies = portfolio.companies
+  const products = portfolio.products
   const busy = createOrganization.isPending || createProduct.isPending || openSession.isPending
   const failure = createOrganization.error ?? createProduct.error ?? openSession.error
-  const liveReady = (organizations.data ?? []).find(
+  const liveReady = (portfolio.organizations.data ?? []).find(
     (item) => item.status === 'profile_approved' && !item.id.startsWith('demo-'),
   )
 
@@ -46,16 +46,19 @@ export function HomePage() {
   }
 
   const next = products[0]
+  const waiting = OFFLINE_DEMO ? pending : portfolio.pendingLive
 
   return (
     <Shell>
       <PageHeader eyebrow={t('eyebrow.home')} title={t('home.title')} lead={t('home.lead')} />
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <DemoMark>{t('shell.demoMark')}</DemoMark>
-        <button type="button" className="text-xs underline" onClick={reset}>
-          reset demo
-        </button>
-      </div>
+      {OFFLINE_DEMO ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <DemoMark>{t('shell.demoMark')}</DemoMark>
+          <button type="button" className="text-xs underline" onClick={reset}>
+            reset demo
+          </button>
+        </div>
+      ) : null}
 
       {next ? (
         <NextAction
@@ -74,7 +77,9 @@ export function HomePage() {
       ) : null}
 
       {failure ? <Callout tone="deadline">{describeError(failure)}</Callout> : null}
-      {organizations.isError ? <Callout tone="deadline">{describeError(organizations.error)}</Callout> : null}
+      {portfolio.organizations.isError ? (
+        <Callout tone="deadline">{describeError(portfolio.organizations.error)}</Callout>
+      ) : null}
 
       <h2 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">{t('home.summary')}</h2>
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -94,10 +99,10 @@ export function HomePage() {
           <Metric value={next ? text(next.deadline).value : '—'} label={t('home.nextDeadline')} />
         </Card>
         <Card>
-          <Metric accent value={`${saleProgressPercent()}%`} label={t('home.saleProgress')} />
+          <Metric accent value={`${portfolio.saleProgress}%`} label={t('home.saleProgress')} />
         </Card>
         <Card>
-          <Metric accent value={pending} label={t('home.pendingUser')} />
+          <Metric accent value={waiting} label={t('home.pendingUser')} />
         </Card>
       </div>
 
@@ -127,6 +132,10 @@ export function HomePage() {
       <h2 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
         {t('portfolio.companies')}
       </h2>
+      {portfolio.organizations.isLoading && companies.length === 0 ? <Empty>{t('common.loading')}</Empty> : null}
+      {!portfolio.organizations.isLoading && companies.length === 0 ? (
+        <Empty>{t('portfolio.noCompanies')}</Empty>
+      ) : null}
       <div className="grid gap-4 lg:grid-cols-2">
         {companies.map((item) => (
           <CompanyCard key={item.organization.id} item={item} />

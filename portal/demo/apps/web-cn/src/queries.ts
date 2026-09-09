@@ -21,7 +21,7 @@ import { isExtractionPending } from './intake/extractionStatus'
 
 /**
  * Чтения идут в ядро. Идентификаторы `demo-*` не зовут API: это walkthrough
- * MH-200, явно помеченный как иллюстрация.
+ * MH-200. Списки подмешивают каталог только при `VITE_DEMO_OFFLINE=1`.
  */
 
 /**
@@ -44,12 +44,17 @@ function mergeById<T extends { id: string }>(demo: T[], live: T[] | undefined): 
 
 /**
  * Витрина без ядра: списочные хуки всё равно зовут API, и в offline он
- * отвечает 404. Demo-строки уже подставлены через mergeById, поэтому ошибку
+ * отвечает 404. Demo-строки уже подставлены через overlayDemo, поэтому ошибку
  * и состояние загрузки здесь гасим — экран показывает готовые demo-данные.
  */
 function quietOffline<T extends { isError: boolean; isLoading: boolean; error: unknown }>(query: T): T {
   if (!OFFLINE_DEMO) return query
   return { ...query, isError: false, isLoading: false, error: null }
+}
+
+function overlayDemo<T extends { id: string }>(demo: T[], live: T[] | undefined): T[] {
+  if (!OFFLINE_DEMO) return live ?? []
+  return mergeById(demo, live)
 }
 
 export const useOrganizations = () => {
@@ -59,7 +64,7 @@ export const useOrganizations = () => {
   return quietOffline({
     ...live,
     isLoading: live.isLoading && !live.data,
-    data: mergeById(listDemoOrganizations(state), live.data),
+    data: overlayDemo(listDemoOrganizations(state), live.data),
   })
 }
 
@@ -114,7 +119,7 @@ export const useAllProducts = (organizationIds: string[]) => {
   return quietOffline({
     ...live,
     isLoading: liveIds.length > 0 && live.isLoading,
-    data: mergeById(listDemoProducts(state), live.data),
+    data: overlayDemo(listDemoProducts(state), live.data),
   })
 }
 
@@ -140,7 +145,7 @@ export const useCases = () => {
   return quietOffline({
     ...live,
     isLoading: live.isLoading && !live.data,
-    data: mergeById([demoCaseDetail().case], live.data),
+    data: overlayDemo([demoCaseDetail().case], live.data),
   })
 }
 

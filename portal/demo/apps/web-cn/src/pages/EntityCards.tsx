@@ -3,7 +3,6 @@ import { useI18n } from '@demo/i18n'
 import { Progress } from '@demo/ui/components/progress'
 import { Link } from '@tanstack/react-router'
 import type { CompanyCardView, ProductCardView } from '../demo/catalog'
-import { DEMO_CASE_RU0417 } from '../demo/ids'
 import { Button, Card, KeyValue, StatusBadge } from '../kit'
 
 export function CompanyCard({ item }: { item: CompanyCardView }) {
@@ -87,7 +86,7 @@ export function ProductCard({ item }: { item: ProductCardView }) {
       ) : null}
       <div className="flex flex-wrap gap-2">
         {hasCase ? (
-          <Link to="/case/$caseId" params={{ caseId: product.caseId || DEMO_CASE_RU0417 }}>
+          <Link to="/case/$caseId" params={{ caseId: product.caseId }}>
             <Button type="button">{t('home.openMap')}</Button>
           </Link>
         ) : (

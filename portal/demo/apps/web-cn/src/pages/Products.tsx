@@ -1,23 +1,40 @@
+import { OFFLINE_DEMO } from '@demo/api-client'
 import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
 import { useNavigate } from '@tanstack/react-router'
-import { classificationVariants, productCards } from '../demo/catalog'
+import { classificationVariants } from '../demo/catalog'
 import { useDemo } from '../demo/context'
 import { DEMO_CASE_RU0417, DEMO_PRODUCT_RK30, isDemoId } from '../demo/ids'
-import { ActorBadge, Benefit, Button, Callout, Card, DemoMark, NextAction, PageHeader, StatusBadge } from '../kit'
+import {
+  ActorBadge,
+  Benefit,
+  Button,
+  Callout,
+  Card,
+  DemoMark,
+  Empty,
+  NextAction,
+  PageHeader,
+  StatusBadge,
+} from '../kit'
+import { usePortfolioCards } from '../live-cards'
 import { Shell } from '../Shell'
 import { ProductCard } from './EntityCards'
 
 export function ProductsPage() {
   const { t } = useI18n()
   const { state } = useDemo()
+  const portfolio = usePortfolioCards(state)
 
   return (
     <Shell>
       <PageHeader eyebrow={t('eyebrow.product')} title={t('nav.products')} lead={t('home.lead')} />
-      <DemoMark>{t('shell.demoMark')}</DemoMark>
+      {OFFLINE_DEMO ? <DemoMark>{t('shell.demoMark')}</DemoMark> : null}
+      {portfolio.productsQuery.isLoading && portfolio.products.length === 0 ? (
+        <Empty>{t('common.loading')}</Empty>
+      ) : null}
       <div className="grid gap-4 lg:grid-cols-2">
-        {productCards(state).map((item) => (
+        {portfolio.products.map((item) => (
           <ProductCard key={item.product.id} item={item} />
         ))}
       </div>
@@ -44,7 +61,7 @@ export function ClassificationPage({ productId }: { productId: string }) {
         <ActorBadge actor="us">{t('nodeOwner.us')}</ActorBadge>
         <ActorBadge actor="agent">{t('classify.draft')}</ActorBadge>
       </div>
-      <DemoMark>{t('shell.demoMark')}</DemoMark>
+      {OFFLINE_DEMO || isDemoId(productId) ? <DemoMark>{t('shell.demoMark')}</DemoMark> : null}
       <div className="mb-4 flex flex-wrap gap-2">
         <StatusBadge tone={specialist ? 'ok' : 'warm'}>
           {specialist ? t('classify.specialistDone') : t('classify.specialistPending')}

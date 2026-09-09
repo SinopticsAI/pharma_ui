@@ -4,6 +4,12 @@ import { type Edge, type Node, Position } from '@xyflow/react'
 export const COLUMN_WIDTH = 280
 export const ROW_HEIGHT = 188
 
+export function nodeMapProgress(items: NodeMapItem[]): { done: number; total: number; percent: number } {
+  const done = items.filter((item) => item.status === 'done').length
+  const total = items.length
+  return { done, total, percent: total === 0 ? 0 : Math.round((done / total) * 100) }
+}
+
 function rankByLongestPath(items: NodeMapItem[]): Map<string, number> {
   const byCode = new Map(items.map((item) => [item.code, item]))
   const known = new Set(byCode.keys())

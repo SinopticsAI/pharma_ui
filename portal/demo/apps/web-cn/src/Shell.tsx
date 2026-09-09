@@ -1,8 +1,9 @@
-import { useIdentity } from '@demo/api-client'
+import { OFFLINE_DEMO, useIdentity } from '@demo/api-client'
 import { useAuth } from '@demo/auth'
 import type { Locale } from '@demo/domain'
 import { l10n } from '@demo/domain'
 import { LOCALE_LABEL, useI18n } from '@demo/i18n'
+import { useParams } from '@tanstack/react-router'
 import { Bell, Menu, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
@@ -10,6 +11,7 @@ import { CabinetNav } from './cabinet-nav'
 import { demoNotifications, mh200Name, minghuName } from './demo/catalog'
 import { useDemo } from './demo/context'
 import { Button, fill, LocaleSwitch } from './kit'
+import { useAllProducts, useCases, useOrganizations } from './queries'
 
 const LOCALES: { value: Locale; label: string }[] = [
   { value: 'zh', label: LOCALE_LABEL.zh },
@@ -32,6 +34,11 @@ export function Shell({
   const identity = useIdentity()
   const { logout } = useAuth()
   const { state, pending } = useDemo()
+  const params = useParams({ strict: false })
+  const caseId = typeof params.caseId === 'string' ? params.caseId : undefined
+  const organizations = useOrganizations()
+  const products = useAllProducts((organizations.data ?? []).map((item) => item.id))
+  const cases = useCases()
   const [menuOpen, setMenuOpen] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
 
@@ -43,7 +50,23 @@ export function Shell({
 
   const account = text(l10n(identity.account.name, identity.accountId)).value
   const userName = identity.displayName || text(l10n(undefined, t('brand.userFallback'))).value
-  const notes = demoNotifications(state)
+  const currentCase = (cases.data ?? []).find((item) => item.id === caseId) ?? (cases.data ?? [])[0]
+  const currentOrg =
+    (organizations.data ?? []).find((item) => item.id === currentCase?.organizationId) ?? (organizations.data ?? [])[0]
+  const currentProduct =
+    (products.data ?? []).find((item) => item.id === currentCase?.productId) ?? (products.data ?? [])[0]
+  const companyLabel = brandMeta ?? (currentOrg ? text(l10n(currentOrg.name, currentOrg.id)).value : '')
+  const productLabel = currentCase
+    ? text(l10n(currentCase.product)).value
+    : currentProduct
+      ? text(l10n(currentProduct.name, currentProduct.id)).value
+      : ''
+  const caseCode = currentCase?.code
+  const headerCompany = companyLabel || (OFFLINE_DEMO ? text(minghuName).value : '—')
+  const headerProduct = productLabel || (OFFLINE_DEMO ? text(mh200Name).value : '—')
+  const headerCode = caseCode || (OFFLINE_DEMO ? 'RU-0417' : '')
+  const notes = OFFLINE_DEMO ? demoNotifications(state) : []
+  const waiting = OFFLINE_DEMO ? pending : (products.data ?? []).filter((item) => !item.caseId).length
 
   return (
     <div className="grid min-h-screen grid-rows-[auto_1fr] md:grid-cols-[220px_1fr] md:grid-rows-[auto_1fr]">
@@ -89,16 +112,17 @@ export function Shell({
 
           <div className="hidden min-w-0 flex-1 flex-col text-xs leading-tight xl:flex">
             <span className="truncate text-primary-foreground/75">
-              {t('shell.currentCompany')} · {brandMeta ?? text(minghuName).value}
+              {t('shell.currentCompany')} · {headerCompany}
             </span>
             <span className="truncate font-medium">
-              {t('shell.currentProduct')} · {text(mh200Name).value} · #{t('app.caseCode')} RU-0417
+              {t('shell.currentProduct')} · {headerProduct}
+              {headerCode ? ` · #${t('app.caseCode')} ${headerCode}` : ''}
             </span>
           </div>
 
           <div className="ml-auto flex items-center gap-2">
             <span className="hidden rounded-full bg-primary-foreground/15 px-2.5 py-1 text-xs sm:inline">
-              {fill(t('shell.pending'), { n: pending })}
+              {fill(t('shell.pending'), { n: waiting })}
             </span>
 
             <div className="relative">
