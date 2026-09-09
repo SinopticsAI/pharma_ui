@@ -19,9 +19,11 @@ import {
   useApproveCompanyProfile,
   useApproveProductData,
   useIntakeMessages,
+  useOrganization,
   useOrganizationItems,
   useProduct,
 } from '../queries'
+import { usePortfolioCreate } from '../portfolio-create'
 import { createIntakeAttachmentAdapter, pickIntakeFile } from './attachments'
 import { IntakeToolUIs } from './cards'
 import { type IntakeActions, IntakeActionsProvider, useIntakeActions } from './context'
@@ -31,6 +33,7 @@ import {
   type ExtractionItem,
   extractionReadyIdsFromTexts,
   formatExtractionReady,
+  formatProfileApproved,
   isSettledStatus,
   itemsNeedingExtract,
   newestByUpdatedAt,
@@ -131,8 +134,12 @@ function processLineText(line: ProcessLine, t: (key: MessageKey) => string): str
 
 function UserText({ text }: { text: string }) {
   const { t } = useI18n()
-  if (userMessagePresentation(text) === 'extraction-ready') {
-    return <span data-extraction-ready>{t('intake.chat.extractionReady')}</span>
+  const kind = userMessagePresentation(text)
+  if (kind === 'extraction-ready') {
+    return <span data-cabinet-turn>{t('intake.chat.extractionReady')}</span>
+  }
+  if (kind === 'profile-approved') {
+    return <span data-cabinet-turn>{t('intake.chat.profileApproved')}</span>
   }
   return <span>{text}</span>
 }
@@ -140,7 +147,7 @@ function UserText({ text }: { text: string }) {
 function UserMessage() {
   return (
     <MessagePrimitive.Root
-      className="max-w-[80%] space-y-1 rounded-lg px-3 py-2 text-sm [&:has([data-extraction-ready])]:bg-transparent [&:has([data-extraction-ready])]:text-muted-foreground [&:not(:has([data-extraction-ready]))]:ml-auto [&:not(:has([data-extraction-ready]))]:bg-primary [&:not(:has([data-extraction-ready]))]:text-primary-foreground"
+      className="max-w-[80%] space-y-1 rounded-lg px-3 py-2 text-sm [&:has([data-cabinet-turn])]:bg-transparent [&:has([data-cabinet-turn])]:text-muted-foreground [&:not(:has([data-cabinet-turn]))]:ml-auto [&:not(:has([data-cabinet-turn]))]:bg-primary [&:not(:has([data-cabinet-turn]))]:text-primary-foreground"
       data-role="user"
     >
       <MessagePrimitive.Parts components={{ Text: ({ text }) => <UserText text={text} /> }} />
@@ -364,6 +371,8 @@ function IntakeChatRuntime({
 
   const approveCompany = useApproveCompanyProfile(organizationId)
   const approveProduct = useApproveProductData(productId ?? '')
+  const company = useOrganization(organizationId)
+  const { startProduct, busy: createBusy, failure: createFailure } = usePortfolioCreate()
   const orgItems = useOrganizationItems(organizationId)
   const product = useProduct(productId ?? '')
   const extractionItems = useMemo<ExtractionItem[]>(() => {
@@ -616,17 +625,39 @@ function IntakeChatRuntime({
         })
       },
       approveDraft: (scope, _entityId) => {
-        if (scope === 'company') approveCompany.mutate()
-        else if (productId) approveProduct.mutate()
+        if (scope === 'company') {
+          approveCompany.mutate(undefined, {
+            onSuccess: () => {
+              void runtime.thread.append({
+                role: 'user',
+                content: [{ type: 'text', text: formatProfileApproved() }],
+              })
+            },
+          })
+        } else if (productId) approveProduct.mutate()
       },
-      busy: approveCompany.isPending || approveProduct.isPending || uploadBusy,
+      startProductWindow: () => {
+        if (company.data) void startProduct(company.data)
+      },
+      startProductReady: Boolean(company.data),
+      busy: approveCompany.isPending || approveProduct.isPending || uploadBusy || createBusy,
     }),
-    [runtime, approveCompany, approveProduct, productId, composerItemType, uploadBusy],
+    [
+      runtime,
+      approveCompany,
+      approveProduct,
+      productId,
+      composerItemType,
+      uploadBusy,
+      company.data,
+      startProduct,
+      createBusy,
+    ],
   )
 
   // Загрузка падает вне нити: сообщение агенту не уходит, вложение остаётся в
   // композере. Показываем причину рядом с чатом, чтобы можно было повторить.
-  const failure = uploadError ?? chatError ?? approveCompany.error ?? approveProduct.error ?? journalError
+  const failure = uploadError ?? chatError ?? approveCompany.error ?? approveProduct.error ?? journalError ?? createFailure
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>

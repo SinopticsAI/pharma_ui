@@ -23,6 +23,7 @@ import {
   shouldKickMastraExtract,
   textsFromUnknownMessages,
   userMessagePresentation,
+  formatProfileApproved,
 } from './extractionStatus'
 
 function item(partial: {
@@ -57,6 +58,7 @@ describe('extraction-ready marker', () => {
       organizationId: 'org-z5eynpwj',
     })
     expect(userMessagePresentation(text)).toBe('extraction-ready')
+    expect(userMessagePresentation(formatProfileApproved())).toBe('profile-approved')
     expect(userMessagePresentation('Проверьте карточку')).toBe('user')
     expect(isExtractionReadyText('  [extraction-ready] leftover')).toBe(true)
   })

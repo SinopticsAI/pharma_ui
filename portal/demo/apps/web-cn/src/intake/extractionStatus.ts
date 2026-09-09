@@ -7,6 +7,7 @@ import type { ItemStatus } from '@demo/domain'
  */
 
 export const EXTRACTION_READY_PREFIX = '[extraction-ready]'
+export const PROFILE_APPROVED_PREFIX = '[profile-approved]'
 export const EXTRACTION_SLOW_MS = 90_000
 /** Тишина при uploaded + пустой draft: это не «ещё в ядре», а завис. */
 export const EXTRACTION_HANG_MS = 180_000
@@ -71,9 +72,21 @@ export function isExtractionReadyText(text: string): boolean {
   return text.trimStart().startsWith(EXTRACTION_READY_PREFIX)
 }
 
+export function formatProfileApproved(): string {
+  return PROFILE_APPROVED_PREFIX
+}
+
+export function isProfileApprovedText(text: string): boolean {
+  return text.trimStart().startsWith(PROFILE_APPROVED_PREFIX)
+}
+
 /** Пузырь пользователя не показываем: маркер — служебный ход кабинета. */
-export function userMessagePresentation(text: string): 'extraction-ready' | 'user' {
-  return isExtractionReadyText(text) ? 'extraction-ready' : 'user'
+export function userMessagePresentation(
+  text: string,
+): 'extraction-ready' | 'profile-approved' | 'user' {
+  if (isExtractionReadyText(text)) return 'extraction-ready'
+  if (isProfileApprovedText(text)) return 'profile-approved'
+  return 'user'
 }
 
 export function extractionReadyIdsFromTexts(texts: string[]): Set<string> {

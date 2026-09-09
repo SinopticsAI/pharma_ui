@@ -337,6 +337,21 @@ function ShowNodeMap({ args }: { args: { caseId: string; nodes: NodeArg[] } }) {
   )
 }
 
+function OfferProductWindow({ args: _args }: { args: { organizationId?: string } }) {
+  const { t } = useI18n()
+  const { startProductWindow, startProductReady, busy } = useIntakeActions()
+
+  return (
+    <section className="space-y-2 rounded-lg border bg-card p-3">
+      <h4 className="text-sm font-semibold">{t('intake.card.offerProductTitle')}</h4>
+      <p className="text-sm text-muted-foreground">{t('intake.card.offerProductLead')}</p>
+      <Button type="button" disabled={busy || !startProductReady} onClick={() => startProductWindow()}>
+        {t('intake.card.offerProduct')}
+      </Button>
+    </section>
+  )
+}
+
 function EscalateToCounsel({ args }: { args: { productId: string; reason: L10nArg } }) {
   const { t } = useI18n()
   const asText = useText()
@@ -354,6 +369,7 @@ const TOOL_UIS: ComponentType[] = [
   ...register<{ productId: string; variants: VariantArg[] }>(['showVariants', 'show-variants'], ShowVariants),
   ...register<RiskArgs>(['showRiskReport', 'show-risk-report'], ShowRiskReport),
   ...register<{ caseId: string; nodes: NodeArg[] }>(['showNodeMap', 'show-node-map'], ShowNodeMap),
+  ...register<{ organizationId?: string }>(['offerProductWindow', 'offer-product-window'], OfferProductWindow),
   ...register<{ productId: string; reason: L10nArg }>(['escalateToCounsel', 'escalate-to-counsel'], EscalateToCounsel),
 ]
 

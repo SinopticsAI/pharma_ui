@@ -20,6 +20,9 @@ export interface IntakeActions {
   /** Тип документа плюс выбор файла: вложение появляется чипом в композере. */
   attachDocument: (itemType: string) => void
   approveDraft: (scope: 'company' | 'product', entityId: string) => void
+  /** Создаёт продукт и открывает его окно чата. */
+  startProductWindow: () => void
+  startProductReady: boolean
   busy: boolean
 }
 
