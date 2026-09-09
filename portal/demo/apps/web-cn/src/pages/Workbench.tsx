@@ -1,6 +1,18 @@
 import { useI18n } from '@demo/i18n'
 import { officialEvents } from '../demo/catalog'
-import { Callout, Card, DemoMark, NextAction, PageHeader, StatusBadge, Timeline, TimelineItem } from '../kit'
+import {
+  ActorBadge,
+  Benefit,
+  Callout,
+  Card,
+  DemoMark,
+  Metric,
+  NextAction,
+  PageHeader,
+  StatusBadge,
+  Timeline,
+  TimelineItem,
+} from '../kit'
 import { Shell } from '../Shell'
 
 export function WorkbenchPage() {
@@ -9,7 +21,11 @@ export function WorkbenchPage() {
 
   return (
     <Shell>
-      <PageHeader title={t('official.title')} lead={t('official.lead')} />
+      <PageHeader eyebrow={t('eyebrow.official')} title={t('official.title')} lead={t('official.lead')} />
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <ActorBadge actor="us">{t('nodeOwner.us')}</ActorBadge>
+        <ActorBadge actor="system">{t('nodeOwner.gov')}</ActorBadge>
+      </div>
       <DemoMark>{t('shell.demoMark')} · M5 → M12</DemoMark>
       <div className="mb-3 flex flex-wrap gap-2">
         <StatusBadge tone="ok">{t('official.onMarket')}</StatusBadge>
@@ -18,6 +34,15 @@ export function WorkbenchPage() {
         <StatusBadge tone="ok">{t('official.firstSale')}</StatusBadge>
       </div>
       <NextAction label={t('official.successMetric')}>{t('official.postreg')}</NextAction>
+
+      <Card title={t('official.metricLead')}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Metric accent value={t('official.metricMonths')} label={t('official.metricMonthsLabel')} />
+          <Metric accent value={t('official.metricMarkup')} label={t('official.metricMarkupLabel')} />
+          <Metric accent value={t('official.metricRounds')} label={t('official.metricRoundsLabel')} />
+        </div>
+      </Card>
+
       <Callout tone="quiet">{t('official.owner')}</Callout>
 
       <Card title={t('official.title')}>
@@ -45,6 +70,7 @@ export function WorkbenchPage() {
           <li>{t('official.changes')}</li>
         </ul>
       </Card>
+      <Benefit label={t('benefit.label')}>{t('benefit.official')}</Benefit>
     </Shell>
   )
 }

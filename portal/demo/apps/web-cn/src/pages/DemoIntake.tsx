@@ -7,7 +7,7 @@ import { mh200Facts } from '../demo/catalog'
 import { useDemo } from '../demo/context'
 import { DEMO_ORG_MINGHU, DEMO_ORG_RUIKANG, DEMO_PRODUCT_MH200 } from '../demo/ids'
 import { ProgressPanel } from '../intake/ProgressPanel'
-import { Button, Callout, Card, ChatBubble, DemoMark, Empty, KeyValue, PageHeader, StatusBadge } from '../kit'
+import { Benefit, Button, Callout, Card, ChatBubble, DemoMark, Empty, KeyValue, PageHeader, StatusBadge } from '../kit'
 import { useOrganization, useProduct } from '../queries'
 import { Shell } from '../Shell'
 
@@ -73,6 +73,7 @@ export function DemoCompanyIntake({ organizationId }: { organizationId: string }
   return (
     <Shell>
       <PageHeader
+        eyebrow={t('eyebrow.intake')}
         title={t('intake.company.title')}
         lead={`${text(l10n(company.name, organizationId)).value}. ${t('intake.company.leadNamed')}`}
       />
@@ -164,6 +165,7 @@ export function DemoCompanyIntake({ organizationId }: { organizationId: string }
           </Card>
         </div>
       </div>
+      <Benefit label={t('benefit.label')}>{t('benefit.intake')}</Benefit>
     </Shell>
   )
 }
@@ -197,6 +199,7 @@ export function DemoProductIntake({ productId }: { productId: string }) {
   return (
     <Shell>
       <PageHeader
+        eyebrow={t('eyebrow.product')}
         title={t('intake.product.title')}
         lead={`${text(l10n(card.name, productId)).value}. ${t('intake.product.leadNamed')}`}
       />
@@ -274,6 +277,7 @@ export function DemoProductIntake({ productId }: { productId: string }) {
           )}
         </div>
       </div>
+      <Benefit label={t('benefit.label')}>{t('benefit.product')}</Benefit>
     </Shell>
   )
 }

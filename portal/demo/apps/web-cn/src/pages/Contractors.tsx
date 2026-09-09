@@ -70,10 +70,10 @@ export function ContractorCardPage() {
           <Metric value={contractor.orders} label={t('contractor.orders')} />
         </Card>
         <Card>
-          <Metric value={text(contractor.median).value} label={t('contractor.median')} />
+          <Metric accent value={text(contractor.median).value} label={t('contractor.median')} />
         </Card>
         <Card>
-          <Metric value={contractor.accepted} label={t('contractor.accepted')} />
+          <Metric accent value={contractor.accepted} label={t('contractor.accepted')} />
         </Card>
         <Card>
           <Metric value={contractor.remarks} label={t('contractor.remarks')} />
@@ -101,6 +101,7 @@ export function ContractorCardPage() {
           ))}
         </Timeline>
       </Card>
+      <Benefit label={t('benefit.label')}>{t('benefit.contractor')}</Benefit>
     </Shell>
   )
 }

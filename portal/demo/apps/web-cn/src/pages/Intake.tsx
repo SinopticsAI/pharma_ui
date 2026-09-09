@@ -91,6 +91,7 @@ function LiveCompanyIntake({ organizationId }: { organizationId: string }) {
   return (
     <Shell nav={<CabinetNav />}>
       <PageHeader
+        eyebrow={t('eyebrow.intake')}
         title={t('intake.company.title')}
         lead={
           company
@@ -165,6 +166,7 @@ function LiveProductIntake({ productId }: { productId: string }) {
   return (
     <Shell nav={<CabinetNav />}>
       <PageHeader
+        eyebrow={t('eyebrow.product')}
         title={t('intake.product.title')}
         lead={
           card

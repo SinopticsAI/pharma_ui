@@ -2,6 +2,8 @@ import { useI18n } from '@demo/i18n'
 import { demoLedger, paymentMeta, uppStages } from '../demo/catalog'
 import { useDemo } from '../demo/context'
 import {
+  ActorBadge,
+  Benefit,
   Button,
   Callout,
   Card,
@@ -26,7 +28,11 @@ export function PaymentsPage() {
 
   return (
     <Shell wide>
-      <PageHeader title={t('pay.title')} lead={t('pay.lead')} />
+      <PageHeader eyebrow={t('eyebrow.pay')} title={t('pay.title')} lead={t('pay.lead')} />
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <ActorBadge actor="you">{t('nodeOwner.you')}</ActorBadge>
+        <ActorBadge actor="us">{t('nodeOwner.us')}</ActorBadge>
+      </div>
       <DemoMark>{t('shell.demoMark')}</DemoMark>
       <div className="mb-3 flex flex-wrap gap-2">
         <StatusBadge tone="ok">{t('pay.reconciled')}</StatusBadge>
@@ -40,6 +46,7 @@ export function PaymentsPage() {
       <div className="mb-4 grid gap-3 md:grid-cols-3">
         <Card>
           <Metric
+            accent
             value={<Money value={`¥ ${meta.totalRmb.toLocaleString('zh-CN')}`} />}
             label={`${t('pay.invoice')} ${meta.invoice}`}
           />
@@ -118,6 +125,7 @@ export function PaymentsPage() {
         {state.casePaused ? t('pay.resume') : t('pay.togglePause')}
       </Button>
       {state.casePaused ? <Callout tone="quiet">{t('pay.pause')}</Callout> : null}
+      <Benefit label={t('benefit.label')}>{t('benefit.pay')}</Benefit>
     </Shell>
   )
 }
