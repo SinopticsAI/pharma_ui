@@ -1,0 +1,184 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@xyflow/react/dist/style.css";
+/* Гротеск для тела и антиква для дисплейных заголовков — как в деке МедМост. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@600;700&family=Noto+Serif+SC:wght@600;700&display=swap");
+
+@source "../../../apps/web-cn/src";
+@source "..";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-latin);
+  --font-serif: var(--font-display);
+  --color-benefit: var(--benefit);
+  --color-benefit-foreground: var(--benefit-foreground);
+  --color-actor-you: var(--actor-you);
+  --color-actor-you-foreground: var(--actor-you-foreground);
+  --color-actor-us: var(--actor-us);
+  --color-actor-us-foreground: var(--actor-us-foreground);
+  --color-actor-agent: var(--actor-agent);
+  --color-actor-agent-foreground: var(--actor-agent-foreground);
+  --color-actor-contractor: var(--actor-contractor);
+  --color-actor-contractor-foreground: var(--actor-contractor-foreground);
+}
+
+:root {
+  --radius: 0.625rem;
+
+  /* Нейтрали: холодный графит по тёплому светло-сером фоне, как в деке. */
+  --background: oklch(0.975 0.002 265);
+  --foreground: oklch(0.24 0.02 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.02 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.02 265);
+
+  /* Бренд МедМост — тёмно-бордовый. */
+  --primary: oklch(0.44 0.15 18);
+  --primary-foreground: oklch(0.98 0.005 20);
+
+  --secondary: oklch(0.955 0.004 265);
+  --secondary-foreground: oklch(0.3 0.02 265);
+  --muted: oklch(0.96 0.003 265);
+  --muted-foreground: oklch(0.5 0.015 265);
+  --accent: oklch(0.955 0.008 20);
+  --accent-foreground: oklch(0.44 0.15 18);
+
+  --destructive: oklch(0.5 0.19 22);
+
+  /* Успех — насыщенный зелёный узла «цель» и бейджей «готово». */
+  --success: oklch(0.5 0.11 155);
+  --success-foreground: oklch(0.38 0.09 155);
+
+  --warning: oklch(0.72 0.13 70);
+  --warning-foreground: oklch(0.46 0.09 55);
+
+  --border: oklch(0.9 0.004 265);
+  --input: oklch(0.9 0.004 265);
+  --ring: oklch(0.44 0.15 18);
+
+  /* Блок «Ваша выгода» из деки — мягкий розовый на бордовом тексте. */
+  --benefit: oklch(0.955 0.018 18);
+  --benefit-foreground: oklch(0.4 0.09 20);
+
+  /* Кто действует: ВЫ / МЫ / АГЕНТ / ПОДРЯДЧИК — из легенды деки. */
+  --actor-you: oklch(0.92 0.045 245);
+  --actor-you-foreground: oklch(0.4 0.09 255);
+  --actor-us: oklch(0.44 0.15 18);
+  --actor-us-foreground: oklch(0.98 0.005 20);
+  --actor-agent: oklch(0.92 0.055 75);
+  --actor-agent-foreground: oklch(0.44 0.09 60);
+  --actor-contractor: oklch(0.92 0.04 155);
+  --actor-contractor-foreground: oklch(0.4 0.09 155);
+
+  --font-latin: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Lora", Georgia, "Times New Roman", serif;
+  --font-zh: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Inter", sans-serif;
+  --font-zh-display: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --lane-cn: oklch(0.97 0.006 265);
+  --lane-ru: #f3f0ea;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --success: oklch(0.72 0.1 155);
+  --success-foreground: oklch(0.85 0.06 155);
+  --warning: oklch(0.78 0.12 75);
+  --warning-foreground: oklch(0.9 0.06 75);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    margin: 0;
+    font-family: var(--font-latin);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  html[data-locale="zh"],
+  html[data-locale="zh"] body {
+    font-family: var(--font-zh);
+  }
+
+  /* Дисплейные заголовки — антиква, как крупные заголовки слайдов деки. */
+  .font-serif {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  html[data-locale="zh"] .font-serif {
+    font-family: var(--font-zh-display);
+  }
+
+  button {
+    font: inherit;
+  }
+
+  :focus-visible {
+    @apply outline-ring outline-2 outline-offset-2;
+  }
+
+  [data-contour="cn"] nav {
+    background: var(--lane-cn);
+  }
+
+  [data-contour="ru"] nav {
+    background: var(--lane-ru);
+  }
+}

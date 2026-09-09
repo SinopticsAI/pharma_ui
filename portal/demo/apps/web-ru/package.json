@@ -1,0 +1,30 @@
+{
+  "name": "@demo/web-ru",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@demo/api-client": "workspace:*",
+    "@demo/auth": "workspace:*",
+    "@demo/domain": "workspace:*",
+    "@demo/i18n": "workspace:*",
+    "@demo/ui": "workspace:*",
+    "@tanstack/react-query": "^5.83.0",
+    "@tanstack/react-router": "^1.130.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  }
+}

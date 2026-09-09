@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="zh" data-locale="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>国家注册门户 · 演示 / Портал государственной регистрации · демо</title>
+    <style>
+      :root {
+        --primary: #0b2a4a;
+        --primary-dark: #071b30;
+        --accent: #00b5d8;
+        --accent-soft: #e0f7fa;
+        --bg: #ffffff;
+        --bg-soft: #f5f7fa;
+        --rule: #e2e8f0;
+        --text-body: #1f2a44;
+        --text-muted: #64748b;
+        --lane-cn: #e8f4fc;
+        --lane-ru: #f3f0ea;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: 'Microsoft YaHei', 'Segoe UI', system-ui, sans-serif;
+        color: var(--text-body);
+        background: var(--bg-soft);
+      }
+      header {
+        background: var(--primary-dark);
+        color: #fff;
+        padding: 28px 32px;
+        border-bottom: 4px solid var(--accent);
+      }
+      header h1 {
+        margin: 0 0 6px;
+        font-size: 26px;
+      }
+      header p {
+        margin: 0;
+        color: var(--accent-soft);
+        font-size: 14px;
+      }
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 28px 32px 56px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+      .card {
+        border: 1px solid var(--rule);
+        border-radius: 12px;
+        background: var(--bg);
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        text-decoration: none;
+        color: inherit;
+      }
+      .card:hover {
+        border-color: var(--accent);
+      }
+      .card.cn {
+        background: var(--lane-cn);
+      }
+      .card.ru {
+        background: var(--lane-ru);
+      }
+      .card h2 {
+        margin: 0;
+        color: var(--primary);
+        font-size: 19px;
+      }
+      .card span {
+        font-size: 13.5px;
+        color: var(--text-muted);
+      }
+      .steps {
+        border: 1px solid var(--rule);
+        border-radius: 12px;
+        background: var(--bg);
+        padding: 22px;
+      }
+      .steps h2 {
+        margin: 0 0 12px;
+        color: var(--primary);
+        font-size: 17px;
+      }
+      .steps ol {
+        margin: 0;
+        padding-left: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 14px;
+      }
+      .steps small {
+        display: block;
+        color: var(--text-muted);
+      }
+      button {
+        font: inherit;
+        border-radius: 8px;
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: var(--primary-dark);
+        font-weight: 600;
+        padding: 10px 18px;
+        cursor: pointer;
+      }
+      .note {
+        font-size: 12.5px;
+        color: var(--text-muted);
+      }
+      .dual {
+        display: none;
+        grid-template-columns: 1fr 1fr;
+        gap: 2px;
+        background: var(--rule);
+        height: calc(100vh - 52px);
+      }
+      .dual iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: #fff;
+      }
+      .dualBar {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        height: 52px;
+        padding: 0 20px;
+        background: var(--primary-dark);
+        color: #fff;
+        font-size: 13.5px;
+      }
+      body.dualMode .dual,
+      body.dualMode .dualBar {
+        display: grid;
+      }
+      body.dualMode .dualBar {
+        display: flex;
+      }
+      body.dualMode header,
+      body.dualMode main {
+        display: none;
+      }
+      .dualBar button {
+        background: transparent;
+        border-color: rgba(255, 255, 255, 0.4);
+        color: #fff;
+        font-weight: 500;
+        padding: 6px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>国家注册门户 · 演示</h1>
+      <p>Портал государственной регистрации · демонстрация на условных данных · 中俄两侧工作台</p>
+    </header>
+
+    <main>
+      <div class="cards">
+        <a class="card cn" href="/cn/">
+          <h2>生产企业工作台 →</h2>
+          <span>Кабинет производителя · 中文 / EN / RU</span>
+          <span>路线图、注册资料、账本、状态与沟通。无电子签名，无政府门户入口。</span>
+        </a>
+        <a class="card ru" href="/ru/">
+          <h2>俄方操作台 →</h2>
+          <span>Консоль оператора РФ · только русский язык</span>
+          <span>委托与 УКЭП、状态录入、按原始发票付款。这里才有加密与递交环节。</span>
+        </a>
+      </div>
+
+      <div class="steps">
+        <h2>演示脚本 / Сценарий показа</h2>
+        <ol>
+          <li>
+            打开生产企业工作台的 A-12 案件：阶段、责任方与期限一屏可见。
+            <small>Кабинет КНР: кейс A-12, этап «Образцы и испытания», ждём протокол ВНИИИМТ.</small>
+          </li>
+          <li>
+            进入账本：ВНИИИМТ 的 478 000 卢布按原价代付，平台佣金单列一行。
+            <small>Ledger: pass-through без наценки, комиссия отдельной строкой.</small>
+          </li>
+          <li>
+            切换到俄方操作台，录入状态并附上凭证。
+            <small>Консоль РФ: форма «внести статус как в государственном кабинете» с артефактом.</small>
+          </li>
+          <li>
+            返回生产企业工作台：阶段已推进，摘要已更新，无需刷新。
+            <small>Кабинет КНР обновился сам: сработала синхронизация вкладок.</small>
+          </li>
+          <li>
+            打开俄方操作台的委托页：ЕСИА、УКЭП、МЧД 只存在于俄方一侧。
+            <small>Мандат: криптоконтур принадлежит российской компании, у клиента его нет.</small>
+          </li>
+        </ol>
+      </div>
+
+      <div>
+        <button type="button" id="dualButton">并排显示两个工作台 / Показать рядом</button>
+        <p class="note">
+          两个应用运行在同一 origin 上（/cn 与 /ru），因此可通过浏览器本地存储同步演示状态。生产环境为两套独立部署。
+        </p>
+      </div>
+    </main>
+
+    <div class="dualBar">
+      <span>生产企业工作台（中国侧） · 俄方操作台（俄罗斯侧）</span>
+      <button type="button" id="exitDual">返回 / Выйти из режима «рядом»</button>
+    </div>
+    <div class="dual">
+      <iframe title="生产企业工作台" src="about:blank" id="frameCn"></iframe>
+      <iframe title="俄方操作台" src="about:blank" id="frameRu"></iframe>
+    </div>
+
+    <script>
+      const dualButton = document.getElementById('dualButton')
+      const exitDual = document.getElementById('exitDual')
+      const frameCn = document.getElementById('frameCn')
+      const frameRu = document.getElementById('frameRu')
+
+      dualButton.addEventListener('click', () => {
+        frameCn.src = '/cn/'
+        frameRu.src = '/ru/'
+        document.body.classList.add('dualMode')
+      })
+
+      exitDual.addEventListener('click', () => {
+        document.body.classList.remove('dualMode')
+        frameCn.src = 'about:blank'
+        frameRu.src = 'about:blank'
+      })
+    </script>
+  </body>
+</html>
