@@ -1,7 +1,7 @@
 import { useI18n } from '@demo/i18n'
 import { Link } from '@tanstack/react-router'
 import { demoChat } from '../demo/catalog'
-import { DEMO_CASE_RU0417, DEMO_ORG_MINGHU, DEMO_PRODUCT_MH200 } from '../demo/ids'
+import { DEMO_ORG_MINGHU, DEMO_PRODUCT_MH200 } from '../demo/ids'
 import { Card, ChatBubble, DemoMark, Empty, PageHeader } from '../kit'
 import { Shell } from '../Shell'
 
@@ -33,7 +33,7 @@ export function MessagesPage() {
         <Link to="/intake/product/$productId" params={{ productId: DEMO_PRODUCT_MH200 }}>
           {t('intake.product.title')} →
         </Link>
-        <Link to="/case/$caseId/chat" params={{ caseId: DEMO_CASE_RU0417 }}>
+        <Link to="/products/$productId/chat" params={{ productId: DEMO_PRODUCT_MH200 }}>
           {t('chat.title')} →
         </Link>
       </div>

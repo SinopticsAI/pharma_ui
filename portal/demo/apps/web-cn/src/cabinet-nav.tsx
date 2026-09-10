@@ -20,7 +20,7 @@ const AFTER = [
 /** Левое меню кабинета: walkthrough IA, не список открытых дел. */
 export function CabinetNav({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useI18n()
-  const { caseId, productId } = useCabinetFocus()
+  const { productId } = useCabinetFocus()
 
   return (
     <>
@@ -37,23 +37,12 @@ export function CabinetNav({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
       ))}
 
-      {caseId ? (
+      {productId ? (
         <Link
-          to="/case/$caseId/roadmap"
-          params={{ caseId }}
-          className={navItem}
-          activeProps={{ className: `${navItem} ${navItemActive}` }}
-          onClick={onNavigate}
-        >
-          {t('nav.processMap')}
-        </Link>
-      ) : productId ? (
-        <Link
-          to="/products/$productId"
+          to="/products/$productId/roadmap"
           params={{ productId }}
           className={navItem}
           activeProps={{ className: `${navItem} ${navItemActive}` }}
-          activeOptions={{ exact: true }}
           onClick={onNavigate}
         >
           {t('nav.processMap')}

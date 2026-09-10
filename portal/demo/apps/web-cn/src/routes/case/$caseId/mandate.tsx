@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { MandatePage } from '../../../pages/Mandate'
+import { CaseRedirect } from '../../../CaseRedirect'
 
 export const Route = createFileRoute('/case/$caseId/mandate')({
-  component: MandatePage,
+  component: () => <CaseRedirect section="mandate" />,
 })

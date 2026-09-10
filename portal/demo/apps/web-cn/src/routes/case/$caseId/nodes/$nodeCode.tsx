@@ -1,11 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { NodeWorkPage } from '../../../../pages/NodeWork'
+import { CaseRedirect } from '../../../../CaseRedirect'
 
 export const Route = createFileRoute('/case/$caseId/nodes/$nodeCode')({
-  component: NodeRoute,
+  component: NodeRedirectRoute,
 })
 
-function NodeRoute() {
+function NodeRedirectRoute() {
   const { nodeCode } = Route.useParams()
-  return <NodeWorkPage nodeCode={nodeCode} />
+  return <CaseRedirect nodeCode={nodeCode} />
 }

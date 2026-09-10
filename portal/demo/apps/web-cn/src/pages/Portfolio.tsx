@@ -134,7 +134,7 @@ export function PortfolioPage() {
               </StatusBadge>
             </div>
             {product.caseId ? (
-              <Link to="/case/$caseId" params={{ caseId: product.caseId }}>
+              <Link to="/products/$productId" params={{ productId: product.id }}>
                 {t('portfolio.open')} →
               </Link>
             ) : (
@@ -181,9 +181,11 @@ export function PortfolioPage() {
                 },
               ]}
             />
-            <Link to="/case/$caseId" params={{ caseId: item.id }}>
-              {t('portfolio.open')} →
-            </Link>
+            {item.productId ? (
+              <Link to="/products/$productId" params={{ productId: item.productId }}>
+                {t('portfolio.open')} →
+              </Link>
+            ) : null}
           </Card>
         ))}
       </div>

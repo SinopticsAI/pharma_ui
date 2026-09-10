@@ -5,7 +5,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { AddProductCard } from '../CreateActions'
 import { classificationVariants } from '../demo/catalog'
 import { useDemo } from '../demo/context'
-import { DEMO_CASE_RU0417, DEMO_PRODUCT_RK30, isDemoId } from '../demo/ids'
+import { DEMO_PRODUCT_RK30, isDemoId } from '../demo/ids'
 import {
   ActorBadge,
   Benefit,
@@ -69,7 +69,7 @@ export function ClassificationPage({ productId }: { productId: string }) {
   const demo = isDemoId(productId)
 
   return (
-    <Shell>
+    <>
       <PageHeader eyebrow={t('eyebrow.classify')} title={t('classify.title')} lead={t('classify.lead')} />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <ActorBadge actor="you">{t('nodeOwner.you')}</ActorBadge>
@@ -178,7 +178,7 @@ export function ClassificationPage({ productId }: { productId: string }) {
             disabled={!canBuild}
             onClick={() => {
               patch({ rk30MapBuilt: true })
-              void navigate({ to: '/case/$caseId/roadmap', params: { caseId: DEMO_CASE_RU0417 } })
+              void navigate({ to: '/products/$productId/roadmap', params: { productId } })
             }}
           >
             {t('classify.buildMap')}
@@ -187,6 +187,6 @@ export function ClassificationPage({ productId }: { productId: string }) {
         {!canBuild ? <p className="mt-2 text-sm text-muted-foreground">{t('classify.buildLocked')}</p> : null}
       </Card>
       <Benefit label={t('benefit.label')}>{t('benefit.classify')}</Benefit>
-    </Shell>
+    </>
   )
 }

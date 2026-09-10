@@ -1,8 +1,8 @@
 import { useI18n } from '@demo/i18n'
 import { Link } from '@tanstack/react-router'
-import { useCaseId } from '../CaseLayout'
 import { Card, ChatBubble, Empty, PageHeader, StatusBadge } from '../kit'
 import { useCase, useChat, useIntakeMessages } from '../queries'
+import { useCaseId } from '../workspace'
 import { caseChatToThread, intakeToThread } from './case-thread'
 
 export function ChatPage() {

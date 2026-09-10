@@ -1,8 +1,8 @@
 import { hasCredentials, l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { useCaseId } from '../CaseLayout'
 import { Callout, Card, Empty, KeyValue, PageHeader, StatusBadge, Table } from '../kit'
 import { useCase } from '../queries'
+import { useCaseId } from '../workspace'
 
 /**
  * Кабинет производителя получает только шаги мандата. Реквизиты ЕСИА, УКЭП и

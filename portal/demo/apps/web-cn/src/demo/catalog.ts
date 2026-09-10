@@ -1478,7 +1478,7 @@ export function demoNotifications(state: DemoUiState): DemoNotification[] {
         'High-risk POA clause — confirm the corrected draft',
         'Высокий риск POA — подтвердите правку',
       ),
-      href: `/case/${DEMO_CASE_RU0417}/nodes/M3`,
+      href: `/products/${DEMO_PRODUCT_MH200}/nodes/M3`,
     })
   }
   if (!state.logisticsConfirmed) {

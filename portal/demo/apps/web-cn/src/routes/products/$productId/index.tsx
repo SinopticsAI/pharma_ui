@@ -1,11 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ProductHubPage } from '../../../pages/Workbench'
+import { ProductOverviewPage } from '../../../pages/Workbench'
 
 export const Route = createFileRoute('/products/$productId/')({
-  component: ProductHubRoute,
+  component: ProductOverviewPage,
 })
-
-function ProductHubRoute() {
-  const { productId } = Route.useParams()
-  return <ProductHubPage productId={productId} />
-}

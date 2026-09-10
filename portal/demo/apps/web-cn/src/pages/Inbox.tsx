@@ -1,8 +1,8 @@
 import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { useCaseId } from '../CaseLayout'
 import { Card, Empty, PageHeader, StatusBadge, Timeline, TimelineItem } from '../kit'
 import { useStatuses } from '../queries'
+import { useCaseId } from '../workspace'
 
 /**
  * Статусы вносит оператор российской компании и прикладывает артефакт.

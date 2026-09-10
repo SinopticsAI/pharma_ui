@@ -1,7 +1,6 @@
 import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
 import { Link } from '@tanstack/react-router'
-import { useCaseId } from '../CaseLayout'
 import { m3Documents } from '../demo/catalog'
 import { useDemo } from '../demo/context'
 import {
@@ -18,11 +17,12 @@ import {
   Table,
 } from '../kit'
 import { useCase } from '../queries'
+import { useWorkspace } from '../workspace'
 
 const STEP_LABEL = { done: 'node.done', progress: 'node.weDoing', pending: 'node.fixWithAgent' } as const
 
 export function NodeWorkPage({ nodeCode }: { nodeCode: string }) {
-  const caseId = useCaseId()
+  const { productId, caseId } = useWorkspace()
   const { t, text } = useI18n()
   const { state, patch } = useDemo()
   const caseQuery = useCase(caseId)
@@ -165,7 +165,7 @@ export function NodeWorkPage({ nodeCode }: { nodeCode: string }) {
 
       <p className="mt-4 text-xs text-muted-foreground">{t('node.forecast')}</p>
       <Benefit label={t('benefit.label')}>{t('benefit.node')}</Benefit>
-      <Link to="/case/$caseId/roadmap" params={{ caseId }} className="mt-3 inline-block text-sm underline">
+      <Link to="/products/$productId/roadmap" params={{ productId }} className="mt-3 inline-block text-sm underline">
         {t('map.title')} →
       </Link>
     </>

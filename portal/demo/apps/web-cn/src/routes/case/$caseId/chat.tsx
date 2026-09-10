@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ChatPage } from '../../../pages/Chat'
+import { CaseRedirect } from '../../../CaseRedirect'
 
 export const Route = createFileRoute('/case/$caseId/chat')({
-  component: ChatPage,
+  component: () => <CaseRedirect section="chat" />,
 })

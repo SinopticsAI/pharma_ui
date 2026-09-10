@@ -10,10 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRef } from 'react'
 import { useForm } from 'react-hook-form'
-import { useCaseId } from '../CaseLayout'
 import { Callout, Card, Empty, PageHeader, PlaneToggle, StatusBadge, Table } from '../kit'
 import { usePlaneEnabled } from '../planeToggle'
 import { useCaseItems, useUploadDossierItem } from '../queries'
+import { useCaseId } from '../workspace'
 
 const STATUS_TONE: Record<ItemStatus, 'accent' | 'warm' | 'quiet'> = {
   pending_upload: 'quiet',

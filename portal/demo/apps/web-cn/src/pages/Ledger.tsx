@@ -1,8 +1,8 @@
 import { ledgerTotals } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { useCaseId } from '../CaseLayout'
 import { Callout, Card, Empty, Estimate, Metric, Money, PageHeader, StatusBadge, Table } from '../kit'
 import { useLedger } from '../queries'
+import { useCaseId } from '../workspace'
 
 export function LedgerPage() {
   const caseId = useCaseId()

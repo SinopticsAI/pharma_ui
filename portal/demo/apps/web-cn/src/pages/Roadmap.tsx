@@ -2,14 +2,14 @@ import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useCaseId } from '../CaseLayout'
 import { Benefit, Button, Callout, Card, Empty, fill, NextAction, PageHeader, StatusBadge, Table } from '../kit'
 import { NodeMapView } from '../NodeMap'
 import { nodeMapProgress } from '../node-map'
 import { useCase } from '../queries'
+import { useWorkspace } from '../workspace'
 
 export function RoadmapPage() {
-  const caseId = useCaseId()
+  const { productId, caseId } = useWorkspace()
   const { t, text } = useI18n()
   const navigate = useNavigate()
   const caseQuery = useCase(caseId)
@@ -21,7 +21,7 @@ export function RoadmapPage() {
   const progress = nodeMapProgress(nodes)
   const critical = caseQuery.data?.criticalNode ?? null
   const open = (code: string) => {
-    void navigate({ to: '/case/$caseId/nodes/$nodeCode', params: { caseId, nodeCode: code } })
+    void navigate({ to: '/products/$productId/nodes/$nodeCode', params: { productId, nodeCode: code } })
   }
 
   return (
@@ -141,7 +141,7 @@ export function RoadmapPage() {
 
       <Benefit label={t('benefit.label')}>{t('benefit.map')}</Benefit>
 
-      <Link to="/case/$caseId" params={{ caseId }} className="mt-4 inline-block text-sm underline">
+      <Link to="/products/$productId" params={{ productId }} className="mt-4 inline-block text-sm underline">
         {t('nav.dashboard')} →
       </Link>
     </>
