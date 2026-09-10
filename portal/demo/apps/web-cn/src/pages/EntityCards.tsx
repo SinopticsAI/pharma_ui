@@ -55,7 +55,10 @@ export function ProductCard({ item }: { item: ProductCardView }) {
   const hasCase = Boolean(product.caseId)
 
   return (
-    <Card title={text(productDisplayName(product, t('portfolio.untitledProduct'))).value} meta={text(item.companyName).value}>
+    <Card
+      title={text(productDisplayName(product, t('portfolio.untitledProduct'))).value}
+      meta={text(item.companyName).value}
+    >
       <div className="flex flex-wrap gap-2">
         <StatusBadge tone="quiet">{text(item.classLabel).value}</StatusBadge>
         <StatusBadge tone={hasCase ? 'accent' : 'warm'}>{text(item.nodeLabel).value}</StatusBadge>

@@ -601,8 +601,7 @@ function IntakeChatRuntime({
 
   // Загрузка падает вне нити: сообщение агенту не уходит, вложение остаётся в
   // композере. Показываем причину рядом с чатом, чтобы можно было повторить.
-  const failure =
-    uploadError ?? chatError ?? journalError
+  const failure = uploadError ?? chatError ?? journalError
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
