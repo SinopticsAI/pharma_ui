@@ -67,7 +67,7 @@
 .brandText {
   display: flex;
   flex-direction: column;
-  line-height: 1.2;
+  line-height: 1.35;
   min-width: 0;
 }
 

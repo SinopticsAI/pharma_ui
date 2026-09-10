@@ -105,7 +105,7 @@ export function Shell({
             >
               M
             </span>
-            <span className="flex min-w-0 flex-col leading-tight">
+            <span className="flex min-w-0 flex-col gap-0.5 leading-snug">
               <span className="truncate text-sm font-semibold">
                 {t('app.title')}
                 <span className="ml-1.5 font-normal text-primary-foreground/75">{t('brand.product')}</span>
@@ -118,7 +118,7 @@ export function Shell({
             {t('brand.accountBadge')}
           </span>
 
-          <div className="hidden min-w-0 flex-1 flex-col text-xs leading-tight xl:flex">
+          <div className="hidden min-w-0 flex-1 flex-col gap-1 text-xs leading-snug xl:flex">
             <span className="truncate text-primary-foreground/75">
               {t('shell.currentCompany')} · {headerCompany}
             </span>
