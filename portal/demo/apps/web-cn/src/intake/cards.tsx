@@ -1,23 +1,18 @@
 import { makeAssistantToolUI } from '@assistant-ui/react'
-import { askDocumentFormSchema } from '@demo/contracts'
 import type { NodeMapItem, NodeOwner, NodeStatus, RiskLevel } from '@demo/domain'
 import { l10n } from '@demo/domain'
 import { type MessageKey, useI18n } from '@demo/i18n'
-import { Button } from '@demo/ui/components/button'
-import { Input } from '@demo/ui/components/input'
-import { zodResolver } from '@hookform/resolvers/zod'
-import type { ComponentType } from 'react'
-import { useForm } from 'react-hook-form'
+import { type ComponentType, useEffect } from 'react'
 import { NodeMapView } from '../NodeMap'
 import { useIntakeActions } from './context'
 import { coerceToolArgs } from './tool-args'
 
 /**
- * Карточки диалога.
+ * Карточки диалога — только просмотр.
  *
  * Агент не пишет таблицы прозой: он вызывает инструмент, а кабинет рисует
- * компонент с настоящими кнопками. Поэтому карточки объявлены через
- * `makeAssistantToolUI` и привязаны к именам инструментов агента.
+ * компонент. Ответ, одобрение и файлы идут только через композер
+ * («Напишите агенту» / «Приложить документ»).
  *
  * Имя инструмента в потоке — ключ, под которым он зарегистрирован у агента
  * (`askDocument`), а инструкции агента ссылаются на его `id` (`ask-document`).
@@ -51,40 +46,20 @@ interface AskDocumentArgs {
 function AskDocument({ args }: { args: AskDocumentArgs }) {
   const { t } = useI18n()
   const asText = useText()
-  const { attachDocument, send, busy } = useIntakeActions()
-  const form = useForm({
-    resolver: zodResolver(askDocumentFormSchema),
-    defaultValues: { answer: '' },
-  })
+  const { setItemType } = useIntakeActions()
+
+  // Тип следующего вложения композера: скрепка пометит файл так, как просил агент.
+  useEffect(() => {
+    if (args.itemType) setItemType(args.itemType)
+  }, [args.itemType, setItemType])
 
   return (
     <section className="space-y-2 rounded-lg border bg-card p-3">
       <h4 className="text-sm font-semibold">{asText(args.question, args.itemType)}</h4>
       {args.why ? <p className="text-sm text-muted-foreground">{asText(args.why)}</p> : null}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Тип документа берётся из запроса агента: вложение уйдёт именно этим типом. */}
-        <Button type="button" disabled={busy} onClick={() => attachDocument(args.itemType)}>
-          {t('intake.card.attachFile')}
-        </Button>
-        {args.acceptsText ? (
-          <form
-            className="flex min-w-[220px] flex-1 gap-2"
-            onSubmit={form.handleSubmit((values) => {
-              send(values.answer)
-              form.reset()
-            })}
-          >
-            <Input
-              {...form.register('answer')}
-              placeholder={t('intake.card.answerPlaceholder')}
-              aria-label={t('intake.card.answerAria')}
-            />
-            <Button type="submit" variant="outline" disabled={busy}>
-              {t('intake.chat.send')}
-            </Button>
-          </form>
-        ) : null}
-      </div>
+      <p className="text-sm text-muted-foreground">
+        {args.acceptsText ? t('intake.card.replyInComposer') : t('intake.card.attachInComposer')}
+      </p>
     </section>
   )
 }
@@ -108,7 +83,6 @@ interface ShowDraftArgs {
 function ShowDraft({ args }: { args: ShowDraftArgs }) {
   const { t } = useI18n()
   const asText = useText()
-  const { approveDraft, send, busy } = useIntakeActions()
   const missing = args.missing ?? []
 
   return (
@@ -134,18 +108,9 @@ function ShowDraft({ args }: { args: ShowDraftArgs }) {
           {t('intake.card.missing').replace('{list}', missing.join(', '))}
         </p>
       ) : null}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          disabled={!args.canApprove || busy}
-          onClick={() => approveDraft(args.scope, args.entityId)}
-        >
-          {t('intake.card.approve')}
-        </Button>
-        <Button type="button" variant="outline" onClick={() => send(t('intake.card.fixInChatMessage'))}>
-          {t('intake.card.fixInChat')}
-        </Button>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        {args.canApprove ? t('intake.card.reviewHint') : t('intake.card.reviewHintIncomplete')}
+      </p>
     </section>
   )
 }
@@ -171,7 +136,6 @@ const VARIANT_TAG: Record<VariantArg['variantType'], MessageKey> = {
 function Variant({ variant }: { variant: VariantArg }) {
   const { t, locale } = useI18n()
   const asText = useText()
-  const { send, busy } = useIntakeActions()
   const forbidden = variant.variantType === 'forbidden'
   const numberLocale = locale === 'zh' ? 'zh-CN' : locale === 'en' ? 'en-GB' : 'ru-RU'
 
@@ -223,16 +187,6 @@ function Variant({ variant }: { variant: VariantArg }) {
             .replace('{to}', String(variant.cycleMonths[1]))}
         </p>
       ) : null}
-
-      {forbidden ? null : (
-        <Button
-          type="button"
-          disabled={busy}
-          onClick={() => send(t('intake.card.chooseVariantMessage').replace('{id}', variant.id))}
-        >
-          {t('intake.card.chooseVariant')}
-        </Button>
-      )}
     </article>
   )
 }
@@ -251,6 +205,7 @@ function ShowVariants({ args }: { args: { productId: string; variants: VariantAr
       <p className="text-xs text-muted-foreground">
         {t('intake.card.variantsLead')} {t('common.estimate')}
       </p>
+      <p className="text-sm text-muted-foreground">{t('intake.card.variantsHint')}</p>
     </section>
   )
 }
@@ -339,15 +294,11 @@ function ShowNodeMap({ args }: { args: { caseId: string; nodes: NodeArg[] } }) {
 
 function OfferProductWindow({ args: _args }: { args: { organizationId?: string } }) {
   const { t } = useI18n()
-  const { startProductWindow, startProductReady, busy } = useIntakeActions()
 
   return (
     <section className="space-y-2 rounded-lg border bg-card p-3">
       <h4 className="text-sm font-semibold">{t('intake.card.offerProductTitle')}</h4>
       <p className="text-sm text-muted-foreground">{t('intake.card.offerProductLead')}</p>
-      <Button type="button" disabled={busy || !startProductReady} onClick={() => startProductWindow()}>
-        {t('intake.card.offerProduct')}
-      </Button>
     </section>
   )
 }

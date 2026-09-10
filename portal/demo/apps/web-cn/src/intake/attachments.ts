@@ -36,7 +36,7 @@ export interface IntakeAttachmentOptions {
   productId?: string
   /** Диалог, в котором пришёл файл: по нему ядро адресует разбор в Plane. */
   sessionId: string
-  /** Тип документа, который последней назвала карточка `ask-document`. */
+  /** Тип документа: карточка `ask-document` выставляет его при показе. */
   itemType: () => string
   /** Загрузка падает вне нити: ошибку показывает экран, а вложение остаётся в композере. */
   onError?: (error: unknown) => void
@@ -126,26 +126,4 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
       itemTypes.delete(attachment.id)
     },
   }
-}
-
-/**
- * Выбор файла для карточки `ask-document`: она называет тип документа и сразу
- * открывает диалог, а файл уходит в композер тем же путём, что и скрепка.
- */
-export function pickIntakeFile(): Promise<File | null> {
-  return new Promise((resolve) => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = INTAKE_ATTACHMENT_ACCEPT
-    input.hidden = true
-    document.body.appendChild(input)
-
-    const finish = (file: File | null) => {
-      input.remove()
-      resolve(file)
-    }
-    input.onchange = () => finish(input.files?.[0] ?? null)
-    input.oncancel = () => finish(null)
-    input.click()
-  })
 }

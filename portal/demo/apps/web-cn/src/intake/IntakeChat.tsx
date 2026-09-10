@@ -15,25 +15,16 @@ import { Loader2 } from 'lucide-react'
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Empty } from '../kit'
 import { usePlaneEnabled } from '../planeToggle'
-import { usePortfolioCreate } from '../portfolio-create'
-import {
-  useApproveCompanyProfile,
-  useApproveProductData,
-  useIntakeMessages,
-  useOrganization,
-  useOrganizationItems,
-  useProduct,
-} from '../queries'
-import { createIntakeAttachmentAdapter, pickIntakeFile } from './attachments'
+import { useIntakeMessages, useOrganizationItems, useProduct } from '../queries'
+import { createIntakeAttachmentAdapter } from './attachments'
 import { IntakeToolUIs } from './cards'
-import { type IntakeActions, IntakeActionsProvider, useIntakeActions } from './context'
+import { type IntakeActions, IntakeActionsProvider } from './context'
 import { ExtractHttpError, startIntakeExtract } from './extract'
 import {
   EXTRACTION_SLOW_MS,
   type ExtractionItem,
   extractionReadyIdsFromTexts,
   formatExtractionReady,
-  formatProfileApproved,
   isSettledStatus,
   itemsNeedingExtract,
   newestByUpdatedAt,
@@ -184,7 +175,6 @@ function AssistantMessage() {
 
 function Thread() {
   const { t } = useI18n()
-  const { setItemType, composerItemType } = useIntakeActions()
   const { line, hideEmpty, chatFailed, uploadBusy, lastAssistantEmpty } = useContext(ExtractionUiContext)
   const waiting = line ? WAITING_PROCESS.has(line.kind) : false
 
@@ -251,7 +241,6 @@ function Thread() {
           <ComposerPrimitive.AddAttachment
             multiple={false}
             disabled={uploadBusy}
-            onClick={() => setItemType(composerItemType)}
             className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
           >
             {t('intake.chat.attach')}
@@ -364,15 +353,11 @@ function IntakeChatRuntime({
   const seed = useMemo(() => journalToUiMessages(journalRows, locale), [journalRows, locale])
   const seedRepository = useMemo(() => (seed.length > 0 ? uiMessagesToRepository(seed) : undefined), [seed])
 
-  // Тип документа называет карточка `ask-document` перед выбором файла, а нужен
-  // он адаптеру в момент отправки — поэтому не состояние, а ссылка.
+  // Тип документа называет карточка `ask-document` при показе, а нужен он
+  // адаптеру в момент отправки — поэтому не состояние, а ссылка.
   const composerItemType = agentId === 'companyIntake' ? 'business-license' : 'other'
   const itemType = useRef(composerItemType)
 
-  const approveCompany = useApproveCompanyProfile(organizationId)
-  const approveProduct = useApproveProductData(productId ?? '')
-  const company = useOrganization(organizationId)
-  const { startProduct, busy: createBusy, failure: createFailure } = usePortfolioCreate()
   const orgItems = useOrganizationItems(organizationId)
   const product = useProduct(productId ?? '')
   const extractionItems = useMemo<ExtractionItem[]>(() => {
@@ -607,58 +592,17 @@ function IntakeChatRuntime({
 
   const actions = useMemo<IntakeActions>(
     () => ({
-      send: (text) => {
-        void runtime.thread.append({ role: 'user', content: [{ type: 'text', text }] })
-      },
-      composerItemType,
       setItemType: (value) => {
         itemType.current = value
       },
-      attachDocument: (value) => {
-        itemType.current = value
-        void pickIntakeFile().then((file) => {
-          if (!file) return
-          setUploadError(null)
-          return runtime.thread.composer.addAttachment(file).catch((error: unknown) => {
-            setUploadError(() => error)
-          })
-        })
-      },
-      approveDraft: (scope, _entityId) => {
-        if (scope === 'company') {
-          approveCompany.mutate(undefined, {
-            onSuccess: () => {
-              void runtime.thread.append({
-                role: 'user',
-                content: [{ type: 'text', text: formatProfileApproved() }],
-              })
-            },
-          })
-        } else if (productId) approveProduct.mutate()
-      },
-      startProductWindow: () => {
-        if (company.data) void startProduct(company.data)
-      },
-      startProductReady: Boolean(company.data),
-      busy: approveCompany.isPending || approveProduct.isPending || uploadBusy || createBusy,
     }),
-    [
-      runtime,
-      approveCompany,
-      approveProduct,
-      productId,
-      composerItemType,
-      uploadBusy,
-      company.data,
-      startProduct,
-      createBusy,
-    ],
+    [],
   )
 
   // Загрузка падает вне нити: сообщение агенту не уходит, вложение остаётся в
   // композере. Показываем причину рядом с чатом, чтобы можно было повторить.
   const failure =
-    uploadError ?? chatError ?? approveCompany.error ?? approveProduct.error ?? journalError ?? createFailure
+    uploadError ?? chatError ?? journalError
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
