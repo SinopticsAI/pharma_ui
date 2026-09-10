@@ -11,6 +11,7 @@ import { IntakeChat } from '../intake/IntakeChat'
 import { RequisitesPanel } from '../intake/RequisitesPanel'
 import { Callout, Empty, PageHeader, PlaneToggle } from '../kit'
 import { usePlaneEnabled } from '../planeToggle'
+import { productDisplayName } from '../live-cards'
 import { extractionPending, useOrganization, useOrganizationItems, useProduct } from '../queries'
 import { Shell } from '../Shell'
 import { DemoCompanyIntake, DemoProductIntake } from './DemoIntake'
@@ -170,7 +171,7 @@ function LiveProductIntake({ productId }: { productId: string }) {
         title={t('intake.product.title')}
         lead={
           card
-            ? `${text(l10n(card.name, productId)).value}. ${t('intake.product.leadNamed')}`
+            ? `${text(productDisplayName(card, t('portfolio.untitledProduct'))).value}. ${t('intake.product.leadNamed')}`
             : t('intake.product.lead')
         }
         actions={

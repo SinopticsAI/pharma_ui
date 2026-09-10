@@ -21,6 +21,7 @@ import {
   Timeline,
   TimelineItem,
 } from '../kit'
+import { productDisplayName } from '../live-cards'
 import { useCase, useCaseItems, useLedger, useOrganization, useProduct } from '../queries'
 import { Shell } from '../Shell'
 
@@ -85,7 +86,7 @@ export function ProductHubPage({ productId }: { productId: string }) {
   const card = caseQuery.data?.case
   const critical = caseQuery.data?.criticalNode
   const companyName = organization.data ? text(l10n(organization.data.name, organization.data.id)).value : ''
-  const productName = text(l10n(product.name, product.id)).value
+  const productName = text(productDisplayName(product, t('portfolio.untitledProduct'))).value
   const caseLabel = card ? `#${card.code}` : t('hub.noCase')
   const docs = (product.documents ?? []).filter((item) => item.level !== 'company')
   const dossierCount = items.data?.length ?? 0

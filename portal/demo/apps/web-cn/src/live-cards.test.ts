@@ -1,6 +1,13 @@
 import type { Organization, Product } from '@demo/domain'
 import { describe, expect, it } from 'vitest'
-import { attachLiveCase, liveCompanyCard, liveProductCard, liveSaleProgress, mergeCaseProducts } from './live-cards'
+import {
+  attachLiveCase,
+  liveCompanyCard,
+  liveProductCard,
+  liveSaleProgress,
+  mergeCaseProducts,
+  productDisplayName,
+} from './live-cards'
 
 const org = (id: string, status: Organization['status'] = 'collecting'): Organization => ({
   id,
@@ -33,6 +40,22 @@ const product = (id: string, organizationId: string, completeness = 50, caseId =
   documents: [],
   missing: [],
   variants: [],
+})
+
+describe('productDisplayName', () => {
+  it('берёт наименование из draft, когда name пустой', () => {
+    const item = product('prd-sml9v3yp', 'org')
+    item.name = {}
+    item.draft = { name: { value: '血糖仪 X1', source: 'IFU' } }
+    expect(productDisplayName(item, 'Новый продукт').ru).toBe('血糖仪 X1')
+  })
+
+  it('не показывает id без имени и черновика', () => {
+    const item = product('prd-sml9v3yp', 'org')
+    item.name = {}
+    expect(productDisplayName(item, 'Новый продукт').ru).toBe('Новый продукт')
+    expect(productDisplayName(item, 'Новый продукт').ru).not.toContain('prd-')
+  })
 })
 
 describe('live cards', () => {

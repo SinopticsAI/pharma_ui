@@ -4,6 +4,7 @@ import { Progress } from '@demo/ui/components/progress'
 import { Link } from '@tanstack/react-router'
 import type { CompanyCardView, ProductCardView } from '../demo/catalog'
 import { Button, Card, KeyValue, StatusBadge } from '../kit'
+import { productDisplayName } from '../live-cards'
 
 export function CompanyCard({ item }: { item: CompanyCardView }) {
   const { t, text } = useI18n()
@@ -54,7 +55,7 @@ export function ProductCard({ item }: { item: ProductCardView }) {
   const hasCase = Boolean(product.caseId)
 
   return (
-    <Card title={text(l10n(product.name, product.id)).value} meta={text(item.companyName).value}>
+    <Card title={text(productDisplayName(product, t('portfolio.untitledProduct'))).value} meta={text(item.companyName).value}>
       <div className="flex flex-wrap gap-2">
         <StatusBadge tone="quiet">{text(item.classLabel).value}</StatusBadge>
         <StatusBadge tone={hasCase ? 'accent' : 'warm'}>{text(item.nodeLabel).value}</StatusBadge>

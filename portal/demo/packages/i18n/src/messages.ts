@@ -71,6 +71,7 @@ export const ru = {
   'portfolio.cases': 'Кейсы',
   'portfolio.noCompanies': 'Компаний пока нет. Начните с диалога — агент заполнит профиль.',
   'portfolio.noProducts': 'Продуктов пока нет. Выберите компанию и начните диалог с агентом.',
+  'portfolio.untitledProduct': 'Новый продукт',
   'portfolio.continueAgent': 'Продолжить с агентом',
   'portfolio.completeness': 'Комплектность',
 
@@ -438,6 +439,7 @@ export const en: Record<keyof typeof ru, string> = {
   'portfolio.cases': 'Cases',
   'portfolio.noCompanies': 'No companies yet. Start with the dialog — the agent will fill the profile.',
   'portfolio.noProducts': 'No products yet. Choose a company and start the agent dialog.',
+  'portfolio.untitledProduct': 'New product',
   'portfolio.continueAgent': 'Continue with the agent',
   'portfolio.completeness': 'Completeness',
 
@@ -805,6 +807,7 @@ export const zh: Record<keyof typeof ru, string> = {
   'portfolio.cases': '案件',
   'portfolio.noCompanies': '暂无公司。从对话开始——代理会填写档案。',
   'portfolio.noProducts': '暂无产品。请选择公司并开始与代理对话。',
+  'portfolio.untitledProduct': '新产品',
   'portfolio.continueAgent': '继续与代理对话',
   'portfolio.completeness': '完整度',
 

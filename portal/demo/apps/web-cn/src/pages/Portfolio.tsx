@@ -5,6 +5,7 @@ import { useI18n } from '@demo/i18n'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { CabinetNav } from '../cabinet-nav'
 import { Callout, Card, Empty, Estimate, KeyValue, PageHeader, StatusBadge } from '../kit'
+import { productDisplayName } from '../live-cards'
 import { eligibleOrganizations } from '../portfolio-create'
 import {
   useAllProducts,
@@ -124,7 +125,7 @@ export function PortfolioPage() {
         {(products.data ?? []).map((product) => (
           <Card
             key={product.id}
-            title={text(l10n(product.name, product.id)).value}
+            title={text(productDisplayName(product, t('portfolio.untitledProduct'))).value}
             meta={`${t('portfolio.completeness')} ${product.completeness}%`}
           >
             <div className="flex flex-wrap gap-2">

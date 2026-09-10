@@ -11,6 +11,7 @@ import { CabinetNav } from './cabinet-nav'
 import { demoNotifications, mh200Name, minghuName } from './demo/catalog'
 import { useDemo } from './demo/context'
 import { Button, fill, LocaleSwitch } from './kit'
+import { productDisplayName } from './live-cards'
 import { useAllProducts, useCases, useOrganizations } from './queries'
 
 const LOCALES: { value: Locale; label: string }[] = [
@@ -67,7 +68,7 @@ export function Shell({
   const productLabel = currentCase
     ? text(l10n(currentCase.product)).value
     : currentProduct
-      ? text(l10n(currentProduct.name, currentProduct.id)).value
+      ? text(productDisplayName(currentProduct, t('portfolio.untitledProduct'))).value
       : ''
   const caseCode = currentCase?.code
   const headerCompany = companyLabel || (OFFLINE_DEMO ? text(minghuName).value : '—')

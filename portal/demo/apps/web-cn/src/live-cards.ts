@@ -18,6 +18,14 @@ function asL10n(value: Partial<L10n> | undefined, fallback: string): L10n {
   return { zh: value?.zh || ru, en: value?.en || ru, ru }
 }
 
+/** Карточка не должна показывать `prd-…`: ядро часто оставляет `name` пустым до копирования из черновика. */
+export function productDisplayName(product: Pick<Product, 'name' | 'draft'>, untitled: string): L10n {
+  if (product.name?.zh || product.name?.en || product.name?.ru) return asL10n(product.name, untitled)
+  const fromDraft = draftValue(product.draft, 'name')
+  if (fromDraft) return asL10n({ zh: fromDraft, en: fromDraft, ru: fromDraft }, untitled)
+  return asL10n({}, untitled)
+}
+
 export function liveCompanyCard(organization: Organization, products: Product[]): CompanyCardView {
   const mine = products.filter((item) => item.organizationId === organization.id)
   const uscc =
