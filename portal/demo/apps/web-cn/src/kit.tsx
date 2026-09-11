@@ -323,14 +323,16 @@ export function LocaleSwitch<T extends string>({
   onChange: (next: T) => void
 }) {
   return (
-    <div className="inline-flex rounded-md border">
+    <div className="inline-flex rounded-md border border-primary-foreground/30">
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           className={cn(
             'px-2.5 py-1 text-xs',
-            option.value === value ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-accent',
+            option.value === value
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-background text-foreground hover:bg-accent',
           )}
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
