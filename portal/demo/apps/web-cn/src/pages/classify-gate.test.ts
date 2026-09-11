@@ -1,7 +1,13 @@
 import type { ClassificationVariant, Product } from '@demo/domain'
 import { describe, expect, it } from 'vitest'
 import { countPendingActions, defaultDemoState } from '../demo/state'
-import { canSelectLiveVariant, clientCanBuildMap, resolveVariants, variantIsChoosable } from './classify-live'
+import {
+  canSelectLiveVariant,
+  classificationCheckedAgainst,
+  clientCanBuildMap,
+  resolveVariants,
+  variantIsChoosable,
+} from './classify-live'
 
 const product = (partial: Partial<Product> = {}): Product => ({
   id: 'prd-sml9v3yp',
@@ -90,6 +96,16 @@ describe('variantIsChoosable', () => {
   it('запрещает выбрать forbidden', () => {
     expect(variantIsChoosable(variant('var-a'))).toBe(true)
     expect(variantIsChoosable({ ...variant('var-c'), variantType: 'forbidden' })).toBe(false)
+  })
+})
+
+describe('classificationCheckedAgainst', () => {
+  it('пишет основание решения, а не заглушку', () => {
+    const line = classificationCheckedAgainst(variant('var-a'))
+    expect(line).toContain('var-a')
+    expect(line).toContain('device/2b/pp1684')
+    expect(line).toContain('4н')
+    expect(line).not.toContain('cn-cabinet')
   })
 })
 

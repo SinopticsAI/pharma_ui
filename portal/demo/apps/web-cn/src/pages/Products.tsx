@@ -25,7 +25,13 @@ import { usePortfolioCards } from '../live-cards'
 import { usePortfolioCreate } from '../portfolio-create'
 import { useApproveProduct, useProduct, useProductVariants } from '../queries'
 import { Shell } from '../Shell'
-import { canSelectLiveVariant, clientCanBuildMap, resolveVariants, variantIsChoosable } from './classify-live'
+import {
+  canSelectLiveVariant,
+  classificationCheckedAgainst,
+  clientCanBuildMap,
+  resolveVariants,
+  variantIsChoosable,
+} from './classify-live'
 import { ProductCard } from './EntityCards'
 
 export function ProductsPage() {
@@ -161,7 +167,7 @@ function LiveClassificationPage({ productId }: { productId: string }) {
   const chooseAndBuild = (variant: ClassificationVariant) => {
     if (!variantIsChoosable(variant)) return
     approve.mutate(
-      { as: 'specialist', variantId: variant.id, checkedAgainst: 'cn-cabinet' },
+      { as: 'specialist', variantId: variant.id, checkedAgainst: classificationCheckedAgainst(variant) },
       { onSuccess: approveAsClient },
     )
   }
