@@ -84,6 +84,28 @@ export const useOrganization = (organizationId: string, awaitingExtraction = fal
   return quietOffline(live)
 }
 
+/**
+ * Список компаний без слотов: карточки считают документы из GET /organizations/{id}.
+ * Идентификаторы demo-* не зовут ядро.
+ */
+export const useOrganizationDetails = (organizationIds: string[]) => {
+  const api = useApi()
+  const liveIds = organizationIds.filter((id) => !isDemoId(id))
+  const live = useQuery({
+    queryKey: ['organization-details', ...liveIds],
+    queryFn: async () => {
+      const rows = await Promise.all(liveIds.map((id) => api.getOrganization(id)))
+      return rows
+    },
+    enabled: liveIds.length > 0,
+  })
+  return quietOffline({
+    ...live,
+    isLoading: liveIds.length > 0 && live.isLoading,
+    data: live.data,
+  })
+}
+
 /** Документы интейка компании: и её собственные, и документы её продуктов. */
 export const useOrganizationItems = (organizationId: string) => {
   const api = useApi()
@@ -241,7 +263,10 @@ export const useCreateOrganization = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { name?: string }) => api.createOrganization(input),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['organizations'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['organizations'] })
+      void queryClient.invalidateQueries({ queryKey: ['organization-details'] })
+    },
   })
 }
 
@@ -289,6 +314,7 @@ export const usePromoteOrgItem = (organizationId: string) => {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['organization-items', organizationId] })
       void queryClient.invalidateQueries({ queryKey: ['organization', organizationId] })
+      void queryClient.invalidateQueries({ queryKey: ['organization-details'] })
       // Документ уходит с уровня продукта, поэтому карточки продуктов устарели.
       void queryClient.invalidateQueries({ queryKey: ['product'] })
     },
@@ -304,6 +330,7 @@ export const useApproveCompanyProfile = (organizationId: string) => {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['organization', organizationId] })
       void queryClient.invalidateQueries({ queryKey: ['organizations'] })
+      void queryClient.invalidateQueries({ queryKey: ['organization-details'] })
     },
   })
 }

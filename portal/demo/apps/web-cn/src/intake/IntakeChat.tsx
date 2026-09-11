@@ -353,10 +353,9 @@ function IntakeChatRuntime({
   const seed = useMemo(() => journalToUiMessages(journalRows, locale), [journalRows, locale])
   const seedRepository = useMemo(() => (seed.length > 0 ? uiMessagesToRepository(seed) : undefined), [seed])
 
-  // Тип документа называет карточка `ask-document` при показе, а нужен он
-  // адаптеру в момент отправки — поэтому не состояние, а ссылка.
-  const composerItemType = agentId === 'companyIntake' ? 'business-license' : 'other'
-  const itemType = useRef(composerItemType)
+  // Тип следующего файла называет карточка `ask-document`. Пачка без карточки
+  // уходит как other — тип каждому файлу ставит extract по скану.
+  const itemType = useRef('other')
 
   const orgItems = useOrganizationItems(organizationId)
   const product = useProduct(productId ?? '')
@@ -401,6 +400,9 @@ function IntakeChatRuntime({
         productId,
         sessionId,
         itemType: () => itemType.current,
+        onItemTypeConsumed: () => {
+          itemType.current = 'other'
+        },
         planeEnabled: () => usePlaneRef.current,
         onError: (error) => setUploadError(() => error),
         onBusy: setUploadBusy,
@@ -500,6 +502,7 @@ function IntakeChatRuntime({
           setExtractFailed((current) => (current?.itemId === item.id ? null : current))
           void queryClient.invalidateQueries({ queryKey: ['organization-items', organizationId] })
           void queryClient.invalidateQueries({ queryKey: ['organization', organizationId] })
+          void queryClient.invalidateQueries({ queryKey: ['organization-details'] })
           if (productId) void queryClient.invalidateQueries({ queryKey: ['product', productId] })
         })
         .catch((error: unknown) => {

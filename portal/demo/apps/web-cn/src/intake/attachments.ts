@@ -36,8 +36,10 @@ export interface IntakeAttachmentOptions {
   productId?: string
   /** Диалог, в котором пришёл файл: по нему ядро адресует разбор в Plane. */
   sessionId: string
-  /** Тип документа: карточка `ask-document` выставляет его при показе. */
+  /** Тип документа: карточка `ask-document` выставляет его на один следующий файл. */
   itemType: () => string
+  /** После `add` тип сгорает — остальная пачка уходит как `other`, тип ставит extract. */
+  onItemTypeConsumed?: () => void
   /** Загрузка падает вне нити: ошибку показывает экран, а вложение остаётся в композере. */
   onError?: (error: unknown) => void
   /** Send крутит PUT/confirm: чип показывает спиннер, пока busy. */
@@ -70,6 +72,7 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
     async add({ file }): Promise<PendingAttachment> {
       const id = generateId()
       itemTypes.set(id, options.itemType())
+      options.onItemTypeConsumed?.()
       return {
         id,
         type: 'document',
@@ -101,6 +104,7 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
         // Комплектность считает ядро: панель разделов пересчитается сама.
         void options.queryClient.invalidateQueries({ queryKey: ['organization', options.organizationId] })
         void options.queryClient.invalidateQueries({ queryKey: ['organization-items', options.organizationId] })
+        void options.queryClient.invalidateQueries({ queryKey: ['organization-details'] })
         if (options.productId) {
           void options.queryClient.invalidateQueries({ queryKey: ['product', options.productId] })
         }

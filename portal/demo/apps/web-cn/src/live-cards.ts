@@ -1,5 +1,5 @@
 import { OFFLINE_DEMO } from '@demo/api-client'
-import type { L10n, Organization, Product, RegistrationCase } from '@demo/domain'
+import type { L10n, Organization, OrganizationSlot, Product, RegistrationCase } from '@demo/domain'
 import { draftValue } from '@demo/domain'
 import {
   type CompanyCardView,
@@ -9,7 +9,7 @@ import {
   saleProgressPercent,
 } from './demo/catalog'
 import type { DemoUiState } from './demo/state'
-import { useAllProducts, useCases, useOrganizations } from './queries'
+import { useAllProducts, useCases, useOrganizationDetails, useOrganizations } from './queries'
 
 const zh = (zhText: string, en: string, ru: string): L10n => ({ zh: zhText, en, ru })
 
@@ -26,6 +26,27 @@ export function productDisplayName(product: Pick<Product, 'name' | 'draft'>, unt
   return asL10n({}, untitled)
 }
 
+function requiredSlots(organization: Organization): OrganizationSlot[] {
+  return (organization.slots ?? []).filter((slot) => !slot.optional)
+}
+
+function slotProgress(slots: OrganizationSlot[]): { done: number; total: number } {
+  return {
+    done: slots.filter((slot) => slot.status === 'filled').length,
+    total: slots.length,
+  }
+}
+
+/** Обязательные слоты кроме risk-check: на карточке это «документы компании». */
+export function companyDocumentProgress(organization: Organization): { done: number; total: number } {
+  return slotProgress(requiredSlots(organization).filter((slot) => slot.section !== 'risk'))
+}
+
+/** Обязательные слоты с апостилем. optional trademark в знаменатель не входит. */
+export function apostilleProgress(organization: Organization): { done: number; total: number } {
+  return slotProgress(requiredSlots(organization).filter((slot) => slot.needsApostille))
+}
+
 export function liveCompanyCard(organization: Organization, products: Product[]): CompanyCardView {
   const mine = products.filter((item) => item.organizationId === organization.id)
   const uscc =
@@ -33,7 +54,8 @@ export function liveCompanyCard(organization: Organization, products: Product[])
     draftValue(organization.draft, 'registrationNumber') ||
     '—'
   const approved = organization.status === 'profile_approved'
-  const docs = organization.completeness?.sections.find((section) => section.key === 'documents')
+  const docs = companyDocumentProgress(organization)
+  const apostille = apostilleProgress(organization)
   const openProduct = mine.find((item) => !item.caseId)
   return {
     organization,
@@ -47,10 +69,10 @@ export function liveCompanyCard(organization: Organization, products: Product[])
           'Profile incomplete; the risk check starts when required slots are closed.',
           'Профиль не закрыт, проверка рисков запустится автоматически.',
         ),
-    docsDone: docs?.filled ?? organization.completeness?.filled ?? 0,
-    docsTotal: docs?.total ?? organization.completeness?.total ?? 0,
-    apostilleDone: 0,
-    apostilleTotal: 0,
+    docsDone: docs.done,
+    docsTotal: docs.total,
+    apostilleDone: apostille.done,
+    apostilleTotal: apostille.total,
     productCount: mine.length,
     nextStep: !approved
       ? zh('继续对话，补全档案', 'Continue the dialog to complete the profile', 'Продолжить диалог и закрыть профиль')
@@ -136,8 +158,11 @@ export function liveSaleProgress(products: Product[]): number {
 
 export function usePortfolioCards(state: DemoUiState) {
   const organizations = useOrganizations()
-  const companies = organizations.data ?? []
-  const productsQuery = useAllProducts(companies.map((item) => item.id))
+  const listed = organizations.data ?? []
+  const details = useOrganizationDetails(listed.map((item) => item.id))
+  const detailed = new Map((details.data ?? []).map((item) => [item.id, item]))
+  const companies = listed.map((item) => detailed.get(item.id) ?? item)
+  const productsQuery = useAllProducts(listed.map((item) => item.id))
   const cases = useCases()
   const products = mergeCaseProducts(productsQuery.data ?? [], cases.data ?? []).map((item) =>
     attachLiveCase(item, cases.data ?? []),

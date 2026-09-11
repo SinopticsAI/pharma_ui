@@ -98,6 +98,32 @@ describe('createIntakeAttachmentAdapter', () => {
     expect(onError).toHaveBeenCalledTimes(1)
   })
 
+  it('сжигает тип ask-document на первом файле пачки', async () => {
+    let nextType = 'business-license'
+    const types: string[] = []
+    const api = fakeApi([])
+    const adapter = createIntakeAttachmentAdapter({
+      api: api as unknown as ApiClient,
+      queryClient: new QueryClient(),
+      organizationId: 'org-1',
+      sessionId: 'ses-1',
+      itemType: () => nextType,
+      onItemTypeConsumed: () => {
+        nextType = 'other'
+      },
+    })
+
+    const first = await adapter.add({ file: new File(['a'], '01-yingye-zhizhao.jpg', { type: 'image/jpeg' }) })
+    const second = await adapter.add({ file: new File(['b'], '03-iso-13485.pdf', { type: 'application/pdf' }) })
+    api.requestOrgUploadUrl.mockImplementation(async (orgId: string, request: { itemType: string }) => {
+      types.push(request.itemType)
+      return { ...TICKET, itemId: `item-${types.length}` }
+    })
+    await adapter.send(first)
+    await adapter.send(second)
+    expect(types).toEqual(['business-license', 'other'])
+  })
+
   it('сигналит onBusy до putFile и сбрасывает после успеха', async () => {
     const calls: string[] = []
     const api = fakeApi(calls)
