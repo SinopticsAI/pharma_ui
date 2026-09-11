@@ -35,6 +35,8 @@ const ITEM_TYPE_LABEL: Record<string, MessageKey> = {
   'instruction-ru': 'itemType.instruction-ru',
   'tech-spec': 'itemType.tech-spec',
   'poa-upp': 'itemType.poa-upp',
+  signatory: 'itemType.signatory',
+  'bank-account': 'itemType.bank-account',
   'lab-protocol': 'itemType.lab-protocol',
   'regulator-letter': 'itemType.regulator-letter',
   'nmpa-certificate': 'itemType.nmpa-certificate',

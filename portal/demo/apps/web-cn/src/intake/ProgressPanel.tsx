@@ -41,9 +41,11 @@ export function ProgressPanel({
   title: string
 }) {
   const { t } = useI18n()
-  const company = sections.length > 0
-  const ordered = company ? sortCompanySections(sections) : sections
-  const clamped = Math.min(100, Math.max(0, percent))
+  const listed = Array.isArray(sections) ? sections : []
+  const needed = Array.isArray(missing) ? missing : []
+  const company = listed.length > 0
+  const ordered = company ? sortCompanySections(listed) : listed
+  const clamped = Math.min(100, Math.max(0, Number(percent) || 0))
 
   return (
     <Card>
@@ -65,14 +67,14 @@ export function ProgressPanel({
             const kind = sectionProgressKind(section)
             return (
               <li key={section.key} className="flex items-center justify-between gap-2">
-                <span>{t(SECTION_KEY[section.key])}</span>
+                <span>{SECTION_KEY[section.key] ? t(SECTION_KEY[section.key]) : section.key}</span>
                 <Badge variant={SECTION_BADGE[kind]}>{sectionStatusLabel(section, t)}</Badge>
               </li>
             )
           })}
           {company
             ? null
-            : missing.map((field) => (
+            : needed.map((field) => (
                 <li key={field} className="flex items-center justify-between gap-2">
                   <span>{field}</span>
                   <span className="text-muted-foreground">{t('intake.chat.progressNeeded')}</span>

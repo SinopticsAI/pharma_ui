@@ -337,7 +337,16 @@ export type DraftFields = Record<string, DraftField | string | undefined>
 export function draftValue(draft: DraftFields | undefined, key: string): string {
   const entry = draft?.[key]
   if (typeof entry === 'string') return entry
-  return entry?.value ?? ''
+  if (!entry || typeof entry !== 'object') return ''
+  const value = (entry as DraftField).value as unknown
+  if (typeof value === 'string') return value
+  if (value && typeof value === 'object') {
+    const rec = value as Record<string, unknown>
+    for (const locale of ['zh', 'en', 'ru', 'value'] as const) {
+      if (typeof rec[locale] === 'string' && rec[locale]) return rec[locale]
+    }
+  }
+  return ''
 }
 
 export type RiskLevel = 'low' | 'medium' | 'high' | 'unknown'

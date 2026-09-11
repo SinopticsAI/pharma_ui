@@ -42,7 +42,10 @@ export function journalToolFallbackKey(
 }
 
 export function journalText(message: IntakeMessage, locale: 'zh' | 'en' | 'ru'): string {
-  return message.text[locale] || message.text.ru || message.text.en || message.text.zh || ''
+  const text = message.text as Partial<{ ru: string; en: string; zh: string }> | string | undefined
+  if (typeof text === 'string') return text
+  if (!text || typeof text !== 'object') return ''
+  return text[locale] || text.ru || text.en || text.zh || ''
 }
 
 export function journalPersistedIds(messages: IntakeMessage[]): Set<string> {

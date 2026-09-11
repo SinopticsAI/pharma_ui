@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coerceToolArgs } from './tool-args'
+import { coerceToolArgs, draftFieldRows, toolArgsOf } from './tool-args'
 
 /** args show-draft / ask-document из msg-jhgdc31u на prd-ypujohgf. */
 const SHOW_DRAFT_FROM_LOG = {
@@ -47,5 +47,34 @@ describe('coerceToolArgs', () => {
 
   it('оставляет мусорную строку строкой', () => {
     expect(coerceToolArgs({ fields: 'not-json' })).toEqual({ fields: 'not-json' })
+  })
+})
+
+describe('toolArgsOf', () => {
+  it('не падает на undefined args до первого стрима', () => {
+    expect(toolArgsOf(undefined)).toEqual({})
+  })
+})
+
+describe('draftFieldRows', () => {
+  it('пустой список, если fields нет или это не массив', () => {
+    expect(draftFieldRows(undefined)).toEqual([])
+    expect(draftFieldRows('not-json')).toEqual([])
+    expect(draftFieldRows({ legalName: 'Acme' })).toEqual([])
+  })
+
+  it('строкой отдаёт value, даже если агент положил объект', () => {
+    expect(
+      draftFieldRows([
+        { key: 'legalName', label: { zh: '名称' }, value: { zh: '天津九安医疗电子股份有限公司' }, source: { ru: '执照' } },
+      ]),
+    ).toEqual([
+      {
+        key: 'legalName',
+        label: { zh: '名称' },
+        value: '天津九安医疗电子股份有限公司',
+        source: '执照',
+      },
+    ])
   })
 })

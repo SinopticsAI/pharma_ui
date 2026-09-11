@@ -2,10 +2,10 @@ import { makeAssistantToolUI } from '@assistant-ui/react'
 import type { NodeMapItem, NodeOwner, NodeStatus, RiskLevel } from '@demo/domain'
 import { l10n } from '@demo/domain'
 import { type MessageKey, useI18n } from '@demo/i18n'
-import { type ComponentType, useEffect } from 'react'
+import { Component, type ComponentType, type ReactNode, useEffect } from 'react'
 import { NodeMapView } from '../NodeMap'
 import { useIntakeActions } from './context'
-import { coerceToolArgs } from './tool-args'
+import { asList, draftFieldRows, toolArgsOf } from './tool-args'
 
 /**
  * Карточки диалога — только просмотр.
@@ -24,14 +24,37 @@ type L10nArg = { ru: string; en?: string; zh?: string }
 
 function useText() {
   const { text } = useI18n()
-  return (value: L10nArg | undefined, fallback = '') => text(l10n(value, fallback)).value
+  return (value: L10nArg | string | undefined, fallback = '') => {
+    if (typeof value === 'string') return value || fallback
+    return text(l10n(value, fallback)).value
+  }
+}
+
+class ToolCardError extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  render() {
+    if (this.state.failed) return <ToolCardFallback />
+    return this.props.children
+  }
+}
+
+function ToolCardFallback() {
+  const { t } = useI18n()
+  return <p className="rounded-lg border bg-card p-3 text-sm text-muted-foreground">{t('intake.chat.journal.toolCard')}</p>
 }
 
 function register<TArgs>(names: string[], Render: ComponentType<{ args: TArgs }>): ComponentType[] {
   return names.map((toolName) =>
     makeAssistantToolUI<TArgs, unknown>({
       toolName,
-      render: ({ args }) => <Render args={coerceToolArgs(args)} />,
+      render: ({ args }) => (
+        <ToolCardError>
+          <Render args={toolArgsOf(args)} />
+        </ToolCardError>
+      ),
     }),
   )
 }
@@ -83,17 +106,18 @@ interface ShowDraftArgs {
 function ShowDraft({ args }: { args: ShowDraftArgs }) {
   const { t } = useI18n()
   const asText = useText()
-  const missing = args.missing ?? []
+  const missing = Array.isArray(args.missing) ? args.missing : []
+  const fields = draftFieldRows(args.fields)
 
   return (
     <section className="space-y-2 rounded-lg border bg-card p-3">
       <h4 className="text-sm font-semibold">{t('intake.card.reviewTitle')}</h4>
       <table className="w-full text-sm">
         <tbody>
-          {(args.fields ?? []).map((field) => (
+          {fields.map((field) => (
             <tr key={field.key} className="border-b last:border-0">
               <th scope="row" className="py-1 pr-3 text-left font-medium">
-                {asText(field.label, field.key)}
+                {asText(field.label as L10nArg | string | undefined, field.key)}
               </th>
               <td className="py-1">
                 <span className="block">{field.value}</span>
@@ -105,7 +129,7 @@ function ShowDraft({ args }: { args: ShowDraftArgs }) {
       </table>
       {missing.length > 0 ? (
         <p className="text-sm text-muted-foreground">
-          {t('intake.card.missing').replace('{list}', missing.join(', '))}
+          {(t('intake.card.missing') ?? '').replace('{list}', missing.join(', '))}
         </p>
       ) : null}
       <p className="text-sm text-muted-foreground">
@@ -144,21 +168,21 @@ function Variant({ variant }: { variant: VariantArg }) {
       className={`space-y-2 rounded-md border p-3 ${forbidden ? 'opacity-70' : ''} ${variant.variantType === 'recommended' ? 'border-primary' : ''}`}
     >
       <header className="space-y-1">
-        <span className="text-xs text-muted-foreground">{t(VARIANT_TAG[variant.variantType])}</span>
+        <span className="text-xs text-muted-foreground">{t(VARIANT_TAG[variant.variantType] ?? 'intake.card.variant.alternative')}</span>
         <h4 className="text-sm font-semibold">{asText(variant.title, variant.id)}</h4>
       </header>
       <p className="text-sm">{asText(variant.summary)}</p>
 
-      {(variant.pros ?? []).length > 0 ? (
+      {asList<L10nArg>(variant.pros).length > 0 ? (
         <ul className="list-disc pl-4 text-sm">
-          {(variant.pros ?? []).map((item, index) => (
+          {asList<L10nArg>(variant.pros).map((item, index) => (
             <li key={index}>{asText(item)}</li>
           ))}
         </ul>
       ) : null}
-      {(variant.cons ?? []).length > 0 ? (
+      {asList<L10nArg>(variant.cons).length > 0 ? (
         <ul className="list-disc pl-4 text-sm text-muted-foreground">
-          {(variant.cons ?? []).map((item, index) => (
+          {asList<L10nArg>(variant.cons).map((item, index) => (
             <li key={index}>{asText(item)}</li>
           ))}
         </ul>
@@ -168,12 +192,12 @@ function Variant({ variant }: { variant: VariantArg }) {
 
       {variant.budget ? (
         <dl className="grid grid-cols-2 gap-1 text-sm">
-          {variant.budget.baskets.map((basket) => (
+          {asList<{ key: string; amount: number }>(variant.budget.baskets).map((basket) => (
             <div key={basket.key} className="contents">
               <dt className="text-muted-foreground">{basket.key}</dt>
               <dd className="m-0">
                 {variant.budget?.currency === 'RMB' ? '¥ ' : ''}
-                {basket.amount.toLocaleString(numberLocale)}
+                {Number(basket.amount).toLocaleString(numberLocale)}
               </dd>
             </div>
           ))}
@@ -198,7 +222,7 @@ function ShowVariants({ args }: { args: { productId: string; variants: VariantAr
     <section className="space-y-2 rounded-lg border bg-card p-3">
       <h4 className="text-sm font-semibold">{t('intake.card.variantsTitle')}</h4>
       <div className="grid gap-3 md:grid-cols-2">
-        {(args.variants ?? []).map((variant) => (
+        {asList<VariantArg>(args.variants).map((variant) => (
           <Variant key={variant.id} variant={variant} />
         ))}
       </div>
@@ -238,13 +262,14 @@ function ShowRiskReport({ args }: { args: RiskArgs }) {
   return (
     <section className="space-y-2 rounded-lg border bg-card p-3">
       <h4 className="text-sm font-semibold">
-        {t(RISK_LEVEL_LABEL[args.level])} · {t(VERDICT_LABEL[args.verdict])}
+        {t(RISK_LEVEL_LABEL[args.level] ?? 'intake.card.risk.unknown')} ·{' '}
+        {t(VERDICT_LABEL[args.verdict] ?? 'intake.card.verdict.pending')}
       </h4>
       <p className="text-sm">{asText(args.reasoning)}</p>
-      {(args.checks ?? []).length > 0 ? (
+      {asList<NonNullable<RiskArgs['checks']>[number]>(args.checks).length > 0 ? (
         <table className="w-full text-sm">
           <tbody>
-            {(args.checks ?? []).map((check) => (
+            {asList<NonNullable<RiskArgs['checks']>[number]>(args.checks).map((check) => (
               <tr key={check.name} className="border-b last:border-0">
                 <th scope="row" className="py-1 pr-3 text-left font-medium">
                   {check.name}
@@ -273,7 +298,7 @@ interface NodeArg {
 
 function ShowNodeMap({ args }: { args: { caseId: string; nodes: NodeArg[] } }) {
   const { t } = useI18n()
-  const items: NodeMapItem[] = (args.nodes ?? []).map((node, index) => ({
+  const items: NodeMapItem[] = asList<NodeArg>(args.nodes).map((node, index) => ({
     code: node.code,
     position: index,
     title: node.title,
@@ -309,7 +334,7 @@ function EscalateToCounsel({ args }: { args: { productId: string; reason: L10nAr
 
   return (
     <section className="rounded-lg border bg-muted/40 p-3 text-sm">
-      {t('intake.card.escalated').replace('{reason}', asText(args.reason))}
+      {(t('intake.card.escalated') ?? '').replace('{reason}', asText(args.reason))}
     </section>
   )
 }

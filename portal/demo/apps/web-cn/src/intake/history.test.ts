@@ -5,6 +5,7 @@ import {
   JOURNAL_ASSISTANT_ROLES,
   JOURNAL_USER_ROLES,
   journalPersistedIds,
+  journalText,
   journalToolFallbackKey,
   journalToUiMessages,
   normalizeUiMessages,
@@ -285,5 +286,32 @@ describe('user написал, /chat упал', () => {
     expect(message).toBeTruthy()
     if (!message) return
     expect(unpersistedAppends([message], new Set(), JOURNAL_USER_ROLES, fallback)[0]?.text).toEqual('подпись вложения')
+  })
+
+  it('не падает, если у сообщения нет text, и поднимает tool-part', () => {
+    const missingText = row({
+      id: 'msg-raw',
+      role: 'agent',
+      text: undefined as unknown as IntakeMessage['text'],
+      payload: {
+        clientMessageId: 'a-raw',
+        parts: [
+          {
+            type: 'tool',
+            toolName: 'show-draft',
+            args: { scope: 'company', entityId: 'org-1', fields: 'not-json', canApprove: true },
+          },
+        ],
+      },
+    })
+    expect(journalText(missingText, 'zh')).toEqual('')
+    const restored = journalToUiMessages([missingText], 'zh')
+    expect(restored).toHaveLength(1)
+    expect(toolInput(restored[0]!, 'show-draft')).toEqual({
+      scope: 'company',
+      entityId: 'org-1',
+      fields: 'not-json',
+      canApprove: true,
+    })
   })
 })
