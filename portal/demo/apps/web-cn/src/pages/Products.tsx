@@ -24,7 +24,6 @@ import {
 import { usePortfolioCards } from '../live-cards'
 import { usePortfolioCreate } from '../portfolio-create'
 import { useApproveProduct, useCase, useProduct, useProductVariants } from '../queries'
-import { MandateStepsTable } from './MandateSteps'
 import { Shell } from '../Shell'
 import {
   canSelectLiveVariant,
@@ -35,6 +34,7 @@ import {
   variantIsChoosable,
 } from './classify-live'
 import { ProductCard } from './EntityCards'
+import { MandateStepsTable } from './MandateSteps'
 
 const GATE_FIELD_LABEL: Record<'name' | 'intendedUse', MessageKey> = {
   name: 'productField.name',
@@ -241,7 +241,11 @@ function LiveClassificationPage({ productId }: { productId: string }) {
             <Button type="button" onClick={openMap}>
               {t('classify.openRoadmap')}
             </Button>
-            <Link to="/products/$productId/nodes/$nodeCode" params={{ productId, nodeCode: 'M1' }} className="text-sm underline">
+            <Link
+              to="/products/$productId/nodes/$nodeCode"
+              params={{ productId, nodeCode: 'M1' }}
+              className="text-sm underline"
+            >
               M1
             </Link>
             <Link to="/products/$productId/mandate" params={{ productId }} className="text-sm underline">
@@ -355,6 +359,7 @@ function VariantGrid({
         const forbidden = variant.variantType === 'forbidden'
         const active = variant.selected || variant.id === selectedId
         const selectable = Boolean(onSelect) && !forbidden
+        const pick = () => onSelect?.(variant)
         return (
           <article
             key={variant.id}
@@ -365,7 +370,19 @@ function VariantGrid({
                   ? 'border-primary ring-1 ring-primary/30'
                   : ''
             } ${selectable ? 'cursor-pointer' : ''}`}
-            onClick={selectable ? () => onSelect?.(variant) : undefined}
+            role={selectable ? 'button' : undefined}
+            tabIndex={selectable ? 0 : undefined}
+            onClick={selectable ? pick : undefined}
+            onKeyDown={
+              selectable
+                ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      pick()
+                    }
+                  }
+                : undefined
+            }
           >
             <header className="space-y-1.5">
               <span

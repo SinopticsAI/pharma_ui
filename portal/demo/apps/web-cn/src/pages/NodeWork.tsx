@@ -79,7 +79,11 @@ export function NodeWorkPage({ nodeCode }: { nodeCode: string }) {
       {nodeCode === 'M1' ? (
         <Card title={t('mandate.m1Title')}>
           <MandateStepsTable steps={caseQuery.data?.mandate?.steps} />
-          <Link to="/products/$productId/mandate" params={{ productId }} className="mt-3 inline-block text-sm underline">
+          <Link
+            to="/products/$productId/mandate"
+            params={{ productId }}
+            className="mt-3 inline-block text-sm underline"
+          >
             {t('nav.mandate')}
           </Link>
         </Card>

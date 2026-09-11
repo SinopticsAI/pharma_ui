@@ -257,11 +257,7 @@ function LiveProductIntake({ productId }: { productId: string }) {
     <Shell nav={<CabinetNav />}>
       <PageHeader
         eyebrow={t('eyebrow.product')}
-        title={
-          card
-            ? text(productDisplayName(card, t('portfolio.untitledProduct'))).value
-            : t('intake.product.title')
-        }
+        title={card ? text(productDisplayName(card, t('portfolio.untitledProduct'))).value : t('intake.product.title')}
         lead={
           card
             ? `${text(productDisplayName(card, t('portfolio.untitledProduct'))).value}. ${t('intake.product.leadNamed')}`
