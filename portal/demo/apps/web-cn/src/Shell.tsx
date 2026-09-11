@@ -13,6 +13,7 @@ import { useDemo } from './demo/context'
 import { Button, fill, LocaleSwitch } from './kit'
 import { productDisplayName } from './live-cards'
 import { useAllProducts, useCases, useOrganizations } from './queries'
+import { resolveShellFocus } from './shell-focus'
 
 const LOCALES: { value: Locale; label: string }[] = [
   { value: 'zh', label: LOCALE_LABEL.zh },
@@ -52,25 +53,21 @@ export function Shell({
 
   const account = text(l10n(identity.account.name, identity.accountId)).value
   const userName = identity.displayName || text(l10n(undefined, t('brand.userFallback'))).value
-  const currentCase =
-    (cases.data ?? []).find((item) => item.id === caseId) ??
-    (cases.data ?? []).find((item) => item.productId === productId) ??
-    (cases.data ?? [])[0]
-  const currentProduct =
-    (products.data ?? []).find((item) => item.id === productId) ??
-    (products.data ?? []).find((item) => item.id === currentCase?.productId) ??
-    (products.data ?? [])[0]
-  const currentOrg =
-    (organizations.data ?? []).find((item) => item.id === currentProduct?.organizationId) ??
-    (organizations.data ?? []).find((item) => item.id === currentCase?.organizationId) ??
-    (organizations.data ?? [])[0]
-  const companyLabel = brandMeta ?? (currentOrg ? text(l10n(currentOrg.name, currentOrg.id)).value : '')
-  const productLabel = currentCase
-    ? text(l10n(currentCase.product)).value
-    : currentProduct
-      ? text(productDisplayName(currentProduct, t('portfolio.untitledProduct'))).value
+  const focus = resolveShellFocus({
+    productId,
+    caseId,
+    products: products.data ?? [],
+    cases: cases.data ?? [],
+    organizations: organizations.data ?? [],
+  })
+  const companyLabel =
+    brandMeta ?? (focus.organization ? text(l10n(focus.organization.name, focus.organization.id)).value : '')
+  const productLabel = focus.product
+    ? text(productDisplayName(focus.product, t('portfolio.untitledProduct'))).value
+    : focus.case
+      ? text(l10n(focus.case.product)).value
       : ''
-  const caseCode = currentCase?.code
+  const caseCode = focus.case?.code
   const headerCompany = companyLabel || (OFFLINE_DEMO ? text(minghuName).value : '—')
   const headerProduct = productLabel || (OFFLINE_DEMO ? text(mh200Name).value : '—')
   const headerCode = caseCode || (OFFLINE_DEMO ? 'RU-0417' : '')

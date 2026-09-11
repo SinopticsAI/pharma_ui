@@ -1,8 +1,8 @@
-import { describeError, OFFLINE_DEMO } from '@demo/api-client'
+import { describeError, OFFLINE_DEMO, useIdentity } from '@demo/api-client'
 import type { ClassificationVariant } from '@demo/domain'
 import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { AddProductCard } from '../CreateActions'
 import { classificationVariants } from '../demo/catalog'
@@ -25,7 +25,7 @@ import { usePortfolioCards } from '../live-cards'
 import { usePortfolioCreate } from '../portfolio-create'
 import { useApproveProduct, useProduct, useProductVariants } from '../queries'
 import { Shell } from '../Shell'
-import { clientCanBuildMap, resolveVariants } from './classify-live'
+import { canSelectLiveVariant, clientCanBuildMap, resolveVariants, variantIsChoosable } from './classify-live'
 import { ProductCard } from './EntityCards'
 
 export function ProductsPage() {
@@ -134,6 +134,7 @@ function DemoClassificationPage({ productId }: { productId: string }) {
 function LiveClassificationPage({ productId }: { productId: string }) {
   const { t } = useI18n()
   const navigate = useNavigate()
+  const identity = useIdentity()
   const productQuery = useProduct(productId)
   const variantsQuery = useProductVariants(productId)
   const approve = useApproveProduct(productId)
@@ -141,6 +142,7 @@ function LiveClassificationPage({ productId }: { productId: string }) {
   const variants = resolveVariants(product, variantsQuery.data)
   const specialist = Boolean(product?.specialistApprovedAt)
   const client = Boolean(product?.clientApprovedAt)
+  const canPick = canSelectLiveVariant({ canApproveAsSpecialist: identity.can.approveAsSpecialist, product })
   const canBuild = clientCanBuildMap(product)
   const selectedId = product?.selectedVariantId ?? ''
 
@@ -148,22 +150,45 @@ function LiveClassificationPage({ productId }: { productId: string }) {
   if (productQuery.isError) return <Callout tone="deadline">{describeError(productQuery.error)}</Callout>
   if (!product) return <Empty>{t('portfolio.noProducts')}</Empty>
 
+  const openMap = () => {
+    void navigate({ to: '/products/$productId/roadmap', params: { productId } })
+  }
+
+  const approveAsClient = () => {
+    approve.mutate({ as: 'client' }, { onSuccess: openMap })
+  }
+
+  const chooseAndBuild = (variant: ClassificationVariant) => {
+    if (!variantIsChoosable(variant)) return
+    approve.mutate(
+      { as: 'specialist', variantId: variant.id, checkedAgainst: 'cn-cabinet' },
+      { onSuccess: approveAsClient },
+    )
+  }
+
   const next = product.caseId
     ? t('classify.mapOpen')
-    : canBuild
-      ? t('classify.buildMap')
-      : variants.length === 0
-        ? t('classify.waitingVariants')
-        : t('classify.buildLocked')
+    : variants.length === 0
+      ? t('classify.waitingVariants')
+      : canBuild
+        ? t('classify.buildMap')
+        : canPick
+          ? t('classify.choose')
+          : t('classify.buildLocked')
 
   return (
     <ClassificationShell next={next} specialist={specialist} client={client}>
       {variantsQuery.isError ? <Callout tone="deadline">{describeError(variantsQuery.error)}</Callout> : null}
-      <Callout tone="quiet">{t('classify.clientOnly')}</Callout>
+      {!canPick && !specialist ? <Callout tone="quiet">{t('classify.clientOnly')}</Callout> : null}
       {variants.length === 0 ? (
-        <Empty>{t('classify.waitingVariants')}</Empty>
+        <Empty>
+          <p>{t('classify.waitingVariants')}</p>
+          <Link to="/intake/product/$productId" params={{ productId }} className="mt-2 inline-block text-sm underline">
+            {t('portfolio.continueAgent')}
+          </Link>
+        </Empty>
       ) : (
-        <VariantGrid variants={variants} selectedId={selectedId} />
+        <VariantGrid variants={variants} selectedId={selectedId} onChoose={canPick ? chooseAndBuild : undefined} />
       )}
 
       <Card title={t('classify.audit')}>
@@ -184,32 +209,16 @@ function LiveClassificationPage({ productId }: { productId: string }) {
         {approve.isError ? <Callout tone="deadline">{describeError(approve.error)}</Callout> : null}
         <div className="mt-3 flex flex-wrap gap-2">
           {product.caseId ? (
-            <Button
-              type="button"
-              onClick={() => void navigate({ to: '/products/$productId/roadmap', params: { productId } })}
-            >
+            <Button type="button" onClick={openMap}>
               {t('home.openMap')}
             </Button>
           ) : (
-            <Button
-              type="button"
-              disabled={!canBuild || approve.isPending}
-              onClick={() => {
-                approve.mutate(
-                  { as: 'client' },
-                  {
-                    onSuccess: () => {
-                      void navigate({ to: '/products/$productId/roadmap', params: { productId } })
-                    },
-                  },
-                )
-              }}
-            >
+            <Button type="button" disabled={!canBuild || approve.isPending} onClick={approveAsClient}>
               {t('classify.buildMap')}
             </Button>
           )}
         </div>
-        {!product.caseId && !canBuild ? (
+        {!product.caseId && !canBuild && !canPick ? (
           <p className="mt-2 text-sm text-muted-foreground">{t('classify.buildLocked')}</p>
         ) : null}
       </Card>

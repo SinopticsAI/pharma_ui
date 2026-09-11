@@ -317,7 +317,7 @@ export const useApproveProductData = (productId: string) => {
   })
 }
 
-/** Клиентское утверждение классификации: специалист подтвердил её раньше. */
+/** Утверждение классификации: specialist выбирает вариант, client строит карту. */
 export const useApproveProduct = (productId: string) => {
   const api = useApi()
   const queryClient = useQueryClient()

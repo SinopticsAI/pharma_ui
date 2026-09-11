@@ -1,7 +1,8 @@
 import { useI18n } from '@demo/i18n'
-import { Link } from '@tanstack/react-router'
+import { Link, useParams } from '@tanstack/react-router'
 import { useCabinetFocus } from './cabinet-focus'
 import { navItem, navItemActive } from './kit'
+import { cabinetNavProductId } from './shell-focus'
 
 const BEFORE = [
   { to: '/', key: 'nav.home', exact: true },
@@ -20,7 +21,10 @@ const AFTER = [
 /** Левое меню кабинета: walkthrough IA, не список открытых дел. */
 export function CabinetNav({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useI18n()
-  const { productId } = useCabinetFocus()
+  const params = useParams({ strict: false })
+  const routeProductId = typeof params.productId === 'string' ? params.productId : undefined
+  const { productId: focusProductId } = useCabinetFocus()
+  const productId = cabinetNavProductId(routeProductId, focusProductId)
 
   return (
     <>

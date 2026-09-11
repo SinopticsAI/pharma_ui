@@ -1,7 +1,7 @@
 import type { ClassificationVariant, Product } from '@demo/domain'
 import { describe, expect, it } from 'vitest'
 import { countPendingActions, defaultDemoState } from '../demo/state'
-import { clientCanBuildMap, resolveVariants } from './classify-live'
+import { canSelectLiveVariant, clientCanBuildMap, resolveVariants, variantIsChoosable } from './classify-live'
 
 const product = (partial: Partial<Product> = {}): Product => ({
   id: 'prd-sml9v3yp',
@@ -56,30 +56,40 @@ describe('classification dual confirmation', () => {
 })
 
 describe('clientCanBuildMap', () => {
-  it('ждёт специалиста, выбранный вариант и отсутствие кейса', () => {
+  it('строит карту по выбранному варианту без ожидания специалиста', () => {
     expect(clientCanBuildMap(undefined)).toBe(false)
     expect(clientCanBuildMap(product())).toBe(false)
-    expect(
-      clientCanBuildMap(product({ specialistApprovedAt: '2026-09-10T10:00:00Z', selectedVariantId: 'var-a' })),
-    ).toBe(true)
+    expect(clientCanBuildMap(product({ selectedVariantId: 'var-a' }))).toBe(true)
     expect(
       clientCanBuildMap(
         product({
-          specialistApprovedAt: '2026-09-10T10:00:00Z',
           selectedVariantId: 'var-a',
           clientApprovedAt: '2026-09-11T10:00:00Z',
         }),
       ),
     ).toBe(false)
+    expect(clientCanBuildMap(product({ selectedVariantId: 'var-a', caseId: 'case-1' }))).toBe(false)
+  })
+})
+
+describe('canSelectLiveVariant', () => {
+  it('даёт выбрать вариант, пока нет кейса и подтверждения специалиста', () => {
+    expect(canSelectLiveVariant({ canApproveAsSpecialist: true, product: product() })).toBe(true)
+    expect(canSelectLiveVariant({ canApproveAsSpecialist: false, product: product() })).toBe(false)
     expect(
-      clientCanBuildMap(
-        product({
-          specialistApprovedAt: '2026-09-10T10:00:00Z',
-          selectedVariantId: 'var-a',
-          caseId: 'case-1',
-        }),
-      ),
+      canSelectLiveVariant({
+        canApproveAsSpecialist: true,
+        product: product({ specialistApprovedAt: '2026-09-10T10:00:00Z' }),
+      }),
     ).toBe(false)
+    expect(canSelectLiveVariant({ canApproveAsSpecialist: true, product: product({ caseId: 'case-1' }) })).toBe(false)
+  })
+})
+
+describe('variantIsChoosable', () => {
+  it('запрещает выбрать forbidden', () => {
+    expect(variantIsChoosable(variant('var-a'))).toBe(true)
+    expect(variantIsChoosable({ ...variant('var-c'), variantType: 'forbidden' })).toBe(false)
   })
 })
 
