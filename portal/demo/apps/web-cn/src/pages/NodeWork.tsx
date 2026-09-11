@@ -18,6 +18,7 @@ import {
 } from '../kit'
 import { useCase } from '../queries'
 import { useWorkspace } from '../workspace'
+import { MandateStepsTable } from './MandateSteps'
 
 const STEP_LABEL = { done: 'node.done', progress: 'node.weDoing', pending: 'node.fixWithAgent' } as const
 
@@ -74,6 +75,15 @@ export function NodeWorkPage({ nodeCode }: { nodeCode: string }) {
           <p className="text-sm">{fillGroup(t('node.group'), done, docs.length || 1)}</p>
         </Card>
       </div>
+
+      {nodeCode === 'M1' ? (
+        <Card title={t('mandate.m1Title')}>
+          <MandateStepsTable steps={caseQuery.data?.mandate?.steps} />
+          <Link to="/products/$productId/mandate" params={{ productId }} className="mt-3 inline-block text-sm underline">
+            {t('nav.mandate')}
+          </Link>
+        </Card>
+      ) : null}
 
       {docs.length > 0 ? (
         <Card title={t('node.pipeline')}>

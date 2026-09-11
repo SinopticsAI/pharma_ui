@@ -97,6 +97,8 @@ export const ruWalk = {
   'classify.clientOnly':
     'Вариант выбирает специалист. Здесь клиент утверждает уже выбранный трек — и ядро строит карту.',
   'classify.mapOpen': 'Карта уже построена',
+  'classify.openRoadmap': 'Открыть карту процесса',
+  'mandate.m1Title': 'M1 · Договор и уполномоченный представитель',
 
   'map.viewMap': 'Карта',
   'map.viewList': 'Список задач',
@@ -384,6 +386,8 @@ export const enWalk: { [K in keyof typeof ruWalk]: string } = {
   'classify.clientOnly':
     'A specialist selects the option. Here the client approves the chosen track — and the core builds the map.',
   'classify.mapOpen': 'The map is already built',
+  'classify.openRoadmap': 'Open the process map',
+  'mandate.m1Title': 'M1 · Contract and authorized representative',
 
   'map.viewMap': 'Map',
   'map.viewList': 'Task list',
@@ -665,6 +669,8 @@ export const zhWalk: { [K in keyof typeof ruWalk]: string } = {
   'classify.waitingVariants': '核心里还没有分类方案。',
   'classify.clientOnly': '方案由专家选定。客户在此确认已选路径，核心随即生成地图。',
   'classify.mapOpen': '地图已生成',
+  'classify.openRoadmap': '打开流程地图',
+  'mandate.m1Title': 'M1 · 合同与授权代表',
 
   'map.viewMap': '地图',
   'map.viewList': '任务列表',

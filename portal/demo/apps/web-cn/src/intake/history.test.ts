@@ -4,10 +4,12 @@ import { describe, expect, it } from 'vitest'
 import {
   JOURNAL_ASSISTANT_ROLES,
   JOURNAL_USER_ROLES,
+  journalHasDraftTool,
   journalPersistedIds,
   journalText,
   journalToolFallbackKey,
   journalToUiMessages,
+  messagesHaveDraftTool,
   normalizeUiMessages,
   uiMessagesToRepository,
   uiMessageToJournalAppend,
@@ -315,5 +317,28 @@ describe('user написал, /chat упал', () => {
       fields: 'not-json',
       canApprove: true,
     })
+  })
+})
+
+describe('draft tool detection', () => {
+  it('видит show-draft в нити и в журнале', () => {
+    expect(
+      messagesHaveDraftTool([
+        {
+          role: 'assistant',
+          parts: [{ type: 'tool-showDraft', toolName: 'showDraft' }],
+        },
+      ]),
+    ).toBe(true)
+    expect(messagesHaveDraftTool([{ role: 'assistant', parts: [{ type: 'text', text: 'ok' }] }])).toBe(false)
+    expect(
+      journalHasDraftTool([
+        row({
+          id: 'msg-draft',
+          role: 'agent',
+          payload: { clientMessageId: 'c1', parts: [{ type: 'tool', toolName: 'show-draft', args: {} }] },
+        }),
+      ]),
+    ).toBe(true)
   })
 })

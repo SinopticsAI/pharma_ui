@@ -1,4 +1,5 @@
 import type { Organization } from '@demo/domain'
+import { useI18n } from '@demo/i18n'
 import { useNavigate } from '@tanstack/react-router'
 import { isDemoId } from './demo/ids'
 import { useCreateOrganization, useCreateProduct, useOpenIntakeSession } from './queries'
@@ -9,6 +10,7 @@ export function eligibleOrganizations(organizations: Organization[]): Organizati
 
 export function usePortfolioCreate() {
   const navigate = useNavigate()
+  const { locale } = useI18n()
   const createOrganization = useCreateOrganization()
   const createProduct = useCreateProduct()
   const openSession = useOpenIntakeSession()
@@ -17,7 +19,11 @@ export function usePortfolioCreate() {
 
   const startCompany = async () => {
     const organization = await createOrganization.mutateAsync({})
-    const session = await openSession.mutateAsync({ scope: 'organization', organizationId: organization.id })
+    const session = await openSession.mutateAsync({
+      scope: 'organization',
+      organizationId: organization.id,
+      locale,
+    })
     void navigate({
       to: '/intake/company/$organizationId',
       params: { organizationId: organization.id },
@@ -27,7 +33,7 @@ export function usePortfolioCreate() {
 
   const startProduct = async (organization: Organization) => {
     const product = await createProduct.mutateAsync({ organizationId: organization.id })
-    const session = await openSession.mutateAsync({ scope: 'product', productId: product.id })
+    const session = await openSession.mutateAsync({ scope: 'product', productId: product.id, locale })
     void navigate({
       to: '/intake/product/$productId',
       params: { productId: product.id },

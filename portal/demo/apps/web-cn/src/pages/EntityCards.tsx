@@ -92,11 +92,7 @@ export function ProductCard({ item }: { item: ProductCardView }) {
         <Link to="/products/$productId" params={{ productId: product.id }}>
           <Button type="button">{t('home.openCabinet')}</Button>
         </Link>
-        {hasCase ? (
-          <Link to="/products/$productId/roadmap" params={{ productId: product.id }} className="text-sm underline">
-            {t('home.openMap')} →
-          </Link>
-        ) : (
+        {hasCase ? null : (
           <Link to="/products/$productId/classify" params={{ productId: product.id }} className="text-sm underline">
             {t('home.openClassify')} →
           </Link>

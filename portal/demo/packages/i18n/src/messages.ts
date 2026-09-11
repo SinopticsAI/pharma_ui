@@ -200,6 +200,13 @@ export const ru = {
   'intake.product.completenessTitle': 'Комплектность продукта',
 
   'intake.chat.empty': 'Приложите документ компании скрепкой — агент разберёт его и заполнит карточку. Анкету писать не нужно.',
+  'intake.chat.emptyProduct':
+    'Приложите документ продукта скрепкой — агент разберёт его и заполнит карточку. Анкету писать не нужно.',
+  'intake.chat.openRoadmap': 'Перейти к дорожной карте',
+  'intake.next.roadmap': 'Карта процесса уже построена — откройте её и закройте узел M1.',
+  'intake.next.classify': 'Данные продукта собраны. Перейдите к классификации и утвердите трек.',
+  'intake.next.missing': 'Чтобы идти дальше, закройте в диалоге: {fields}.',
+  'intake.next.upload': 'Приложите документы продукта — агент заполнит карточку.',
   'intake.chat.reading': 'Агент читает документ',
   'intake.chat.replying': 'Агент отвечает',
   'intake.chat.uploading': 'Загружаю файл',
@@ -571,6 +578,13 @@ export const en: Record<keyof typeof ru, string> = {
   'intake.product.completenessTitle': 'Product completeness',
 
   'intake.chat.empty': 'Attach a company document with the paperclip — the agent will read it and fill the card. You do not need a questionnaire.',
+  'intake.chat.emptyProduct':
+    'Attach a product document with the paperclip — the agent will read it and fill the card. You do not need a questionnaire.',
+  'intake.chat.openRoadmap': 'Go to the roadmap',
+  'intake.next.roadmap': 'The process map is ready — open it and close node M1.',
+  'intake.next.classify': 'Product data is in. Go to classification and confirm the track.',
+  'intake.next.missing': 'To continue, close these fields in the dialog: {fields}.',
+  'intake.next.upload': 'Attach product documents — the agent will fill the card.',
   'intake.chat.reading': 'The agent is reading the document',
   'intake.chat.replying': 'The agent is answering',
   'intake.chat.uploading': 'Uploading the file',
@@ -940,6 +954,12 @@ export const zh: Record<keyof typeof ru, string> = {
   'intake.product.completenessTitle': '产品完备度',
 
   'intake.chat.empty': '用回形针上传公司文件——智能体会读取并填写卡片。无需填写问卷。',
+  'intake.chat.emptyProduct': '用回形针上传产品文件——智能体会读取并填写卡片。无需填写问卷。',
+  'intake.chat.openRoadmap': '前往路线图',
+  'intake.next.roadmap': '流程地图已生成——打开并完成节点 M1。',
+  'intake.next.classify': '产品资料已齐。请前往分类并确认路径。',
+  'intake.next.missing': '要继续，请在对话中补全：{fields}。',
+  'intake.next.upload': '请上传产品文件，智能体将填写卡片。',
   'intake.chat.reading': '智能体正在阅读文件',
   'intake.chat.replying': '智能体正在回复',
   'intake.chat.uploading': '正在上传文件',

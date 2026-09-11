@@ -4,6 +4,7 @@ import { Badge } from '@demo/ui/components/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@demo/ui/components/card'
 import { Progress } from '@demo/ui/components/progress'
 import { Separator } from '@demo/ui/components/separator'
+import { productFieldKey } from './product-fields'
 import { sectionProgressKind, sortCompanySections } from './progress'
 
 const SECTION_KEY: Record<ProgressSection['key'], MessageKey> = {
@@ -74,12 +75,15 @@ export function ProgressPanel({
           })}
           {company
             ? null
-            : needed.map((field) => (
-                <li key={field} className="flex items-center justify-between gap-2">
-                  <span>{field}</span>
-                  <span className="text-muted-foreground">{t('intake.chat.progressNeeded')}</span>
-                </li>
-              ))}
+            : needed.map((field) => {
+                const label = productFieldKey(field)
+                return (
+                  <li key={field} className="flex items-center justify-between gap-2">
+                    <span>{label ? t(label) : field}</span>
+                    <span className="text-muted-foreground">{t('intake.chat.progressNeeded')}</span>
+                  </li>
+                )
+              })}
         </ul>
         {company ? (
           <div className="space-y-2">

@@ -1,15 +1,17 @@
 import { ApiError, describeError, useApi } from '@demo/api-client'
-import { l10n } from '@demo/domain'
+import type { Product } from '@demo/domain'
+import { draftValue, l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { type ErrorComponentProps, useNavigate, useParams, useSearch } from '@tanstack/react-router'
+import { type ErrorComponentProps, Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { Component, type ReactNode, useEffect, useRef, useState } from 'react'
 import { CabinetNav } from '../cabinet-nav'
 import { isDemoId } from '../demo/ids'
 import { DocumentsPanel } from '../intake/DocumentsPanel'
 import { isDraftEmpty } from '../intake/extractionStatus'
 import { IntakeChat } from '../intake/IntakeChat'
+import { productFieldKey } from '../intake/product-fields'
 import { RequisitesPanel } from '../intake/RequisitesPanel'
-import { Button, Callout, Empty, PageHeader, PlaneToggle } from '../kit'
+import { Button, Callout, Empty, NextAction, PageHeader, PlaneToggle } from '../kit'
 import { productDisplayName } from '../live-cards'
 import { usePlaneEnabled } from '../planeToggle'
 import { extractionPending, useOrganization, useOrganizationItems, useProduct } from '../queries'
@@ -182,6 +184,54 @@ function LiveCompanyIntake({ organizationId }: { organizationId: string }) {
   )
 }
 
+function ProductIntakeNext({ product }: { product: Product }) {
+  const { t } = useI18n()
+  if (product.caseId) {
+    return (
+      <NextAction
+        label={t('shell.nextAction')}
+        action={
+          <Link to="/products/$productId/roadmap" params={{ productId: product.id }}>
+            <Button type="button">{t('intake.chat.openRoadmap')}</Button>
+          </Link>
+        }
+      >
+        {t('intake.next.roadmap')}
+      </NextAction>
+    )
+  }
+
+  const missing = (Array.isArray(product.missing) ? product.missing : [])
+    .map((field) => {
+      const key = productFieldKey(field)
+      return key ? t(key) : field
+    })
+    .filter(Boolean)
+  const gateOpen = Boolean(draftValue(product.draft, 'name') && draftValue(product.draft, 'intendedUse'))
+  if (missing.length > 0 || !gateOpen) {
+    return (
+      <NextAction label={t('shell.nextAction')}>
+        {missing.length > 0
+          ? t('intake.next.missing').replace('{fields}', missing.join(', '))
+          : t('intake.next.upload')}
+      </NextAction>
+    )
+  }
+
+  return (
+    <NextAction
+      label={t('shell.nextAction')}
+      action={
+        <Link to="/products/$productId/classify" params={{ productId: product.id }}>
+          <Button type="button">{t('nav.classify')}</Button>
+        </Link>
+      }
+    >
+      {t('intake.next.classify')}
+    </NextAction>
+  )
+}
+
 export function IntakeProductPage() {
   const { productId } = useParams({ from: '/intake/product/$productId' })
   if (isDemoId(productId)) return <DemoProductIntake productId={productId} />
@@ -207,7 +257,11 @@ function LiveProductIntake({ productId }: { productId: string }) {
     <Shell nav={<CabinetNav />}>
       <PageHeader
         eyebrow={t('eyebrow.product')}
-        title={t('intake.product.title')}
+        title={
+          card
+            ? text(productDisplayName(card, t('portfolio.untitledProduct'))).value
+            : t('intake.product.title')
+        }
         lead={
           card
             ? `${text(productDisplayName(card, t('portfolio.untitledProduct'))).value}. ${t('intake.product.leadNamed')}`
@@ -224,6 +278,7 @@ function LiveProductIntake({ productId }: { productId: string }) {
       />
       {error ? <Callout tone="deadline">{describeError(error)}</Callout> : null}
       {product.isError ? <Callout tone="deadline">{describeError(product.error)}</Callout> : null}
+      {card ? <ProductIntakeNext product={card} /> : null}
       {!sessionId || !organizationId ? (
         <Empty>{t('common.loading')}</Empty>
       ) : (

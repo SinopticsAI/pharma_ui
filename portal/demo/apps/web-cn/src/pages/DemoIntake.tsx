@@ -200,7 +200,7 @@ export function DemoProductIntake({ productId }: { productId: string }) {
     <Shell>
       <PageHeader
         eyebrow={t('eyebrow.product')}
-        title={t('intake.product.title')}
+        title={text(l10n(card.name, t('portfolio.untitledProduct'))).value}
         lead={`${text(l10n(card.name, productId)).value}. ${t('intake.product.leadNamed')}`}
       />
       <DemoMark>{t('intake.demoContinue')}</DemoMark>

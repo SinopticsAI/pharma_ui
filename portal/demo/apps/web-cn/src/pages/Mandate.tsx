@@ -1,8 +1,9 @@
-import { hasCredentials, l10n } from '@demo/domain'
+import { hasCredentials } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
-import { Callout, Card, Empty, KeyValue, PageHeader, StatusBadge, Table } from '../kit'
+import { Callout, Card, Empty, KeyValue, PageHeader } from '../kit'
 import { useCase } from '../queries'
 import { useCaseId } from '../workspace'
+import { MandateStepsTable } from './MandateSteps'
 
 /**
  * Кабинет производителя получает только шаги мандата. Реквизиты ЕСИА, УКЭП и
@@ -10,7 +11,7 @@ import { useCaseId } from '../workspace'
  */
 export function MandatePage() {
   const caseId = useCaseId()
-  const { t, text, date } = useI18n()
+  const { t } = useI18n()
   const caseQuery = useCase(caseId)
 
   const mandate = caseQuery.data?.mandate
@@ -28,22 +29,7 @@ export function MandatePage() {
             { key: t('case.track'), value: t(`mandate.role.${mandate.role}`) },
           ]}
         />
-        <Table head={['', t('ledger.status'), t('dossier.date'), '']}>
-          {mandate.steps.map((step) => (
-            <tr key={step.key}>
-              <td>{t(`mandate.step.${step.key}`)}</td>
-              <td>
-                <StatusBadge
-                  tone={step.status === 'done' ? 'accent' : step.status === 'in-progress' ? 'warm' : 'quiet'}
-                >
-                  {t(`mandateStatus.${step.status}`)}
-                </StatusBadge>
-              </td>
-              <td>{step.date ? date(step.date) : '—'}</td>
-              <td>{step.note ? text(l10n(step.note)).value : ''}</td>
-            </tr>
-          ))}
-        </Table>
+        <MandateStepsTable steps={mandate.steps} />
       </Card>
 
       {hasCredentials(mandate) ? null : <Callout>{t('mandate.noCrypto')}</Callout>}

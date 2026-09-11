@@ -69,7 +69,7 @@ export function RoadmapPage() {
             <Empty>{t('map.empty')}</Empty>
           ) : (
             <>
-              <NodeMapView items={nodes} className="h-[560px]" onOpen={open} />
+              <NodeMapView items={nodes} className="h-[calc(100vh-12rem)] min-h-[720px]" onOpen={open} />
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
                 {(['done', 'in_progress', 'planned', 'later', 'goal'] as const).map((status) => (
                   <StatusBadge

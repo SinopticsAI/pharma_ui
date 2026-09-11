@@ -323,6 +323,8 @@ function ShowNodeMap({ args }: { args: { caseId: string; nodes: NodeArg[] } }) {
 
 function OfferProductWindow({ args: _args }: { args: { organizationId?: string } }) {
   const { t } = useI18n()
+  const { hideOfferProduct } = useIntakeActions()
+  if (hideOfferProduct) return null
 
   return (
     <section className="space-y-2 rounded-lg border bg-card p-3">

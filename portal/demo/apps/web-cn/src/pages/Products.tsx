@@ -3,7 +3,7 @@ import type { ClassificationVariant } from '@demo/domain'
 import { l10n } from '@demo/domain'
 import { type MessageKey, useI18n } from '@demo/i18n'
 import { Link, useNavigate } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { AddProductCard } from '../CreateActions'
 import { classificationVariants } from '../demo/catalog'
 import { useDemo } from '../demo/context'
@@ -23,7 +23,8 @@ import {
 } from '../kit'
 import { usePortfolioCards } from '../live-cards'
 import { usePortfolioCreate } from '../portfolio-create'
-import { useApproveProduct, useProduct, useProductVariants } from '../queries'
+import { useApproveProduct, useCase, useProduct, useProductVariants } from '../queries'
+import { MandateStepsTable } from './MandateSteps'
 import { Shell } from '../Shell'
 import {
   canSelectLiveVariant,
@@ -101,7 +102,7 @@ function DemoClassificationPage({ productId }: { productId: string }) {
       <VariantGrid
         variants={variants}
         selectedId={selected ? `${productId}-${selected}` : ''}
-        onChoose={(variant) => {
+        onSelect={(variant) => {
           const letter = variant.id.slice(-1) as 'A' | 'B' | 'C'
           patch({ rk30Selected: letter === 'C' ? null : letter, rk30ClientApproved: false })
         }}
@@ -144,7 +145,7 @@ function DemoClassificationPage({ productId }: { productId: string }) {
 }
 
 function LiveClassificationPage({ productId }: { productId: string }) {
-  const { t } = useI18n()
+  const { t, text } = useI18n()
   const navigate = useNavigate()
   const identity = useIdentity()
   const productQuery = useProduct(productId)
@@ -158,6 +159,20 @@ function LiveClassificationPage({ productId }: { productId: string }) {
   const canPick = canSelectLiveVariant({ canApproveAsSpecialist: identity.can.approveAsSpecialist, product })
   const canBuild = clientCanBuildMap(product)
   const selectedId = product?.selectedVariantId ?? ''
+  const caseQuery = useCase(product?.caseId ?? '')
+  const [pickedId, setPickedId] = useState(selectedId)
+
+  useEffect(() => {
+    if (selectedId) {
+      setPickedId(selectedId)
+      return
+    }
+    setPickedId((current) => {
+      if (current) return current
+      const recommended = variants.find((item) => item.variantType === 'recommended' && variantIsChoosable(item))
+      return recommended?.id ?? variants.find((item) => variantIsChoosable(item))?.id ?? ''
+    })
+  }, [selectedId, variants])
 
   if (productQuery.isLoading) return <Empty>{t('common.loading')}</Empty>
   if (productQuery.isError) return <Callout tone="deadline">{describeError(productQuery.error)}</Callout>
@@ -171,10 +186,11 @@ function LiveClassificationPage({ productId }: { productId: string }) {
     approve.mutate({ as: 'client' }, { onSuccess: openMap })
   }
 
-  const chooseAndBuild = (variant: ClassificationVariant) => {
-    if (!variantIsChoosable(variant)) return
+  const chosen = variants.find((item) => item.id === pickedId) ?? variants.find((item) => item.selected)
+  const chooseAndBuild = () => {
+    if (!chosen || !variantIsChoosable(chosen)) return
     approve.mutate(
-      { as: 'specialist', variantId: variant.id, checkedAgainst: classificationCheckedAgainst(variant) },
+      { as: 'specialist', variantId: chosen.id, checkedAgainst: classificationCheckedAgainst(chosen) },
       { onSuccess: approveAsClient },
     )
   }
@@ -186,13 +202,18 @@ function LiveClassificationPage({ productId }: { productId: string }) {
       : canBuild
         ? t('classify.buildMap')
         : canPick
-          ? t('classify.choose')
+          ? t('classify.buildMap')
           : t('classify.buildLocked')
 
   return (
     <ClassificationShell next={next} specialist={specialist} client={client}>
       {variantsQuery.isError ? <Callout tone="deadline">{describeError(variantsQuery.error)}</Callout> : null}
       {!canPick && !specialist ? <Callout tone="quiet">{t('classify.clientOnly')}</Callout> : null}
+      {chosen ? (
+        <Callout tone="ok">
+          {t('classify.selected')}: {text(l10n(chosen.title)).value} · {t(`track.${chosen.track}`)} · {chosen.riskClass}
+        </Callout>
+      ) : null}
       {variants.length === 0 ? (
         <Empty>
           <p>{t('classify.waitingVariants')}</p>
@@ -206,8 +227,29 @@ function LiveClassificationPage({ productId }: { productId: string }) {
           </Link>
         </Empty>
       ) : (
-        <VariantGrid variants={variants} selectedId={selectedId} onChoose={canPick ? chooseAndBuild : undefined} />
+        <VariantGrid
+          variants={variants}
+          selectedId={pickedId || selectedId}
+          onSelect={canPick ? (variant) => setPickedId(variant.id) : undefined}
+        />
       )}
+
+      {product.caseId ? (
+        <Card title={t('mandate.m1Title')}>
+          <MandateStepsTable steps={caseQuery.data?.mandate?.steps} />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" onClick={openMap}>
+              {t('classify.openRoadmap')}
+            </Button>
+            <Link to="/products/$productId/nodes/$nodeCode" params={{ productId, nodeCode: 'M1' }} className="text-sm underline">
+              M1
+            </Link>
+            <Link to="/products/$productId/mandate" params={{ productId }} className="text-sm underline">
+              {t('nav.mandate')}
+            </Link>
+          </div>
+        </Card>
+      ) : null}
 
       <Card title={t('classify.audit')}>
         <KeyValue
@@ -228,7 +270,15 @@ function LiveClassificationPage({ productId }: { productId: string }) {
         <div className="mt-3 flex flex-wrap gap-2">
           {product.caseId ? (
             <Button type="button" onClick={openMap}>
-              {t('home.openMap')}
+              {t('classify.openRoadmap')}
+            </Button>
+          ) : canPick ? (
+            <Button
+              type="button"
+              disabled={!chosen || !variantIsChoosable(chosen) || gateMissing.length > 0 || approve.isPending}
+              onClick={chooseAndBuild}
+            >
+              {t('classify.buildMap')}
             </Button>
           ) : (
             <Button type="button" disabled={!canBuild || approve.isPending} onClick={approveAsClient}>
@@ -236,6 +286,11 @@ function LiveClassificationPage({ productId }: { productId: string }) {
             </Button>
           )}
         </div>
+        {gateMissing.length > 0 && !product.caseId ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t('product.missing')}: {gateMissing.map((key) => t(GATE_FIELD_LABEL[key])).join(', ')}
+          </p>
+        ) : null}
         {!product.caseId && !canBuild && !canPick ? (
           <p className="mt-2 text-sm text-muted-foreground">{t('classify.buildLocked')}</p>
         ) : null}
@@ -286,11 +341,11 @@ function ClassificationShell({
 function VariantGrid({
   variants,
   selectedId,
-  onChoose,
+  onSelect,
 }: {
   variants: ClassificationVariant[]
   selectedId: string
-  onChoose?: (variant: ClassificationVariant) => void
+  onSelect?: (variant: ClassificationVariant) => void
 }) {
   const { t, text } = useI18n()
 
@@ -299,6 +354,7 @@ function VariantGrid({
       {variants.map((variant) => {
         const forbidden = variant.variantType === 'forbidden'
         const active = variant.selected || variant.id === selectedId
+        const selectable = Boolean(onSelect) && !forbidden
         return (
           <article
             key={variant.id}
@@ -308,7 +364,8 @@ function VariantGrid({
                 : active
                   ? 'border-primary ring-1 ring-primary/30'
                   : ''
-            }`}
+            } ${selectable ? 'cursor-pointer' : ''}`}
+            onClick={selectable ? () => onSelect?.(variant) : undefined}
           >
             <header className="space-y-1.5">
               <span
@@ -350,14 +407,7 @@ function VariantGrid({
               </ul>
             ) : null}
             {forbidden ? <Callout tone="deadline">{t('classify.weDoNotFile')}</Callout> : null}
-            {onChoose && !forbidden ? (
-              <Button type="button" variant={active ? 'primary' : 'secondary'} onClick={() => onChoose(variant)}>
-                {active ? t('classify.selected') : t('classify.choose')}
-              </Button>
-            ) : null}
-            {!onChoose && active && !forbidden ? (
-              <StatusBadge tone="accent">{t('classify.selected')}</StatusBadge>
-            ) : null}
+            {active && !forbidden ? <StatusBadge tone="accent">{t('classify.selected')}</StatusBadge> : null}
           </article>
         )
       })}

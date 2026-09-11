@@ -9,6 +9,8 @@ import { createContext, useContext } from 'react'
 export interface IntakeActions {
   /** Тип следующего вложения: его подставит адаптер в запрос загрузки. */
   setItemType: (itemType: string) => void
+  /** На продуктовом интейке карточка «заведите продукт» не нужна. */
+  hideOfferProduct?: boolean
 }
 
 const IntakeContext = createContext<IntakeActions | null>(null)

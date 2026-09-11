@@ -39,4 +39,16 @@ describe('ProgressPanel', () => {
     expect(screen.getByText('Зачем это нужно')).toBeTruthy()
     expect(screen.queryByText('Профиль компании')).toBeNull()
   })
+
+  it('переводит missing продукта через productField, а не сырой ключ', () => {
+    render(
+      <I18nProvider defaultLocale="en" locked>
+        <ProgressPanel title="Product" percent={40} missing={['intendedUse', 'name']} sections={[]} />
+      </I18nProvider>,
+    )
+
+    expect(screen.getByText('Intended use')).toBeTruthy()
+    expect(screen.getByText('Name')).toBeTruthy()
+    expect(screen.queryByText('intendedUse')).toBeNull()
+  })
 })

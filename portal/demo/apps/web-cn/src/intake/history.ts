@@ -33,6 +33,34 @@ export const JOURNAL_ASSISTANT_ROLES: ReadonlySet<JournalUiRole> = new Set(['ass
 const DRAFT_TOOLS = new Set(['showDraft', 'show-draft'])
 const DOCUMENT_TOOLS = new Set(['askDocument', 'ask-document'])
 
+function isDraftToolName(name: string): boolean {
+  return DRAFT_TOOLS.has(name) || name === 'tool-showDraft' || name === 'tool-show-draft'
+}
+
+/** Карточка show-draft уже в нити — баннер filling можно снимать. */
+export function messagesHaveDraftTool(messages: unknown): boolean {
+  if (!Array.isArray(messages)) return false
+  for (const message of messages) {
+    if (!message || typeof message !== 'object') continue
+    const row = message as { parts?: unknown; content?: unknown }
+    const parts = Array.isArray(row.parts) ? row.parts : Array.isArray(row.content) ? row.content : []
+    for (const part of parts) {
+      if (!part || typeof part !== 'object') continue
+      const item = part as { type?: string; toolName?: string }
+      if (item.toolName && isDraftToolName(item.toolName)) return true
+      if (typeof item.type === 'string' && isDraftToolName(item.type)) return true
+    }
+  }
+  return false
+}
+
+export function journalHasDraftTool(rows: IntakeMessage[]): boolean {
+  return rows.some((row) => {
+    const payload = row.payload as JournalPayload | null | undefined
+    return Boolean(payload?.parts?.some((part) => part.type === 'tool' && isDraftToolName(part.toolName)))
+  })
+}
+
 export function journalToolFallbackKey(
   toolName: string,
 ): 'intake.chat.journal.draftCard' | 'intake.chat.journal.documentCard' | 'intake.chat.journal.toolCard' {

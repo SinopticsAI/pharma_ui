@@ -10,10 +10,11 @@ import { describeError, useApi, useIdentity } from '@demo/api-client'
 import { useAuth } from '@demo/auth'
 import type { IntakeMessage, ProgressSection } from '@demo/domain'
 import { type MessageKey, useI18n } from '@demo/i18n'
+import { Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Empty } from '../kit'
+import { Button, Empty } from '../kit'
 import { usePlaneEnabled } from '../planeToggle'
 import { useIntakeMessages, useOrganizationItems, useProduct } from '../queries'
 import { createIntakeAttachmentAdapter } from './attachments'
@@ -45,10 +46,12 @@ import {
   JOURNAL_ASSISTANT_ROLES,
   JOURNAL_USER_ROLES,
   type JournalUiRole,
+  journalHasDraftTool,
   journalPersistedIds,
   journalText,
   journalToolFallbackKey,
   journalToUiMessages,
+  messagesHaveDraftTool,
   normalizeUiMessages,
   uiMessagesToRepository,
   unpersistedAppends,
@@ -64,12 +67,15 @@ const ExtractionUiContext = createContext<{
   chatFailed: boolean
   uploadBusy: boolean
   lastAssistantEmpty: boolean
+  emptyChatKey: MessageKey
+  roadmapProductId?: string
 }>({
   line: null,
   hideEmpty: false,
   chatFailed: false,
   uploadBusy: false,
   lastAssistantEmpty: false,
+  emptyChatKey: 'intake.chat.empty',
 })
 
 function TypingDots({ label }: { label?: string }) {
@@ -175,7 +181,8 @@ function AssistantMessage() {
 
 function Thread() {
   const { t } = useI18n()
-  const { line, hideEmpty, chatFailed, uploadBusy, lastAssistantEmpty } = useContext(ExtractionUiContext)
+  const { line, hideEmpty, chatFailed, uploadBusy, lastAssistantEmpty, emptyChatKey, roadmapProductId } =
+    useContext(ExtractionUiContext)
   const waiting = line ? WAITING_PROCESS.has(line.kind) : false
 
   return (
@@ -183,7 +190,7 @@ function Thread() {
       <ThreadPrimitive.Viewport className="flex-1 space-y-3 overflow-y-auto p-4">
         {hideEmpty ? null : (
           <ThreadPrimitive.Empty>
-            <p className="text-sm text-muted-foreground">{t('intake.chat.empty')}</p>
+            <p className="text-sm text-muted-foreground">{t(emptyChatKey)}</p>
           </ThreadPrimitive.Empty>
         )}
 
@@ -212,6 +219,13 @@ function Thread() {
       </ThreadPrimitive.Viewport>
 
       <ComposerPrimitive.Root className="space-y-2 border-t p-3">
+        {roadmapProductId ? (
+          <Link to="/products/$productId/roadmap" params={{ productId: roadmapProductId }}>
+            <Button type="button" variant="secondary">
+              {t('intake.chat.openRoadmap')}
+            </Button>
+          </Link>
+        ) : null}
         <div className="flex flex-wrap gap-2 empty:hidden">
           <ComposerPrimitive.Attachments>
             {() => (
@@ -476,6 +490,11 @@ function IntakeChatRuntime({
         seenRunning = true
         return
       }
+      if (fillingRef.current && messagesHaveDraftTool(state?.messages)) {
+        fillingRef.current = false
+        setFilling(false)
+        return
+      }
       if (!seenRunning || !fillingRef.current) return
       fillingRef.current = false
       setFilling(false)
@@ -574,13 +593,22 @@ function IntakeChatRuntime({
   }, [extractionItems, journalRows, locale, nowMs, organizationId, runtime, sessionId, threadRunning])
 
   useEffect(() => {
+    if (!fillingRef.current) return
+    if (!draftEmpty || journalHasDraftTool(journalRows)) {
+      fillingRef.current = false
+      setFilling(false)
+    }
+  }, [draftEmpty, filling, journalRows])
+
+  useEffect(() => {
     if (!filling) return
+    if (!draftEmpty) return
     const timer = window.setTimeout(() => {
       fillingRef.current = false
       setFilling(false)
     }, EXTRACTION_SLOW_MS)
     return () => window.clearTimeout(timer)
-  }, [filling])
+  }, [draftEmpty, filling])
 
   const line = processLine({
     items: extractionItems,
@@ -598,8 +626,9 @@ function IntakeChatRuntime({
       setItemType: (value) => {
         itemType.current = value
       },
+      hideOfferProduct: Boolean(productId),
     }),
-    [],
+    [productId],
   )
 
   // Загрузка падает вне нити: сообщение агенту не уходит, вложение остаётся в
@@ -610,7 +639,15 @@ function IntakeChatRuntime({
     <AssistantRuntimeProvider runtime={runtime}>
       <IntakeActionsProvider value={actions}>
         <ExtractionUiContext.Provider
-          value={{ line, hideEmpty, chatFailed: Boolean(chatError), uploadBusy, lastAssistantEmpty }}
+          value={{
+            line,
+            hideEmpty,
+            chatFailed: Boolean(chatError),
+            uploadBusy,
+            lastAssistantEmpty,
+            emptyChatKey: productId ? 'intake.chat.emptyProduct' : 'intake.chat.empty',
+            roadmapProductId: product.data?.caseId ? productId : undefined,
+          }}
         >
           <IntakeToolUIs />
           <div className="grid items-start gap-4 lg:grid-cols-[1fr_340px]">
