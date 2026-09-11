@@ -4,6 +4,7 @@ import { countPendingActions, defaultDemoState } from '../demo/state'
 import {
   canSelectLiveVariant,
   classificationCheckedAgainst,
+  classifyGateMissing,
   clientCanBuildMap,
   resolveVariants,
   variantIsChoosable,
@@ -116,5 +117,12 @@ describe('resolveVariants', () => {
     expect(resolveVariants(product({ variants: [] }), listed)).toEqual(listed)
     const embedded = [variant('from-product')]
     expect(resolveVariants(product({ variants: embedded }), listed)).toEqual(embedded)
+  })
+})
+
+describe('classifyGateMissing', () => {
+  it('оставляет только имя и назначение', () => {
+    expect(classifyGateMissing(undefined)).toEqual([])
+    expect(classifyGateMissing(['models', 'name', 'intendedUse', 'sites'])).toEqual(['name', 'intendedUse'])
   })
 })

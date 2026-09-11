@@ -1,7 +1,7 @@
 import { describeError, OFFLINE_DEMO, useIdentity } from '@demo/api-client'
 import type { ClassificationVariant } from '@demo/domain'
 import { l10n } from '@demo/domain'
-import { useI18n } from '@demo/i18n'
+import { type MessageKey, useI18n } from '@demo/i18n'
 import { Link, useNavigate } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { AddProductCard } from '../CreateActions'
@@ -28,11 +28,17 @@ import { Shell } from '../Shell'
 import {
   canSelectLiveVariant,
   classificationCheckedAgainst,
+  classifyGateMissing,
   clientCanBuildMap,
   resolveVariants,
   variantIsChoosable,
 } from './classify-live'
 import { ProductCard } from './EntityCards'
+
+const GATE_FIELD_LABEL: Record<'name' | 'intendedUse', MessageKey> = {
+  name: 'productField.name',
+  intendedUse: 'productField.intendedUse',
+}
 
 export function ProductsPage() {
   const { t } = useI18n()
@@ -146,6 +152,7 @@ function LiveClassificationPage({ productId }: { productId: string }) {
   const approve = useApproveProduct(productId)
   const product = productQuery.data
   const variants = resolveVariants(product, variantsQuery.data)
+  const gateMissing = classifyGateMissing(product?.missing)
   const specialist = Boolean(product?.specialistApprovedAt)
   const client = Boolean(product?.clientApprovedAt)
   const canPick = canSelectLiveVariant({ canApproveAsSpecialist: identity.can.approveAsSpecialist, product })
@@ -189,6 +196,11 @@ function LiveClassificationPage({ productId }: { productId: string }) {
       {variants.length === 0 ? (
         <Empty>
           <p>{t('classify.waitingVariants')}</p>
+          {gateMissing.length > 0 ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('product.missing')}: {gateMissing.map((key) => t(GATE_FIELD_LABEL[key])).join(', ')}
+            </p>
+          ) : null}
           <Link to="/intake/product/$productId" params={{ productId }} className="mt-2 inline-block text-sm underline">
             {t('portfolio.continueAgent')}
           </Link>

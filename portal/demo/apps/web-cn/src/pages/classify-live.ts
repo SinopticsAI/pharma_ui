@@ -38,3 +38,13 @@ export function resolveVariants(
   if (product?.variants && product.variants.length > 0) return product.variants
   return listed ?? []
 }
+
+const GATE_FIELDS = ['name', 'intendedUse'] as const
+
+export function classifyGateMissing(missing: string[] | undefined): Array<(typeof GATE_FIELDS)[number]> {
+  const out: Array<(typeof GATE_FIELDS)[number]> = []
+  for (const key of missing ?? []) {
+    if (key === 'name' || key === 'intendedUse') out.push(key)
+  }
+  return out
+}
