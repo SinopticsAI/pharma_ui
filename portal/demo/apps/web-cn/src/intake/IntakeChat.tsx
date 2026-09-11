@@ -239,7 +239,7 @@ function Thread() {
             rows={1}
           />
           <ComposerPrimitive.AddAttachment
-            multiple={false}
+            multiple={true}
             disabled={uploadBusy}
             className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
           >

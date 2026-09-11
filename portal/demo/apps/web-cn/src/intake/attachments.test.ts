@@ -120,6 +120,41 @@ describe('createIntakeAttachmentAdapter', () => {
     expect(calls).toEqual(['busy-true', 'upload-url', 'busy-false'])
   })
 
+  it('держит onBusy пока идёт пачка, а не сбрасывает после первого файла', async () => {
+    const release: Array<() => void> = []
+    const api = {
+      requestOrgUploadUrl: vi.fn(async () => TICKET),
+      putFile: vi.fn(() => new Promise<void>((resolve) => release.push(resolve))),
+      confirmOrgUpload: vi.fn(async () => ({}) as OrganizationItem),
+    }
+    const busy: boolean[] = []
+    const adapter = createIntakeAttachmentAdapter({
+      api: api as unknown as ApiClient,
+      queryClient: new QueryClient(),
+      organizationId: 'org-1',
+      productId: 'prod-1',
+      sessionId: 'ses-1',
+      itemType: () => 'other',
+      planeEnabled: () => false,
+      onBusy: (value) => busy.push(value),
+    })
+
+    const first = await adapter.add({ file: file() })
+    const second = await adapter.add({ file: new File(['y'], 'ifu.pdf', { type: 'application/pdf' }) })
+    const sendFirst = adapter.send(first)
+    const sendSecond = adapter.send(second)
+    await vi.waitFor(() => expect(release).toHaveLength(2))
+    expect(busy).toEqual([true])
+
+    release[0]()
+    await sendFirst
+    expect(busy).toEqual([true])
+
+    release[1]()
+    await sendSecond
+    expect(busy).toEqual([true, false])
+  })
+
   it('передаёт usePlane на confirm, когда галочка включена', async () => {
     const api = fakeApi([])
     const adapter = createIntakeAttachmentAdapter({

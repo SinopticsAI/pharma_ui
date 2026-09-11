@@ -33,6 +33,7 @@ function item(partial: {
   updatedAt?: string
   level?: 'company' | 'product'
   productId?: string
+  itemType?: string
 }) {
   return {
     fileName: 'licence.jpg',
@@ -134,6 +135,57 @@ describe('auto-turn once per item', () => {
     expect(nextAutoTurnItem(new Set(['it-jpg']), [oldDocx, item({ ...newJpg, status: 'parsed' })], new Set())?.id).toBe(
       'it-jpg',
     )
+  })
+
+  it('пачка other на продукте не схлопывается в один слот', () => {
+    const pack = [
+      item({
+        id: 'it-1',
+        status: 'uploaded',
+        itemType: 'other',
+        fileName: '11-nmpa-certificate.jpg',
+        level: 'product',
+        productId: 'pr-1',
+        updatedAt: '2026-09-11T08:00:00Z',
+      }),
+      item({
+        id: 'it-2',
+        status: 'uploaded',
+        itemType: 'other',
+        fileName: '12-ifu-cn.pdf',
+        level: 'product',
+        productId: 'pr-1',
+        updatedAt: '2026-09-11T08:00:01Z',
+      }),
+      item({
+        id: 'it-3',
+        status: 'uploaded',
+        itemType: 'other',
+        fileName: '13-tech-spec.pdf',
+        level: 'product',
+        productId: 'pr-1',
+        updatedAt: '2026-09-11T08:00:02Z',
+      }),
+      item({
+        id: 'it-4',
+        status: 'uploaded',
+        itemType: 'other',
+        fileName: '14-lab-cn.pdf',
+        level: 'product',
+        productId: 'pr-1',
+        updatedAt: '2026-09-11T08:00:03Z',
+      }),
+    ]
+    expect(pack.every((row) => !isSuperseded(row, pack))).toBe(true)
+    expect(itemsNeedingExtract(pack, new Set()).map((row) => row.id)).toEqual(['it-1', 'it-2', 'it-3', 'it-4'])
+
+    const seen = new Set(pack.map((row) => row.id))
+    const firstParsed = pack.map((row, index) => (index === 0 ? item({ ...row, status: 'parsed' }) : row))
+    expect(nextAutoTurnItem(seen, firstParsed, new Set())?.id).toBe('it-1')
+    expect(nextAutoTurnItem(seen, firstParsed, new Set(['it-1']))).toBeNull()
+
+    const twoParsed = pack.map((row, index) => (index < 2 ? item({ ...row, status: 'parsed' }) : row))
+    expect(nextAutoTurnItem(seen, twoParsed, new Set(['it-1']))?.id).toBe('it-2')
   })
 })
 

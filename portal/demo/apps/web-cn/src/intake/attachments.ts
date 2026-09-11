@@ -23,7 +23,7 @@ import type { QueryClient } from '@tanstack/react-query'
 /** Те же расширения, что принимает досье: скан, фото, офисный документ. */
 export const INTAKE_ATTACHMENT_ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,.tif,.tiff,.doc,.docx,.xls,.xlsx'
 
-/** Один файл за раз: `add` всегда обещание, а не поток промежуточных состояний. */
+/** `add` — один файл; пачку набирает композер и зовёт `add` на каждый. */
 export interface IntakeAttachmentAdapter extends AttachmentAdapter {
   add(state: { file: File }): Promise<PendingAttachment>
 }
@@ -52,6 +52,17 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
   // Тип документа известен в момент выбора файла, а нужен в момент отправки:
   // между ними человек успевает набрать текст и приложить второй файл.
   const itemTypes = new Map<string, string>()
+  let busyCount = 0
+
+  const setBusy = (active: boolean) => {
+    if (active) {
+      busyCount += 1
+      if (busyCount === 1) options.onBusy?.(true)
+      return
+    }
+    busyCount = Math.max(0, busyCount - 1)
+    if (busyCount === 0) options.onBusy?.(false)
+  }
 
   return {
     accept: INTAKE_ATTACHMENT_ACCEPT,
@@ -79,7 +90,7 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
         productId: options.productId,
       }
 
-      options.onBusy?.(true)
+      setBusy(true)
       try {
         const ticket = await options.api.requestOrgUploadUrl(options.organizationId, request)
         await options.api.putFile(ticket, attachment.file)
@@ -118,7 +129,7 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
         options.onError?.(error)
         throw error
       } finally {
-        options.onBusy?.(false)
+        setBusy(false)
       }
     },
 

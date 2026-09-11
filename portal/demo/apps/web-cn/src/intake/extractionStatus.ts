@@ -135,11 +135,12 @@ export function newestByUpdatedAt<T extends { id: string; updatedAt: string }>(i
   })[0]
 }
 
+/** `other` and an empty type are a pack of different papers, not one slot. */
 function sameDocumentSlot(left: ExtractionItem, right: ExtractionItem): boolean {
   const leftType = left.itemType || ''
   const rightType = right.itemType || ''
-  if (leftType && rightType) return leftType === rightType
-  return !leftType && !rightType
+  if (!leftType || !rightType || leftType === 'other' || rightType === 'other') return false
+  return leftType === rightType
 }
 
 /** A newer file of the same kind replaces an older one for banners and auto-turn. */
