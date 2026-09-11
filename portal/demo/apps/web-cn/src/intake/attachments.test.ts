@@ -1,4 +1,4 @@
-import type { ApiClient } from '@demo/api-client'
+import type { ApiClient, UploadRequest } from '@demo/api-client'
 import type { OrganizationItem, UploadTicket } from '@demo/domain'
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
@@ -13,7 +13,7 @@ const TICKET: UploadTicket = {
 
 function fakeApi(calls: string[], overrides: Partial<Record<'putFile', () => Promise<void>>> = {}) {
   return {
-    requestOrgUploadUrl: vi.fn(async () => {
+    requestOrgUploadUrl: vi.fn(async (_organizationId: string, _body: UploadRequest) => {
       calls.push('upload-url')
       return TICKET
     }),
@@ -115,7 +115,7 @@ describe('createIntakeAttachmentAdapter', () => {
 
     const first = await adapter.add({ file: new File(['a'], '01-yingye-zhizhao.jpg', { type: 'image/jpeg' }) })
     const second = await adapter.add({ file: new File(['b'], '03-iso-13485.pdf', { type: 'application/pdf' }) })
-    api.requestOrgUploadUrl.mockImplementation(async (orgId: string, request: { itemType: string }) => {
+    api.requestOrgUploadUrl.mockImplementation(async (_organizationId, request) => {
       types.push(request.itemType)
       return { ...TICKET, itemId: `item-${types.length}` }
     })
