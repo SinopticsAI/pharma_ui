@@ -93,6 +93,11 @@ export const ruWalk = {
   'classify.audit': 'Запись аудита',
   'classify.choose': 'Выбрать этот вариант',
   'classify.selected': 'Выбран',
+  'classify.waitingVariants':
+    'Варианты ещё не предложены. Агент готовит их, когда карточка продукта достаточно полная.',
+  'classify.clientOnly':
+    'Вариант выбирает специалист. Здесь клиент утверждает уже выбранный трек — и ядро строит карту.',
+  'classify.mapOpen': 'Карта уже построена',
 
   'map.viewMap': 'Карта',
   'map.viewList': 'Список задач',
@@ -376,6 +381,11 @@ export const enWalk: { [K in keyof typeof ruWalk]: string } = {
   'classify.audit': 'Audit record',
   'classify.choose': 'Choose this option',
   'classify.selected': 'Selected',
+  'classify.waitingVariants':
+    'No options yet. The agent proposes them once the product card is complete enough.',
+  'classify.clientOnly':
+    'A specialist selects the option. Here the client approves the chosen track — and the core builds the map.',
+  'classify.mapOpen': 'The map is already built',
 
   'map.viewMap': 'Map',
   'map.viewList': 'Task list',
@@ -654,6 +664,9 @@ export const zhWalk: { [K in keyof typeof ruWalk]: string } = {
   'classify.audit': '审计记录',
   'classify.choose': '选择此方案',
   'classify.selected': '已选',
+  'classify.waitingVariants': '尚未提出方案。产品档案足够完整后，智能体才会给出选项。',
+  'classify.clientOnly': '方案由专家选定。客户在此确认已选路径，核心随即生成地图。',
+  'classify.mapOpen': '地图已生成',
 
   'map.viewMap': '地图',
   'map.viewList': '任务列表',

@@ -1,7 +1,9 @@
 import { describeError, OFFLINE_DEMO } from '@demo/api-client'
+import type { ClassificationVariant } from '@demo/domain'
 import { l10n } from '@demo/domain'
 import { useI18n } from '@demo/i18n'
 import { useNavigate } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 import { AddProductCard } from '../CreateActions'
 import { classificationVariants } from '../demo/catalog'
 import { useDemo } from '../demo/context'
@@ -14,13 +16,16 @@ import {
   Card,
   DemoMark,
   Empty,
+  KeyValue,
   NextAction,
   PageHeader,
   StatusBadge,
 } from '../kit'
 import { usePortfolioCards } from '../live-cards'
 import { usePortfolioCreate } from '../portfolio-create'
+import { useApproveProduct, useProduct, useProductVariants } from '../queries'
 import { Shell } from '../Shell'
+import { clientCanBuildMap, resolveVariants } from './classify-live'
 import { ProductCard } from './EntityCards'
 
 export function ProductsPage() {
@@ -58,7 +63,14 @@ export function ProductsPage() {
 }
 
 export function ClassificationPage({ productId }: { productId: string }) {
-  const { t, text } = useI18n()
+  if (OFFLINE_DEMO || isDemoId(productId)) {
+    return <DemoClassificationPage productId={productId} />
+  }
+  return <LiveClassificationPage productId={productId} />
+}
+
+function DemoClassificationPage({ productId }: { productId: string }) {
+  const { t } = useI18n()
   const navigate = useNavigate()
   const { state, patch } = useDemo()
   const variants = classificationVariants(productId)
@@ -66,94 +78,22 @@ export function ClassificationPage({ productId }: { productId: string }) {
   const specialist = productId === DEMO_PRODUCT_RK30 ? state.rk30SpecialistApproved : true
   const client = productId === DEMO_PRODUCT_RK30 ? state.rk30ClientApproved : true
   const canBuild = specialist && client && selected !== null
-  const demo = isDemoId(productId)
 
   return (
-    <>
-      <PageHeader eyebrow={t('eyebrow.classify')} title={t('classify.title')} lead={t('classify.lead')} />
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <ActorBadge actor="you">{t('nodeOwner.you')}</ActorBadge>
-        <ActorBadge actor="us">{t('nodeOwner.us')}</ActorBadge>
-        <ActorBadge actor="agent">{t('classify.draft')}</ActorBadge>
-      </div>
-      {OFFLINE_DEMO || isDemoId(productId) ? <DemoMark>{t('shell.demoMark')}</DemoMark> : null}
-      <div className="mb-4 flex flex-wrap gap-2">
-        <StatusBadge tone={specialist ? 'ok' : 'warm'}>
-          {specialist ? t('classify.specialistDone') : t('classify.specialistPending')}
-        </StatusBadge>
-        <StatusBadge tone={client ? 'ok' : 'warm'}>
-          {client ? t('classify.clientDone') : t('classify.clientPending')}
-        </StatusBadge>
-      </div>
-
-      <NextAction label={t('shell.nextAction')}>
-        {canBuild ? t('classify.buildMap') : t('classify.buildLocked')}
-      </NextAction>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        {variants.map((variant) => {
+    <ClassificationShell
+      next={canBuild ? t('classify.buildMap') : t('classify.buildLocked')}
+      specialist={specialist}
+      client={client}
+      demo
+    >
+      <VariantGrid
+        variants={variants}
+        selectedId={selected ? `${productId}-${selected}` : ''}
+        onChoose={(variant) => {
           const letter = variant.id.slice(-1) as 'A' | 'B' | 'C'
-          const forbidden = variant.variantType === 'forbidden'
-          const active = selected === letter
-          return (
-            <article
-              key={variant.id}
-              className={`space-y-3 rounded-lg border bg-card p-4 ${
-                forbidden
-                  ? 'border-muted-foreground/25 bg-muted/40'
-                  : active
-                    ? 'border-primary ring-1 ring-primary/30'
-                    : ''
-              }`}
-            >
-              <header className="space-y-1.5">
-                <span
-                  className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${
-                    variant.variantType === 'recommended'
-                      ? 'bg-primary/12 text-primary'
-                      : variant.variantType === 'alternative'
-                        ? 'bg-actor-you text-actor-you-foreground'
-                        : 'bg-secondary text-muted-foreground'
-                  }`}
-                >
-                  {variant.variantType === 'recommended'
-                    ? t('classify.recommended')
-                    : variant.variantType === 'alternative'
-                      ? t('classify.alternative')
-                      : t('classify.forbidden')}
-                </span>
-                <h2 className="text-sm font-semibold">{text(l10n(variant.title)).value}</h2>
-              </header>
-              <p className="text-sm">{text(l10n(variant.summary)).value}</p>
-              {variant.pros.length > 0 ? (
-                <ul className="list-disc pl-4 text-sm">
-                  {variant.pros.map((item) => (
-                    <li key={text(l10n(item)).value}>{text(l10n(item)).value}</li>
-                  ))}
-                </ul>
-              ) : null}
-              {variant.cons.length > 0 ? (
-                <ul className="list-disc pl-4 text-sm text-muted-foreground">
-                  {variant.cons.map((item) => (
-                    <li key={text(l10n(item)).value}>{text(l10n(item)).value}</li>
-                  ))}
-                </ul>
-              ) : null}
-              {forbidden ? <Callout tone="deadline">{t('classify.weDoNotFile')}</Callout> : null}
-              {forbidden ? null : (
-                <Button
-                  type="button"
-                  variant={active ? 'primary' : 'secondary'}
-                  disabled={!demo}
-                  onClick={() => patch({ rk30Selected: letter === 'C' ? null : letter, rk30ClientApproved: false })}
-                >
-                  {active ? t('classify.selected') : t('classify.choose')}
-                </Button>
-              )}
-            </article>
-          )
-        })}
-      </div>
+          patch({ rk30Selected: letter === 'C' ? null : letter, rk30ClientApproved: false })
+        }}
+      />
 
       <Card title={t('classify.audit')} meta="A-2214 · 2026-09-06 14:10">
         <p className="text-sm">{t('classify.specialist')}: 李静 · 4н / ПП 1684</p>
@@ -187,6 +127,213 @@ export function ClassificationPage({ productId }: { productId: string }) {
         {!canBuild ? <p className="mt-2 text-sm text-muted-foreground">{t('classify.buildLocked')}</p> : null}
       </Card>
       <Benefit label={t('benefit.label')}>{t('benefit.classify')}</Benefit>
+    </ClassificationShell>
+  )
+}
+
+function LiveClassificationPage({ productId }: { productId: string }) {
+  const { t } = useI18n()
+  const navigate = useNavigate()
+  const productQuery = useProduct(productId)
+  const variantsQuery = useProductVariants(productId)
+  const approve = useApproveProduct(productId)
+  const product = productQuery.data
+  const variants = resolveVariants(product, variantsQuery.data)
+  const specialist = Boolean(product?.specialistApprovedAt)
+  const client = Boolean(product?.clientApprovedAt)
+  const canBuild = clientCanBuildMap(product)
+  const selectedId = product?.selectedVariantId ?? ''
+
+  if (productQuery.isLoading) return <Empty>{t('common.loading')}</Empty>
+  if (productQuery.isError) return <Callout tone="deadline">{describeError(productQuery.error)}</Callout>
+  if (!product) return <Empty>{t('portfolio.noProducts')}</Empty>
+
+  const next = product.caseId
+    ? t('classify.mapOpen')
+    : canBuild
+      ? t('classify.buildMap')
+      : variants.length === 0
+        ? t('classify.waitingVariants')
+        : t('classify.buildLocked')
+
+  return (
+    <ClassificationShell next={next} specialist={specialist} client={client}>
+      {variantsQuery.isError ? <Callout tone="deadline">{describeError(variantsQuery.error)}</Callout> : null}
+      <Callout tone="quiet">{t('classify.clientOnly')}</Callout>
+      {variants.length === 0 ? (
+        <Empty>{t('classify.waitingVariants')}</Empty>
+      ) : (
+        <VariantGrid variants={variants} selectedId={selectedId} />
+      )}
+
+      <Card title={t('classify.audit')}>
+        <KeyValue
+          items={[
+            {
+              key: t('classify.specialist'),
+              value: specialist
+                ? product.specialistApprovedBy || t('classify.specialistDone')
+                : t('classify.specialistPending'),
+            },
+            {
+              key: t('classify.client'),
+              value: client ? product.clientApprovedBy || t('classify.clientDone') : t('classify.clientPending'),
+            },
+          ]}
+        />
+        {approve.isError ? <Callout tone="deadline">{describeError(approve.error)}</Callout> : null}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {product.caseId ? (
+            <Button
+              type="button"
+              onClick={() => void navigate({ to: '/products/$productId/roadmap', params: { productId } })}
+            >
+              {t('home.openMap')}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              disabled={!canBuild || approve.isPending}
+              onClick={() => {
+                approve.mutate(
+                  { as: 'client' },
+                  {
+                    onSuccess: () => {
+                      void navigate({ to: '/products/$productId/roadmap', params: { productId } })
+                    },
+                  },
+                )
+              }}
+            >
+              {t('classify.buildMap')}
+            </Button>
+          )}
+        </div>
+        {!product.caseId && !canBuild ? (
+          <p className="mt-2 text-sm text-muted-foreground">{t('classify.buildLocked')}</p>
+        ) : null}
+      </Card>
+      <Benefit label={t('benefit.label')}>{t('benefit.classify')}</Benefit>
+    </ClassificationShell>
+  )
+}
+
+function ClassificationShell({
+  next,
+  specialist,
+  client,
+  demo = false,
+  children,
+}: {
+  next: string
+  specialist: boolean
+  client: boolean
+  demo?: boolean
+  children: ReactNode
+}) {
+  const { t } = useI18n()
+
+  return (
+    <>
+      <PageHeader eyebrow={t('eyebrow.classify')} title={t('classify.title')} lead={t('classify.lead')} />
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <ActorBadge actor="you">{t('nodeOwner.you')}</ActorBadge>
+        <ActorBadge actor="us">{t('nodeOwner.us')}</ActorBadge>
+        <ActorBadge actor="agent">{t('classify.draft')}</ActorBadge>
+      </div>
+      {demo ? <DemoMark>{t('shell.demoMark')}</DemoMark> : null}
+      <div className="mb-4 flex flex-wrap gap-2">
+        <StatusBadge tone={specialist ? 'ok' : 'warm'}>
+          {specialist ? t('classify.specialistDone') : t('classify.specialistPending')}
+        </StatusBadge>
+        <StatusBadge tone={client ? 'ok' : 'warm'}>
+          {client ? t('classify.clientDone') : t('classify.clientPending')}
+        </StatusBadge>
+      </div>
+      <NextAction label={t('shell.nextAction')}>{next}</NextAction>
+      {children}
     </>
+  )
+}
+
+function VariantGrid({
+  variants,
+  selectedId,
+  onChoose,
+}: {
+  variants: ClassificationVariant[]
+  selectedId: string
+  onChoose?: (variant: ClassificationVariant) => void
+}) {
+  const { t, text } = useI18n()
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      {variants.map((variant) => {
+        const forbidden = variant.variantType === 'forbidden'
+        const active = variant.selected || variant.id === selectedId
+        return (
+          <article
+            key={variant.id}
+            className={`space-y-3 rounded-lg border bg-card p-4 ${
+              forbidden
+                ? 'border-muted-foreground/25 bg-muted/40'
+                : active
+                  ? 'border-primary ring-1 ring-primary/30'
+                  : ''
+            }`}
+          >
+            <header className="space-y-1.5">
+              <span
+                className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${
+                  variant.variantType === 'recommended'
+                    ? 'bg-primary/12 text-primary'
+                    : variant.variantType === 'alternative'
+                      ? 'bg-actor-you text-actor-you-foreground'
+                      : 'bg-secondary text-muted-foreground'
+                }`}
+              >
+                {variant.variantType === 'recommended'
+                  ? t('classify.recommended')
+                  : variant.variantType === 'alternative'
+                    ? t('classify.alternative')
+                    : t('classify.forbidden')}
+              </span>
+              <h2 className="text-sm font-semibold">{text(l10n(variant.title)).value}</h2>
+            </header>
+            <p className="text-sm">{text(l10n(variant.summary)).value}</p>
+            <KeyValue
+              items={[
+                { key: t('case.track'), value: t(`track.${variant.track}`) },
+                { key: t('case.class'), value: variant.riskClass },
+              ]}
+            />
+            {variant.pros.length > 0 ? (
+              <ul className="list-disc pl-4 text-sm">
+                {variant.pros.map((item) => (
+                  <li key={text(l10n(item)).value}>{text(l10n(item)).value}</li>
+                ))}
+              </ul>
+            ) : null}
+            {variant.cons.length > 0 ? (
+              <ul className="list-disc pl-4 text-sm text-muted-foreground">
+                {variant.cons.map((item) => (
+                  <li key={text(l10n(item)).value}>{text(l10n(item)).value}</li>
+                ))}
+              </ul>
+            ) : null}
+            {forbidden ? <Callout tone="deadline">{t('classify.weDoNotFile')}</Callout> : null}
+            {onChoose && !forbidden ? (
+              <Button type="button" variant={active ? 'primary' : 'secondary'} onClick={() => onChoose(variant)}>
+                {active ? t('classify.selected') : t('classify.choose')}
+              </Button>
+            ) : null}
+            {!onChoose && active && !forbidden ? (
+              <StatusBadge tone="accent">{t('classify.selected')}</StatusBadge>
+            ) : null}
+          </article>
+        )
+      })}
+    </div>
   )
 }

@@ -1,6 +1,6 @@
 import type { ApproveProductInput, UploadRequest } from '@demo/api-client'
 import { OFFLINE_DEMO, useApi } from '@demo/api-client'
-import type { IntakeScope, Locale } from '@demo/domain'
+import type { ClassificationVariant, IntakeScope, Locale } from '@demo/domain'
 import { readPlaneEnabled } from '@demo/domain'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -136,6 +136,19 @@ export const useProduct = (productId: string) => {
   if (demo) {
     return { ...live, data: getDemoProduct(productId, state), isLoading: false, isError: false, error: null }
   }
+  return quietOffline(live)
+}
+
+/** Варианты классификации: в карточке продукта или отдельным списком, если ядро не вложило их. */
+export const useProductVariants = (productId: string) => {
+  const api = useApi()
+  const demo = isDemoId(productId)
+  const live = useQuery({
+    queryKey: ['product-variants', productId],
+    queryFn: () => api.listVariants(productId),
+    enabled: Boolean(productId) && !demo,
+  })
+  if (demo) return { ...live, data: [] as ClassificationVariant[], isLoading: false, isError: false, error: null }
   return quietOffline(live)
 }
 
@@ -312,6 +325,7 @@ export const useApproveProduct = (productId: string) => {
     mutationFn: (input: ApproveProductInput) => api.approveProduct(productId, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['product', productId] })
+      void queryClient.invalidateQueries({ queryKey: ['product-variants', productId] })
       void queryClient.invalidateQueries({ queryKey: ['cases'] })
     },
   })
