@@ -66,7 +66,12 @@ describe('draftFieldRows', () => {
   it('строкой отдаёт value, даже если агент положил объект', () => {
     expect(
       draftFieldRows([
-        { key: 'legalName', label: { zh: '名称' }, value: { zh: '天津九安医疗电子股份有限公司' }, source: { ru: '执照' } },
+        {
+          key: 'legalName',
+          label: { zh: '名称' },
+          value: { zh: '天津九安医疗电子股份有限公司' },
+          source: { ru: '执照' },
+        },
       ]),
     ).toEqual([
       {

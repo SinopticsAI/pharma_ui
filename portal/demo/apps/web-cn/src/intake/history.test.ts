@@ -307,7 +307,9 @@ describe('user написал, /chat упал', () => {
     expect(journalText(missingText, 'zh')).toEqual('')
     const restored = journalToUiMessages([missingText], 'zh')
     expect(restored).toHaveLength(1)
-    expect(toolInput(restored[0]!, 'show-draft')).toEqual({
+    const first = restored[0]
+    if (!first) throw new Error('expected a restored message')
+    expect(toolInput(first, 'show-draft')).toEqual({
       scope: 'company',
       entityId: 'org-1',
       fields: 'not-json',

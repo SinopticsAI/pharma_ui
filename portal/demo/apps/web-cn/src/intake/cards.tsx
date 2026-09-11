@@ -43,7 +43,9 @@ class ToolCardError extends Component<{ children: ReactNode }, { failed: boolean
 
 function ToolCardFallback() {
   const { t } = useI18n()
-  return <p className="rounded-lg border bg-card p-3 text-sm text-muted-foreground">{t('intake.chat.journal.toolCard')}</p>
+  return (
+    <p className="rounded-lg border bg-card p-3 text-sm text-muted-foreground">{t('intake.chat.journal.toolCard')}</p>
+  )
 }
 
 function register<TArgs>(names: string[], Render: ComponentType<{ args: TArgs }>): ComponentType[] {
@@ -168,7 +170,9 @@ function Variant({ variant }: { variant: VariantArg }) {
       className={`space-y-2 rounded-md border p-3 ${forbidden ? 'opacity-70' : ''} ${variant.variantType === 'recommended' ? 'border-primary' : ''}`}
     >
       <header className="space-y-1">
-        <span className="text-xs text-muted-foreground">{t(VARIANT_TAG[variant.variantType] ?? 'intake.card.variant.alternative')}</span>
+        <span className="text-xs text-muted-foreground">
+          {t(VARIANT_TAG[variant.variantType] ?? 'intake.card.variant.alternative')}
+        </span>
         <h4 className="text-sm font-semibold">{asText(variant.title, variant.id)}</h4>
       </header>
       <p className="text-sm">{asText(variant.summary)}</p>
