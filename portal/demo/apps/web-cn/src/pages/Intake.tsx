@@ -11,9 +11,8 @@ import { isDraftEmpty } from '../intake/extractionStatus'
 import { IntakeChat } from '../intake/IntakeChat'
 import { productFieldKey } from '../intake/product-fields'
 import { RequisitesPanel } from '../intake/RequisitesPanel'
-import { Button, Callout, Empty, NextAction, PageHeader, PlaneToggle } from '../kit'
+import { Button, Callout, Empty, NextAction, PageHeader } from '../kit'
 import { productDisplayName } from '../live-cards'
-import { usePlaneEnabled } from '../planeToggle'
 import { extractionPending, useOrganization, useOrganizationItems, useProduct } from '../queries'
 import { Shell } from '../Shell'
 import { DemoCompanyIntake, DemoProductIntake } from './DemoIntake'
@@ -116,7 +115,6 @@ export function IntakeCompanyPage() {
 function LiveCompanyIntake({ organizationId }: { organizationId: string }) {
   const { session } = useSearch({ from: '/intake/company/$organizationId' })
   const { t, text } = useI18n()
-  const [usePlane, setUsePlane] = usePlaneEnabled()
   // Реквизиты дописывает разбор документов, поэтому карточка перечитывается,
   // пока хотя бы по одному документу ядро ещё ждёт ответа от Plane.
   const items = useOrganizationItems(organizationId)
@@ -137,14 +135,6 @@ function LiveCompanyIntake({ organizationId }: { organizationId: string }) {
           company
             ? `${text(l10n(company.name, organizationId)).value}. ${t('intake.company.leadNamed')}`
             : t('intake.company.lead')
-        }
-        actions={
-          <PlaneToggle
-            checked={usePlane}
-            onChange={setUsePlane}
-            label={t('intake.plane.toggle')}
-            hint={t('intake.plane.toggleHint')}
-          />
         }
       />
       {error ? <Callout tone="deadline">{describeError(error)}</Callout> : null}
@@ -241,7 +231,6 @@ export function IntakeProductPage() {
 function LiveProductIntake({ productId }: { productId: string }) {
   const { session } = useSearch({ from: '/intake/product/$productId' })
   const { t, text } = useI18n()
-  const [usePlane, setUsePlane] = usePlaneEnabled()
   const product = useProduct(productId)
   const { sessionId, error } = useSessionId(session, { scope: 'product', productId })
 
@@ -262,14 +251,6 @@ function LiveProductIntake({ productId }: { productId: string }) {
           card
             ? `${text(productDisplayName(card, t('portfolio.untitledProduct'))).value}. ${t('intake.product.leadNamed')}`
             : t('intake.product.lead')
-        }
-        actions={
-          <PlaneToggle
-            checked={usePlane}
-            onChange={setUsePlane}
-            label={t('intake.plane.toggle')}
-            hint={t('intake.plane.toggleHint')}
-          />
         }
       />
       {error ? <Callout tone="deadline">{describeError(error)}</Callout> : null}
