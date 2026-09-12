@@ -55,8 +55,8 @@ export function WorkbenchRedirectPage() {
 
 /**
  * Обзор кабинета продукта: карточка продукта и состояние его кейса на одном
- * экране. Пока кейса нет, разделы карты, досье и счетов показывают, чего ждут,
- * а не пустоту: карту строит ядро после утверждения классификации.
+ * экране. Пока кейса нет, баннер ведёт к классификации — карту строит ядро
+ * после её утверждения, а не пустые разделы на этом экране.
  */
 export function ProductOverviewPage() {
   const { productId, caseId } = useWorkspace()
@@ -85,11 +85,14 @@ export function ProductOverviewPage() {
         {card ? <StatusBadge tone="quiet">{t(`stage.${card.currentStage}`)}</StatusBadge> : null}
       </div>
       {OFFLINE_DEMO || productId.startsWith('demo-') ? <DemoMark>{t('shell.demoMark')}</DemoMark> : null}
-      <NextAction label={t('shell.nextAction')}>
+      <NextAction
+        label={t('shell.nextAction')}
+        action={card ? undefined : <ClassifyCta productId={productId} />}
+      >
         {card ? text(l10n(card.waitingFor)).value : t('hub.emptyChannel')}
       </NextAction>
 
-      {caseId ? <CaseOverview /> : <CaseLocked productId={productId} />}
+      {caseId ? <CaseOverview /> : null}
 
       <Card title={t('hub.profile')}>
         <KeyValue
@@ -125,26 +128,10 @@ export function ProductOverviewPage() {
   )
 }
 
-/** Каркас разделов кейса до классификации: видно, что будет и чего это ждёт. */
-function CaseLocked({ productId }: { productId: string }) {
-  const { t } = useI18n()
-
-  return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {(['nav.processMap', 'nav.dossier', 'nav.ledger'] as const).map((key) => (
-        <Card key={key} title={t(key)}>
-          <Empty>{t('hub.emptyChannel')}</Empty>
-          <ClassifyCta productId={productId} />
-        </Card>
-      ))}
-    </div>
-  )
-}
-
 function ClassifyCta({ productId }: { productId: string }) {
   const { t } = useI18n()
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <Link to="/products/$productId/classify" params={{ productId }}>
         <Button type="button">{t('home.openClassify')}</Button>
       </Link>

@@ -12,9 +12,38 @@ import type { Locale } from '@demo/domain'
  * Тело запроса — параметры выполнения агента Mastra, поэтому идентификатор
  * диалога уходит как `memory.thread`, а не как произвольное поле `sessionId`.
  * Читать эту нить кабинет не умеет и не должен: окно берёт `chat_messages`.
+ *
+ * Байты скана в `/chat` не едут. Шлюз режет тело HTTP на 2.5 МБ — это не лимит
+ * файла и не лимит бакета. PUT идёт в Object Storage; extract качает оригинал
+ * оттуда. Агенту в чате достаточно текста с itemId.
  */
 
 export type AgentId = 'companyIntake' | 'productIntake'
+
+const BINARY_PART = new Set(['file', 'image'])
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function keepTextPart(part: unknown): boolean {
+  if (!isRecord(part)) return true
+  const type = typeof part.type === 'string' ? part.type : ''
+  return !BINARY_PART.has(type)
+}
+
+/** AI SDK кладёт data-URI скана в parts — для агента оставляем только текст. */
+export function messagesWithoutScanBytes(messages: unknown[]): unknown[] {
+  return messages.map((message) => {
+    if (!isRecord(message)) return message
+    const next: Record<string, unknown> = { ...message }
+    if (Array.isArray(next.parts)) next.parts = next.parts.filter(keepTextPart)
+    if (Array.isArray(next.content)) next.content = next.content.filter(keepTextPart)
+    delete next.experimental_attachments
+    delete next.attachments
+    return next
+  })
+}
 
 export function agentApiBase(): string {
   const value = import.meta.env.VITE_AGENT_API as string | undefined
@@ -57,5 +86,15 @@ export function createIntakeTransport(options: {
         ...(options.productId ? { productId: options.productId } : {}),
       },
     },
+    prepareSendMessagesRequest: ({ id, messages, body, trigger, messageId, requestMetadata }) => ({
+      body: {
+        ...body,
+        id,
+        messages: messagesWithoutScanBytes(messages),
+        trigger,
+        messageId,
+        metadata: requestMetadata,
+      },
+    }),
   })
 }
