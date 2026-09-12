@@ -1,7 +1,7 @@
 import type { DraftFields } from '@demo/domain'
 import { draftValue } from '@demo/domain'
 import { type MessageKey, useI18n } from '@demo/i18n'
-import { Card, Empty, StatusBadge, Table } from '../kit'
+import { Card, Empty, StatusBadge } from '../kit'
 
 /**
  * Что агент вычитал из документов.
@@ -10,8 +10,8 @@ import { Card, Empty, StatusBadge, Table } from '../kit'
  * После перезагрузки нить поднимается из журнала, а этот сайдбар по-прежнему
  * читает draft компании или продукта, не сообщения чата.
  *
- * Значение без источника показывать нельзя — проверить его нечем, — поэтому
- * происхождение стоит отдельной колонкой, а не подписью под значением.
+ * Значение без источника показывать нельзя — проверить его нечем. В узкой
+ * колонке происхождение и уверенность идут строкой под значением, не таблицей.
  */
 
 interface FieldRow {
@@ -87,51 +87,39 @@ export function RequisitesPanel({
       {filled.length === 0 ? (
         <Empty>{t('intake.requisites.empty')}</Empty>
       ) : (
-        <Table
-          head={
-            approved
-              ? [t('intake.requisites.field'), t('intake.requisites.value')]
-              : [
-                  t('intake.requisites.field'),
-                  t('intake.requisites.value'),
-                  t('intake.requisites.source'),
-                  t('intake.requisites.confidence'),
-                ]
-          }
-        >
+        <ul className="divide-y">
           {rows.map((row) => {
             const value = draftValue(source, row.key)
             const { source: from, confidence, unverified } = provenance(draft, row.key)
+            const meta =
+              from || confidence !== null
+                ? [from || '—', confidence === null ? null : `${Math.round(confidence * 100)}%`]
+                    .filter(Boolean)
+                    .join(' · ')
+                : ''
             return (
-              <tr key={row.key}>
-                <td>
-                  {t(row.label)}
-                  {row.required ? (
-                    <div className="text-xs text-muted-foreground">{t('intake.requisites.required')}</div>
-                  ) : null}
-                </td>
-                <td>
-                  {value ? value : <StatusBadge tone="quiet">{t('intake.requisites.awaiting')}</StatusBadge>}
-                  {/* Значение показываем как есть, но без пометки его нельзя принять за факт. */}
-                  {value && unverified ? (
-                    <div className="mt-1 space-y-1">
-                      <StatusBadge tone="warm">{t('intake.requisites.unverified')}</StatusBadge>
-                      <div className="text-xs text-muted-foreground">{t('intake.requisites.unverifiedHint')}</div>
-                    </div>
-                  ) : null}
-                </td>
-                {approved ? null : (
-                  <>
-                    <td className="text-xs text-muted-foreground">{from || '—'}</td>
-                    <td className="text-xs text-muted-foreground">
-                      {confidence === null ? '—' : `${Math.round(confidence * 100)}%`}
-                    </td>
-                  </>
+              <li key={row.key} className="space-y-1 py-3 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                  <span>{t(row.label)}</span>
+                  {row.required ? <span>{t('intake.requisites.required')}</span> : null}
+                </div>
+                {value ? (
+                  <p className="text-sm leading-snug wrap-break-word">{value}</p>
+                ) : (
+                  <StatusBadge tone="quiet">{t('intake.requisites.awaiting')}</StatusBadge>
                 )}
-              </tr>
+                {/* Значение показываем как есть, но без пометки его нельзя принять за факт. */}
+                {value && unverified ? (
+                  <div className="space-y-1">
+                    <StatusBadge tone="warm">{t('intake.requisites.unverified')}</StatusBadge>
+                    <p className="text-xs text-muted-foreground">{t('intake.requisites.unverifiedHint')}</p>
+                  </div>
+                ) : null}
+                {!approved && value && meta ? <p className="text-xs text-muted-foreground">{meta}</p> : null}
+              </li>
             )
           })}
-        </Table>
+        </ul>
       )}
     </Card>
   )

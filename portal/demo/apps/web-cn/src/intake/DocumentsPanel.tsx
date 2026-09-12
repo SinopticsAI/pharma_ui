@@ -3,8 +3,10 @@ import type { ItemStatus, OrganizationItem } from '@demo/domain'
 import { l10n } from '@demo/domain'
 import { type MessageKey, useI18n } from '@demo/i18n'
 import { Button } from '@demo/ui/components/button'
-import { Fragment } from 'react'
-import { Callout, Card, Empty, StatusBadge, Table } from '../kit'
+import { cn } from '@demo/ui/lib/utils'
+import { ExternalLink, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { Callout, Card, Empty, StatusBadge } from '../kit'
 import { useOrgItemDownloadUrl, usePromoteOrgItem } from '../queries'
 
 /**
@@ -16,6 +18,9 @@ import { useOrgItemDownloadUrl, usePromoteOrgItem } from '../queries'
  *
  * Байты файла кабинет не проксирует: ссылка подписывается ядром на час и
  * открывается новой вкладкой, поэтому CORS хранилища здесь не участвует.
+ *
+ * В узкой колонке чата таблица ломает CJK по символу — поэтому список карточками:
+ * тип и статус сверху, имя файла на всю ширину, открытие иконкой.
  */
 
 const STATUS_TONE: Record<ItemStatus, 'accent' | 'warm' | 'quiet'> = {
@@ -49,6 +54,14 @@ const ITEM_TYPE_LABEL: Record<string, MessageKey> = {
 /** Служебная обёртка Plane вокруг результата OCR: показывать её незачем. */
 const PIPELINE_KEYS = new Set(['case_id', 'item_id', 'status', 'merge_meta', '_ref', 'item_type'])
 
+export type DocumentGroup = {
+  id: string
+  title: MessageKey
+  lead?: MessageKey
+  items: OrganizationItem[]
+  canPromote?: boolean
+}
+
 /** Повторяет `extraction_of` ядра: та же выборка, что попала в черновик. */
 function extraction(parcedData: Record<string, unknown> | null | undefined): [string, unknown][] {
   if (!parcedData) return []
@@ -68,112 +81,156 @@ function asText(value: unknown): string {
   return JSON.stringify(value)
 }
 
+function DocumentCard({
+  item,
+  canPromote,
+  opening,
+  moving,
+  onOpen,
+  onPromote,
+  openBusy,
+  promoteBusy,
+}: {
+  item: OrganizationItem
+  canPromote: boolean
+  opening: boolean
+  moving: boolean
+  onOpen: () => void
+  onPromote: () => void
+  openBusy: boolean
+  promoteBusy: boolean
+}) {
+  const { t, text } = useI18n()
+  const fields = extraction(item.parcedData)
+  const fileName = text(l10n(item.title, item.fileName)).value
+
+  return (
+    <article className="space-y-1.5 rounded-lg border p-3">
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 text-sm font-medium leading-snug">
+          {t(ITEM_TYPE_LABEL[item.itemType] ?? 'itemType.other')}
+        </p>
+        <StatusBadge tone={STATUS_TONE[item.status] ?? 'quiet'}>{t(`intake.itemStatus.${item.status}`)}</StatusBadge>
+      </div>
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 break-all text-xs text-muted-foreground">{fileName}</p>
+        {item.status === 'pending_upload' ? null : (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-8 shrink-0"
+            disabled={openBusy}
+            aria-label={opening ? t('intake.documents.opening') : t('intake.documents.open')}
+            onClick={onOpen}
+          >
+            {opening ? <Loader2 className="animate-spin" /> : <ExternalLink />}
+          </Button>
+        )}
+      </div>
+      {canPromote && item.level === 'product' ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          title={t('intake.documents.promoteHint')}
+          disabled={promoteBusy}
+          onClick={onPromote}
+        >
+          {moving ? t('intake.documents.promoting') : t('intake.documents.promote')}
+        </Button>
+      ) : null}
+      {fields.length === 0 ? (
+        <p className="text-xs text-muted-foreground">{t('intake.documents.noExtraction')}</p>
+      ) : (
+        <details>
+          <summary className="cursor-pointer text-xs text-muted-foreground">{t('intake.documents.extracted')}</summary>
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+            {fields.map(([key, value]) => (
+              <div key={key} className="contents">
+                <dt className="text-muted-foreground">{key}</dt>
+                <dd className="m-0 break-all">{asText(value)}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      )}
+    </article>
+  )
+}
+
 export function DocumentsPanel({
   organizationId,
   items,
   title,
   lead,
+  groups,
   /** Подъём документа продукта в профиль компании: только на экране продукта. */
   canPromote = false,
 }: {
   organizationId: string
-  items: OrganizationItem[]
-  title: MessageKey
+  items?: OrganizationItem[]
+  title?: MessageKey
   lead?: MessageKey
+  groups?: DocumentGroup[]
   canPromote?: boolean
 }) {
-  const { t, text } = useI18n()
+  const { t } = useI18n()
   const download = useOrgItemDownloadUrl(organizationId)
   const promote = usePromoteOrgItem(organizationId)
   const failure = download.error ?? promote.error
+  const tabs = groups ?? []
+  const [activeId, setActiveId] = useState(tabs[0]?.id ?? '')
+  const active = tabs.find((group) => group.id === activeId) ?? tabs[0]
+  const listed = active?.items ?? items ?? []
+  const listLead = active?.lead ?? lead
+  const listCanPromote = active?.canPromote ?? canPromote
 
   return (
-    <Card title={t(title)}>
-      <p className="text-sm text-muted-foreground">{t(lead ?? 'intake.documents.lead')}</p>
-      {failure ? <Callout tone="deadline">{describeError(failure)}</Callout> : null}
-
-      {items.length === 0 ? (
-        <Empty>{t('intake.documents.empty')}</Empty>
-      ) : (
-        <Table
-          head={[
-            t('intake.documents.type'),
-            t('intake.documents.file'),
-            t('intake.documents.level'),
-            t('intake.documents.status'),
-            '',
-          ]}
-        >
-          {items.map((item) => {
-            const fields = extraction(item.parcedData)
-            const opening = download.isPending && download.variables === item.id
-            const moving = promote.isPending && promote.variables === item.id
-
+    <Card title={active ? undefined : title ? t(title) : undefined}>
+      {active ? (
+        <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1" role="tablist">
+          {tabs.map((group) => {
+            const selected = group.id === active.id
             return (
-              <Fragment key={item.id}>
-                <tr>
-                  <td>{t(ITEM_TYPE_LABEL[item.itemType] ?? 'itemType.other')}</td>
-                  <td>{text(l10n(item.title, item.fileName)).value}</td>
-                  <td className="text-xs text-muted-foreground">{t(`intake.documents.level.${item.level}`)}</td>
-                  <td>
-                    <StatusBadge tone={STATUS_TONE[item.status] ?? 'quiet'}>
-                      {t(`intake.itemStatus.${item.status}`)}
-                    </StatusBadge>
-                  </td>
-                  <td>
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {/* До подтверждения загрузки в хранилище открывать нечего. */}
-                      {item.status === 'pending_upload' ? null : (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={download.isPending}
-                          onClick={() => download.mutate(item.id)}
-                        >
-                          {opening ? t('intake.documents.opening') : t('intake.documents.open')}
-                        </Button>
-                      )}
-                      {canPromote && item.level === 'product' ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          title={t('intake.documents.promoteHint')}
-                          disabled={promote.isPending}
-                          onClick={() => promote.mutate(item.id)}
-                        >
-                          {moving ? t('intake.documents.promoting') : t('intake.documents.promote')}
-                        </Button>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td colSpan={5} className="pb-2">
-                    {fields.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">{t('intake.documents.noExtraction')}</p>
-                    ) : (
-                      <details>
-                        <summary className="cursor-pointer text-xs text-muted-foreground">
-                          {t('intake.documents.extracted')}
-                        </summary>
-                        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
-                          {fields.map(([key, value]) => (
-                            <div key={key} className="contents">
-                              <dt className="text-muted-foreground">{key}</dt>
-                              <dd className="m-0">{asText(value)}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </details>
-                    )}
-                  </td>
-                </tr>
-              </Fragment>
+              <button
+                key={group.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                className={cn(
+                  'rounded-md px-2 py-1.5 text-center text-sm leading-snug',
+                  selected ? 'bg-background font-medium shadow-sm' : 'text-muted-foreground',
+                )}
+                onClick={() => setActiveId(group.id)}
+              >
+                {t(group.title)} · {group.items.length}
+              </button>
             )
           })}
-        </Table>
+        </div>
+      ) : null}
+      <p className="text-sm text-muted-foreground">{t(listLead ?? 'intake.documents.lead')}</p>
+      {failure ? <Callout tone="deadline">{describeError(failure)}</Callout> : null}
+
+      {listed.length === 0 ? (
+        <Empty>{t('intake.documents.empty')}</Empty>
+      ) : (
+        <div className="space-y-2">
+          {listed.map((item) => (
+            <DocumentCard
+              key={item.id}
+              item={item}
+              canPromote={listCanPromote}
+              opening={download.isPending && download.variables === item.id}
+              moving={promote.isPending && promote.variables === item.id}
+              openBusy={download.isPending}
+              promoteBusy={promote.isPending}
+              onOpen={() => download.mutate(item.id)}
+              onPromote={() => promote.mutate(item.id)}
+            />
+          ))}
+        </div>
       )}
     </Card>
   )

@@ -275,15 +275,20 @@ function LiveProductIntake({ productId }: { productId: string }) {
                 <RequisitesPanel scope="product" draft={card?.draft} />
                 <DocumentsPanel
                   organizationId={organizationId}
-                  items={ownDocuments}
-                  title="intake.documents.productTitle"
-                  canPromote
-                />
-                <DocumentsPanel
-                  organizationId={organizationId}
-                  items={inheritedDocuments}
-                  title="intake.documents.inheritedTitle"
-                  lead="intake.documents.inheritedLead"
+                  groups={[
+                    {
+                      id: 'product',
+                      title: 'intake.documents.productTitle',
+                      items: ownDocuments,
+                      canPromote: true,
+                    },
+                    {
+                      id: 'company',
+                      title: 'intake.documents.inheritedTitle',
+                      lead: 'intake.documents.inheritedLead',
+                      items: inheritedDocuments,
+                    },
+                  ]}
                 />
               </>
             }
