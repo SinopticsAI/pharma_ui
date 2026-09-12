@@ -85,10 +85,7 @@ export function ProductOverviewPage() {
         {card ? <StatusBadge tone="quiet">{t(`stage.${card.currentStage}`)}</StatusBadge> : null}
       </div>
       {OFFLINE_DEMO || productId.startsWith('demo-') ? <DemoMark>{t('shell.demoMark')}</DemoMark> : null}
-      <NextAction
-        label={t('shell.nextAction')}
-        action={card ? undefined : <ClassifyCta productId={productId} />}
-      >
+      <NextAction label={t('shell.nextAction')} action={card ? undefined : <ClassifyCta productId={productId} />}>
         {card ? text(l10n(card.waitingFor)).value : t('hub.emptyChannel')}
       </NextAction>
 

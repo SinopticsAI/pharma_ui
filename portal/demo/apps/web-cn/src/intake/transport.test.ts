@@ -8,7 +8,12 @@ describe('messagesWithoutScanBytes', () => {
         role: 'user',
         parts: [
           { type: 'text', text: 'Файл «11-nmpa-certificate.jpg» принят' },
-          { type: 'file', filename: '11-nmpa-certificate.jpg', mediaType: 'image/jpeg', url: 'data:image/jpeg;base64,aaaa' },
+          {
+            type: 'file',
+            filename: '11-nmpa-certificate.jpg',
+            mediaType: 'image/jpeg',
+            url: 'data:image/jpeg;base64,aaaa',
+          },
         ],
         attachments: [{ name: '11-nmpa-certificate.jpg' }],
       },
