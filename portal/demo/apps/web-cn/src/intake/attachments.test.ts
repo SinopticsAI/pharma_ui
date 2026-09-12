@@ -98,6 +98,22 @@ describe('createIntakeAttachmentAdapter', () => {
     expect(onError).toHaveBeenCalledTimes(1)
   })
 
+  it('незнакомый тип ask-document уходит как other', async () => {
+    const api = fakeApi([])
+    const adapter = createIntakeAttachmentAdapter({
+      api: api as unknown as ApiClient,
+      queryClient: new QueryClient(),
+      organizationId: 'org-1',
+      productId: 'prd-1',
+      sessionId: 'ses-1',
+      itemType: () => 'expectedUse',
+    })
+
+    const pending = await adapter.add({ file: file() })
+    await adapter.send(pending)
+    expect(api.requestOrgUploadUrl).toHaveBeenCalledWith('org-1', expect.objectContaining({ itemType: 'other' }))
+  })
+
   it('сжигает тип ask-document на первом файле пачки', async () => {
     let nextType = 'business-license'
     const types: string[] = []

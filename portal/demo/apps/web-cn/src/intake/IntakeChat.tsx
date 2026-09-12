@@ -18,6 +18,7 @@ import { Button, Empty } from '../kit'
 import { usePlaneEnabled } from '../planeToggle'
 import { useIntakeMessages, useOrganizationItems, useProduct } from '../queries'
 import { createIntakeAttachmentAdapter } from './attachments'
+import { itemTypeOf } from './itemType'
 import { IntakeToolUIs } from './cards'
 import { type IntakeActions, IntakeActionsProvider } from './context'
 import { ExtractHttpError, startIntakeExtract } from './extract'
@@ -624,7 +625,7 @@ function IntakeChatRuntime({
   const actions = useMemo<IntakeActions>(
     () => ({
       setItemType: (value) => {
-        itemType.current = value
+        itemType.current = itemTypeOf(value)
       },
       hideOfferProduct: Boolean(productId),
     }),

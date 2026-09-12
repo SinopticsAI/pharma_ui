@@ -2,6 +2,7 @@ import type { Attachment, AttachmentAdapter, CompleteAttachment, PendingAttachme
 import { generateId } from '@assistant-ui/react'
 import type { ApiClient, UploadRequest } from '@demo/api-client'
 import type { QueryClient } from '@tanstack/react-query'
+import { itemTypeOf } from './itemType'
 
 /**
  * Вложение прямо в нить диалога.
@@ -72,7 +73,7 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
 
     async add({ file }): Promise<PendingAttachment> {
       const id = generateId()
-      itemTypes.set(id, options.itemType())
+      itemTypes.set(id, itemTypeOf(options.itemType()))
       options.onItemTypeConsumed?.()
       return {
         id,
@@ -85,7 +86,7 @@ export function createIntakeAttachmentAdapter(options: IntakeAttachmentOptions):
     },
 
     async send(attachment): Promise<CompleteAttachment> {
-      const itemType = itemTypes.get(attachment.id) ?? 'other'
+      const itemType = itemTypeOf(itemTypes.get(attachment.id) ?? 'other')
       const request: UploadRequest = {
         itemType,
         fileName: attachment.file.name,
