@@ -18,7 +18,6 @@ import { Button, Empty } from '../kit'
 import { usePlaneEnabled } from '../planeToggle'
 import { useIntakeMessages, useOrganizationItems, useProduct } from '../queries'
 import { createIntakeAttachmentAdapter } from './attachments'
-import { itemTypeOf } from './itemType'
 import { IntakeToolUIs } from './cards'
 import { type IntakeActions, IntakeActionsProvider } from './context'
 import { ExtractHttpError, startIntakeExtract } from './extract'
@@ -57,6 +56,7 @@ import {
   uiMessagesToRepository,
   unpersistedAppends,
 } from './history'
+import { itemTypeOf } from './itemType'
 import { ProgressPanel } from './ProgressPanel'
 import { type AgentId, createIntakeTransport } from './transport'
 
